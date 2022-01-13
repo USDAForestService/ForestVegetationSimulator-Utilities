@@ -1,68 +1,72 @@
+#############################################################################
+#ST_Processing_Structure_Template.R
+#
+#This script provides a template in code/pseudo code for how FVS output
+#databases will be used to produce output for stand and transition (ST)
+#models.
+#############################################################################
+
 library(RSQLite)
 library(DBI)
 library(dplyr)
 
 #############################################################################   
-#Start processing - I think this would initiate with a function call
+#Processing sequence - I think this would initiate with a function call
 #lets just name this function, main, for the sake of this example.
 
-#Possible function arguments:
-#Input:        Directory path or directory path with database name.
-#Output:       Directory path or directory path with xlsx name.
-#Overwrite:    boolean to determine if current xlsx file should have data 
+#Potential function arguments:
+#input:        Directory path or directory path with database name.
+#output:       Directory path or directory path with xlsx name.
+#overwrite:    boolean to determine if output file should have data 
 #              overwritten or have new data appended to existing data.
-#groupingCode: this is character string pertaining to a code that data will
-#              be summarized by. This could be an ERU or something else.
-#              This variable is searched for in FVS_Compute table
-#mgmtID:       mgmtID code. This code specifies what data to read in if a 
-#              project has multiple runs.If left as NA, then all data is read
-#              in. Not sure for the time being how this will be implemented.
+#groupCode:    this is a grouping code that data will be summarized by. This
+#              could be an ERU or other type of code. This variable will be
+#              stored and retrieved from the FVS_Compute table.
+#runTitle:     FVS runtitle which specifies what data to prcoess if an input 
+#              project has multiple runs.If left as NA, then all data is 
+#              processed from input database defined in argument input.
 #############################################################################
 
-main<- function()
+main<- function(input, output, overwrite, groupCode, runTitle)
 {
   
   #ERROR CHECK: Test existence of .db file. If .db does not exist
   #then return from function.
   
+  #ERROR CHECK: Probably need to test if output path (output argument) is valid.
+  #Not sure how to implement or if it is 100% necessary.
+  
   #PRINT MESSAGE: Message that connection to database is being established if
   #.db is legitimate.
   
-  #ERROR CHECK: Test if FVS_TreeList, FVS_Summary2, and FVS_Compute?
-  #is found in table. If one of these is missing, then return with an error
-  #message and disconnect from database. 
+  #Perform database validation done in validateDBInput function (see 
+  #ST_Functions.R).
+  message<-validateDBInputs(con, runTitle, groupCode)
   
-  #Test if we need to pull in a grouping variable from the FVS_Compute table
-  #based on argument groupingCode.
-  
-  #Logic for reading in tree list from .db, joining other pertinent tables
-  #and removing unneeded tree records etc. starts here. Stand age will need to
-  #be joined to tree level data from FVS_StandInit. Contemplating having a 
-  #function return a query (string variable) that is passed into dbGetQuery.
-  baseDF<- dbGetQuery("SQL logic")
-  
-  #Subset data based on mgmtID argument if mgmtID is not NA.
-  if(!is.na(mgmtID))
+  #If validateDBInput function returns a message that is not 'PASS' then
+  #halt execution of main function and print error message to console.
+  if(message != 'PASS')
   {
-    if(! mgmtID %in% unique(baseDF$MgmtID))
-    {
-      stop("Specified management ID (mgmtID) not found in input database")
-    }
-    
-    else
-    {
-      baseDF<-baseDF[baseDF$MgmtID == mgmtID]
-    }
+    stop(cat(message))
   }
   
-  #After last subset, test if baseDF has no rows for any reason. If this is the
-  #case, then return from function with an error.
+  #Generate a query that will be created by buildQuery function (see 
+  #ST_Functions.R).
+  dbQuery<-buildQuery(runTitle, groupCode)
   
-  #Logic for connecting to species support .db
-  #Read in the following columns with query: 
+  #Execute SQL query to obtain input data
+  baseDF<-dbGetQuery(con, dbQuery)
+  
+  #Test if baseDF has no rows (or is null?) for any reason. If this is the case,
+  #then return from main function with an error.
+  
+  #Read in support .db. We may want to hardcode this db as a dataframe so
+  #we can avoid distributing a SQL database with this information. We could 
+  #simply call a function that returns this dataframe. This would be worth 
+  #discussing. Logic shown below may become obsolete.
+  
+  #Read in the following columns:
   #SPECIES_SYMBOL, GENUS, LEAF_RETEN, R3SHADE_TOL, and R3_DIA_MEAS
-  #Logic for connecting to species support .db
-  #We don't need to join this information to baseDF
   con<-dbConnect(SQLite(), "C:/R3_StateTransition_Modeling/Species_Documentation/Species_Support.db")
   sp.info<-dbGetQuery(con, "SELECT SPECIES_SYMBOL AS SpeciesFVS, GENUS, LEAF_RETEN,
                          R3_SHADE_TOL, R3_DIA_MEAS
@@ -77,26 +81,30 @@ main<- function()
   stands.output<-vector(mode = "list", length(stands))
   
   #Begin loop across standIDs
-  #May want to consider using stand in stands for loop syntax
   for(i in 1:length(stands))
   {
     #Extract stand ID i...
     #PRINT: Message detailing which stand is being processed
     standDF<-baseDF[baseDF$StandID == stands[i], ]
+
+    #Determine years that will be evaluated
     years<-unique(standDF$Year)
     
     #May consider ordering years. I am not sure if years will ever be out of
-    #order for a given stand. Years will need to be in sequential
-    #order so we can derive cycle number correctly.
+    #order for a given stand. Years will need to be in sequentialorder so we
+    #can derive cycle number correctly as shown further below.
     
     #Initialize list that will store output on a year-by-year basis for standDF
     #The length of this list will match the length of years vector.
-    stand.yr.output<-vector(mode = "list", length(years))
+    standYrOutput<-vector(mode = "list", length(years))
     
-    #Merge species information, as well as, forest system
-    standDF<-merge(standDF, sp.info, by = "SpeciesPlants", all.x = T)
+    #We could maybe do look ups for the next two indented comments. Also not 
+    #even sure if we need forest system for any calculations currently.
     
-    #Derive forest system for ERU using R3 crosswalk function
+      #Merge species information, as well as, forest system
+      # standDF<-merge(standDF, sp.info, by = "SpeciesPlants", all.x = T)
+    
+      #Derive forest system for ERU using R3 crosswalk function
     
     #Now we enter loop across years for the stand
     for(j in 1:length(years))
@@ -109,6 +117,8 @@ main<- function()
       
       #Create dataframe that will store output for the stand in a given year.
       #There may be more variables that I am missing in dataframe defined below.
+      #We need to find a way to conditional add groupCode column if user is 
+      #assuming one (i.e. groupCode argument is not NA)
       yr.output<-data.frame(StandID = unique(stdYrFrame$StandID),
                             ERU = unqiue(stdYrFrame$ERU),
                             Year = years[j],
@@ -121,11 +131,19 @@ main<- function()
       #entire stdYrFrame or specific columns from this dataframe). The names of
       #the functions are all hypothetical too.
       
+      #Stand level BA
       yr.output$BA<-sum(stdYrFrame$DBH^2 * 0.005454 * stdYrFrame$TPA)
-      yr.output$BA<-standBAFunction()
+      
+      #Stand percent canopy cover
       yr.output$CC<-standCCFunction()
+      
+      #Dominance type of stand
       yr.output$DOMTYPE<-domTypeFunction()
+      
+      #Canopy size class
       yr.output$CANSIZCL<-canSizClsFunction()
+      
+      #BA storiedness
       yr.output$BASTORY<-baStoryFunction()
       
       #Once we have derived our variables, we will store yr.output in 
@@ -136,7 +154,7 @@ main<- function()
       #Loop continues until we process all the years for the stand
     }
     
-    #Combine all year-by-year information for standID i into a single dataframe
+    #Combine all year-by-year information for standID i into a single dataframe.
     stand.out<-do.call("rbind", stand.yr.output)
     
     #Now we add stand.out dataframe to our list of stands
@@ -154,7 +172,7 @@ main<- function()
   
   #PRINT: Message indicating that all stands have been processed.
   
-  #Send out the stand.data to an .xlsx, .csv, or.db. This will be executed
+  #Send out the stand.data to an .xlsx, .csv, or.db. This will likely be executed
   #in a function call.
   
   #PRINT: Message that output file is being created
