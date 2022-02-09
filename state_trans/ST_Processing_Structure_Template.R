@@ -33,11 +33,21 @@ main<- function(input, output, overwrite, groupCode, runTitle)
   #ERROR CHECK: Test existence of .db file. If .db does not exist
   #then return from function.
   
+  #replace backslashes into forward slashes in path
+  #May need to require user to input path as forward slashes 
+  sub("\\","/", input)
+  
+  #NEED TO FIGURE OUT RELATIVE PATHS!!!!
+  if (!(file.exists(input))){
+    stop(cat('Invalid input database file.  Program Terminated'))
+  }
+  
   #ERROR CHECK: Probably need to test if output path (output argument) is valid.
   #Not sure how to implement or if it is 100% necessary.
   
   #PRINT MESSAGE: Message that connection to database is being established if
   #.db is legitimate.
+  con<-dbConnect(RSQLite::SQLite(), input)
   
   #Perform database validation done in validateDBInput function (see 
   #ST_Functions.R).

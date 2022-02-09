@@ -123,15 +123,16 @@ buildQuery<-function(con, runTitle, groupCode)
   
   query<-
     paste("SELECT TL.CaseID, TL.StandID, TL.Year,
-              TL.SpeciesPLANTS, TL.TPA, TL.DBH,
-              0.005454*TL.DBH*TL.DBH*TL.TPA as BA,
-              (3.141593*TL.CrWidth/2*TL.CrWidth/2)*TL.TPA/43560 * 100 AS TREECC
-              FVS_Cases.RunTitle, FVS_Summary2.Age
-FROM FVS_TreeList TL INNER JOIN FVS_Cases
- ON FVS_TreeList.CaseID = FVS_Cases.CaseID
-INNER JOIN FVS_Summary2
- ON FVS_TreeList.CaseID = FVS_Summary2.CaseID AND
-    FVS_TreeList.Year = FVS_Summary2.Year")
+          TL.SpeciesPLANTS, TL.TPA, TL.DBH,
+          0.005454*TL.DBH*TL.DBH*TL.TPA as BA,
+          (3.141593*TL.CrWidth/2*TL.CrWidth/2)*TL.TPA/43560 * 100 AS TREECC,
+          FVS_Cases.RunTitle, FVS_Summary2.Age 
+          FROM FVS_TreeList TL 
+          INNER JOIN FVS_Cases 
+          ON TL.CaseID = FVS_Cases.CaseID 
+          INNER JOIN FVS_Summary2 
+          ON TL.CaseID = FVS_Summary2.CaseID AND
+          TL.Year = FVS_Summary2.Year")
   
   #Initialize an empty query. This blank query will be returned if runTitle or
   #groupCode is invalid.
