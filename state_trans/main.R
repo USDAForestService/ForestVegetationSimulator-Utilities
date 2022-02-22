@@ -7,7 +7,7 @@
 
 #NOTE:
 #If we end up making a package for this work then the library and source
-#statements will not be inlcuded in this file.
+#statements will not be included in this file.
 
 library(RSQLite)
 library(DBI)
@@ -228,7 +228,7 @@ main<- function(input, output, overwriteOut = F, groupTag = NA, runTitle = NA)
         yrOutput$CAN_COV<-standCC
         
         # #Dominance type of stand
-        # yrOutput$DOMTYPE<-domTypeFunction()
+        yrOutput$DOM_TYPE<-domType(standYrDF)
         
         #Canopy size class - midscale mapping
         yrOutput$CAN_SIZCL<-canSizeCl(standYrDF[c("DBH", "TREECC")], 1)
@@ -276,13 +276,13 @@ main<- function(input, output, overwriteOut = F, groupTag = NA, runTitle = NA)
     #==================================
   }
   
-  #Disconnect from con
-  dbDisconnect(con)
-  cat("Disconnected from input database:", input, "\n")
-  
   #Print out how many stands had zero tree records
   zeroTree<-length(stands) - standSum
   cat(zeroTree, "stands contained no tree records.", "\n")
+  
+  #Disconnect from con
+  dbDisconnect(con)
+  cat("Disconnected from input database:", input, "\n")
   
   #Combine all output from allStandsOutput
   allOut<-bind_rows(allStandsOutput)
@@ -342,9 +342,6 @@ main<- function(input, output, overwriteOut = F, groupTag = NA, runTitle = NA)
   #PRINT: Message when output file has been written
   cat("Data sent to output file:", output, "\n")
   
-  #PRINT: Message that process is complete.
-  cat("Processing complete. End of program.", "\n")
-  
   #Return from function main
-  return()
+  return(cat("End of program.", "\n"))
 }

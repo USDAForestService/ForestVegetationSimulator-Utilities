@@ -1,49 +1,50 @@
 #############################################################################
-#Function: calcCanClassDC
-#CURRENT STATUS: This function could use a little more testing. Will remove
-#the commented out upper vectors at some point.
+#Function: getDiaValues
+#CURRENT STATUS: This function could use a little more testing. 
 #
-#This function takes in a DBH value and returns a diameter class based on R3
-#midscale mapping, timber dominance type, or woodland  dominance types criteria.
-#These different diameter classes are described in NFS_Reg_Veg_Class.pdf.
+#This function takes in a type argument and returns a list containing a vector
+#of diameters and a vector of diameter class values based on R3 midscale 
+#mapping, timber dominance type, or woodland  dominance types criteria. These
+#different diameter classes are described in NFS_Reg_Veg_Class.pdf.
 #
 #Arguments
-#type: Indicator variable used to determine which type of diameter class to
-#      return
+#type: Indicator variable used to determine which diameters and diameter class
+#      values to return.
 #      1 - Midscale mapping (default and will be used if any value other than 
 #          2 or 3 is entered for type argument.)
 #      2 - Timberland dominance type
 #      3 - Woodland dominance type
 #
-#DBH:  diameter of tree record
-#
-#Possible return values when type = 1
+#Return values when type = 1
+#diameters = c(0, 5, 10, 20, 30)
+#diameter class values: 
 #1 = seedling sapling canopy cover
 #2 = small tree canopy cover
 #3 = medium and large tree canopy cover
 #4 = very large tree canopy cover
 #5 - giant tree canopy cover
 #
-#Possible return values when type = 2
+#Return values when type = 2
+#diameters = c(0, 5, 10, 20)
+#diameter class values: 
 #1 = seedling sapling canopy cover
 #2 = small tree canopy cover
 #3 = medium tree canopy cover
 #4 = large - giant tree cover
 #
-#Possible return values when type = 3
+#Return values when type = 3
+#diameters = c(0, 5, 10)
+#diameter class values:
 #1 = seedling sapling canopy cover
 #2 = small tree canopy cover
 #3 = medium - giant tree cover
 #############################################################################
 
-canSizeDC<-function(DBH, type = 1)
+getDiaValues<-function(type = 1)
 {
   #Define lower and upper DBH limits for midscale mapping
   #Lower diameter limit
   diameters<-c(0, 5, 10, 20, 30)
-  
-  #Upper diameter limit
-  # upper<-c(5, 10, 20, 30, 30)
   
   #Diameter class values
   dcls<-seq(from = 1, to = 5, by = 1)
@@ -53,9 +54,6 @@ canSizeDC<-function(DBH, type = 1)
   {
     #Lower diameter limit
     diameters<-c(0, 5, 10, 20)
-    
-    #Upper diameter limit
-    # upper<-c(5, 10, 20, 20)
     
     #Diameter class values
     dcls<-seq(from = 1, to = 4, by = 1)
@@ -67,17 +65,14 @@ canSizeDC<-function(DBH, type = 1)
     #Lower diameter limit
     diameters<-c(0, 5, 10)
     
-    #Upper diameter limit
-    # upper<-c(5, 10, 10)
-    
     #Diameter class values
     dcls<-seq(from = 1, to = 3, by = 1)
   }
   
-  #Find diameter class
-  dc<-findCategory(DBH, diameters, dcls)
+  #Collect diameters and dcls in a list and return
+  results<-list(diameters, dcls)
   
-  return(dc)
+  return(results)
 }
 
 #############################################################################
@@ -198,35 +193,104 @@ findCategory<-function(x, inputValues = 0, outputValues = 0, invalidReturn = 0,
 }
 
 #############################################################################
-#Function: calcCanSizCl
-#CURRENT STATUS: This function could use some more work. Not sure what
-#happens yet if dataframe with all dead trees is passed in or if there
-#is a value to return if total stand percent canopy cover is below a certain
-#value.
+#Function: getCanSizDC
+#CURRENT STATUS: This function could use a little more testing.
 #
-#This function takes in a dataframe containing diameter class and treecc and
-#returns a canopy size class value ranging from 1-5. Canopy size class is 
-#determined by calculating percent canopy cover for each mid scale mapping
-#diameter class. The diameter class with the largest amount of percent 
-#canopy cover is returned.
+#This function takes in a vector of DBH values and a type argument and returns
+#a vector of diameter classes that are used to calculate canopy size class 
+#in the canSizeCls function.
+#
+#Arguments
+#DBH:  Vector containing DBH values.
+#type: Indicator variable used to determine which type of diameter class to
+#      return
+#      1 - Midscale mapping (default and will be used if any value other than 
+#          2 or 3 is entered for type argument.)
+#      2 - Timberland dominance type
+#      3 - Woodland dominance type
+#
+#Possible return values when type = 1
+#1 = seedling sapling canopy cover
+#2 = small tree canopy cover
+#3 = medium and large tree canopy cover
+#4 = very large tree canopy cover
+#5 - giant tree canopy cover
+#
+#Possible return values when type = 2
+#1 = seedling sapling canopy cover
+#2 = small tree canopy cover
+#3 = medium tree canopy cover
+#4 = large - giant tree cover
+#
+#Possible return values when type = 3
+#1 = seedling sapling canopy cover
+#2 = small tree canopy cover
+#3 = medium - giant tree cover
+#############################################################################
+
+getCanSizeDC<-function(DBH, type = 1)
+{
+  #Get diameters and DC values
+  values<-getDiaValues(type)
+  
+  #Initialize vector the same size as DBH for storing DC values
+  DC<-vector(length = length(DBH))
+  
+  #Loop across DBH vector and determine 
+  for(i in 1:length(DBH))
+  {
+    dcls<-findCategory(DBH[i], values[[1]], values[[2]])
+    DC[i]<-dcls
+  }
+  
+  #Return DC
+  return(DC)
+}
+
+#############################################################################
+#Function: calcCanSizCl
+#
+#CURRENT STATUS: This function may need a little more refinement. Need to
+#find out if CanSizCl should be zero if stand CC is below a certain threshold
+#(i.e. 10% canopy cover).
+#
+#This function takes in a tree-level dataframe and returns a canopy size 
+#class for the inventory plot that the tree records reside on.
 #
 #Argument
-#dat:  tree level dataframe containing DBH and canopy percent cover of each
+#dat:  Tree level dataframe that contains DBH and canopy percent cover of each
 #      tree record (TREECC).
-#type: type determines what kind of diameter class will be calculated. See
-#      use of type in calcCanSizDC
+#type: Indicator variable used to determine which type of diameter class to
+#      return
+#      1 - Midscale mapping (default and will be used if any value other than 
+#          2 or 3 is entered for type argument.)
+#      2 - Timberland dominance type
+#      3 - Woodland dominance type
 #
-#Possible return values from function
-#1 - 5
+#Possible return values when type = 1
+#1 = seedling sapling canopy cover
+#2 = small tree canopy cover
+#3 = medium and large tree canopy cover
+#4 = very large tree canopy cover
+#5 - giant tree canopy cover
+#
+#Possible return values when type = 2
+#1 = seedling sapling canopy cover
+#2 = small tree canopy cover
+#3 = medium tree canopy cover
+#4 = large - giant tree cover
+#
+#Possible return values when type = 3
+#1 = seedling sapling canopy cover
+#2 = small tree canopy cover
+#3 = medium - giant tree cover
 #############################################################################
 
 canSizeCl<-function(dat, type=1)
 {
-  #Create column with type variable
-  dat$TYPE<-type
-  
-  #Calculate diameter class for incoming records
-  dat$DC<-mapply(canSizeDC, dat$DBH, dat$TYPE)
+
+  #Determine diameter class for each tree record
+  dat$DC<-getCanSizeDC(dat$DBH, type)
   
   #Summarize CC by midscale diameter class
   can.sum<- dat %>%
