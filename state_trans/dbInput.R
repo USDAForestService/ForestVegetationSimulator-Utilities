@@ -36,8 +36,8 @@ validateDBInputs<-function(con, runTitle)
     if(is.element(F, c("FVS_TreeList", "FVS_Cases", "FVS_Summary2") %in%
                   dbListTables(con)))
     {
-      message<-"One of the following tables was not found in incoming database:
-    FVS_TreeList, FVS_Cases, and FVS_Summary2."
+      message<-paste("One of the following tables was not found in incoming database:",
+    "FVS_TreeList, FVS_Cases, and FVS_Summary2.")
       
       #Assign value of F to validDB. Database (con) is not ready for prcoessing.
       validDB = F
@@ -55,8 +55,8 @@ validateDBInputs<-function(con, runTitle)
     if(!is.na(runTitle) & 
        (! runTitle %in% unique(dbGetQuery(con, "SELECT RunTitle FROM FVS_Cases")[,1])))
     {
-      message<-(paste("Run title", paste0("\'",runTitle,"\'"), "was not found in input database. Please ensure that run title
-                   is spelled correctly."))
+      message<-(paste("Run titles", paste0("\'",runTitle,"\'"), "not found in",
+      "input database. Please ensure run titles are spelled correctly."))
       
       #Assign value of F to validDB. Database (con) is not ready for prcoessing.
       validDB = F

@@ -17,6 +17,7 @@ library(openxlsx)
 source("C:/OpenFVS/utility/state_trans/canSizCls.R")
 source("C:/OpenFVS/utility/state_trans/dbInput.R")
 source("C:/OpenFVS/utility/state_trans/domType.R")
+# source("C:/R3_StateTransition_Modeling/R_Code/baStory.R")
 
 #############################################################################   
 #Function : main.R
@@ -40,6 +41,7 @@ source("C:/OpenFVS/utility/state_trans/domType.R")
 #              Examples of valid output formats:
 #              "C:/FVS/R3_Work/FVSOut.xlsx"
 #              "C:\\FVS\\R3_Work\\FVSOut.xlsx"
+#
 #              "C:/FVS/R3_Work/FVSOut.csv"
 #              "C:\\FVS\\R3_Work\\FVSOut.csv"
 #
@@ -85,7 +87,6 @@ main<- function(input, output, overwriteOut = F, groupTag = NA, runTitle = NA)
   #May need to require user to input path as forward slashes 
   # input<-sub("\\","/", input)
   
-  #NEED TO FIGURE OUT RELATIVE PATHS!!!!
   #Test if input file extension is valid.
   if (!(file.exists(input))){
     stop('Invalid input database file. Program Terminated.')
@@ -113,7 +114,7 @@ main<- function(input, output, overwriteOut = F, groupTag = NA, runTitle = NA)
   if(message != 'PASS')
   {
     #Disconnect from con
-    dbDisonnct(con)
+    dbDisconnect(con)
     
     #Print error message
     stop(message)
@@ -124,12 +125,17 @@ main<- function(input, output, overwriteOut = F, groupTag = NA, runTitle = NA)
   spInfo<-read.csv("C:/OpenFVS/utility/state_trans/SupportDB.csv")
   
   #Obtain unique list of stand ids to process
-  stands<-unique(dbGetQuery(con, "SELECT StandID FROM FVS_Summary2")[,1])
-  cat("Total number of stands to prcoess:", length(stands), "\n")
+  standQuery<- paste("SELECT FVS_Summary2.StandID, FVS_Cases.RunTitle
+                      FROM FVS_Summary2
+                      INNER JOIN FVS_Cases
+                      ON FVS_Summary2.CaseID = FVS_Cases.CaseID
+                      WHERE RunTitle =", paste0("'",runTitle,"'"))
+  stands<-unique(dbGetQuery(con, standQuery)[,1])
   
-  #Split stand vector into list containing vectors of stand IDs (length 250, this
-  #could be user defined)
-  standList<-split(stands, ceiling(seq_along(stands)/250))
+  cat("Total number of stands to process:", length(stands), "\n")
+  
+  #Split stand vector into list containing vectors of stand IDs
+  standList<-split(stands, ceiling(seq_along(stands)/100))
   # cat("List of stands for processing created.", "\n")
   
   #Initialize list for storing stand output. Will have the same length as the 
@@ -202,17 +208,12 @@ main<- function(input, output, overwriteOut = F, groupTag = NA, runTitle = NA)
         group<-getGroup(standYrDF["Groups"][[1]][1], groupTag)
         
         #Create dataframe that will store output for the stand in a given year.
-        yrOutput<-data.frame(GROUP = group,
+        yrOutput<-data.frame(RUN = runTitle,
+                             GROUP = group,
                              PLOT_ID = unique(standYrDF$StandID),
                              CY = k,
-                             PROJ_YEAR = years[k])
-        
-        #Now we calculate helper variables and all the variables requested by
-        #region 3. In my mind, the hypothetical functions below will return a 
-        #single value for the stand/year combination. These functions will also
-        #take in arguments BUT I don't know what they will be yet (quite possibly
-        #entire stdYrFrame or specific columns from this dataframe). The names of
-        #the functions are all hypothetical too.
+                             PROJ_YEAR = years[k],
+                             ST_AGE = unique(standYrDF$Age))
         
         #Calculate tree BA
         standYrDF$TREEBA<-standYrDF$DBH^2 * standYrDF$TPA * 0.005454
@@ -225,22 +226,43 @@ main<- function(input, output, overwriteOut = F, groupTag = NA, runTitle = NA)
         
         #Calculate stand percent canopy cover (uncorrected)
         standCC<-sum(standYrDF$TREECC)
-        yrOutput$CAN_COV<-standCC
+        yrOutput$CAN_COV<-round(standCC,2)
         
-        # #Dominance type of stand
-        yrOutput$DOM_TYPE<-domType(standYrDF)
+        #Calculate DomType, Dom1, Dom2, Dom1Per, and Dom2Per
+        dtResults<-domType(standYrDF, yrOutput$CAN_COV)
+        
+        #Dominance type
+        yrOutput$DOM_TYPE<-dtResults[["DOMTYPE"]]
+        
+        #Dominance type 1
+        yrOutput$DCC1<-dtResults[["DCC1"]]
+        
+        #Dominance type 1 CC percentage
+        yrOutput$XDCC1<-round(dtResults[["XDCC1"]],2)
+        
+        #Dominance type 2
+        yrOutput$DCC2<-dtResults[["DCC2"]]
+        
+        #Dominance type 2 CC percentage
+        yrOutput$XDCC2<-round(dtResults[["XDCC2"]],2)
         
         #Canopy size class - midscale mapping
-        yrOutput$CAN_SIZCL<-canSizeCl(standYrDF[c("DBH", "TREECC")], 1)
+        yrOutput$CAN_SIZCL<-canSizeCl(standYrDF[c("DBH", "TREECC")], 
+                                      yrOutput$CAN_COV,
+                                      1)
         
         #Canopy size class - timberland
-        yrOutput$CAN_SZTMB<-canSizeCl(standYrDF[c("DBH", "TREECC")], 2)
+        yrOutput$CAN_SZTMB<-canSizeCl(standYrDF[c("DBH", "TREECC")], 
+                                      yrOutput$CAN_COV,
+                                      2)
         
         #Canopy size class - woodland
-        yrOutput$CAN_SZWDL<-canSizeCl(standYrDF[c("DBH", "TREECC")], 3)
+        yrOutput$CAN_SZWDL<-canSizeCl(standYrDF[c("DBH", "TREECC")],
+                                      yrOutput$CAN_COV,
+                                      3)
         
         # #BA storiedness
-        # yrOutput$BASTORY<-baStoryFunction()
+        # yrOutput$BA_STORY<-baStory(standYrDF, yrOutput$CAN_COV)
         
         #Add yrOutput to standYrOutput
         standYrOutput[[k]]<-yrOutput

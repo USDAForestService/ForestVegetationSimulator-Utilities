@@ -258,14 +258,15 @@ getCanSizeDC<-function(DBH, type = 1)
 #class for the inventory plot that the tree records reside on.
 #
 #Argument
-#dat:  Tree level dataframe that contains DBH and canopy percent cover of each
-#      tree record (TREECC).
-#type: Indicator variable used to determine which type of diameter class to
-#      return
-#      1 - Midscale mapping (default and will be used if any value other than 
-#          2 or 3 is entered for type argument.)
-#      2 - Timberland dominance type
-#      3 - Woodland dominance type
+#dat:     Tree level dataframe that contains DBH and canopy percent cover of each
+#         tree record (TREECC).
+#totalCC: Percent canopy cover of stand.
+#type:    Indicator variable used to determine which type of diameter class to
+#         return
+#         1 - Midscale mapping (default and will be used if any value other than 
+#         2 or 3 is entered for type argument.)
+#         2 - Timberland dominance type
+#         3 - Woodland dominance type
 #
 #Possible return values when type = 1
 #1 = seedling sapling canopy cover
@@ -286,19 +287,29 @@ getCanSizeDC<-function(DBH, type = 1)
 #3 = medium - giant tree cover
 #############################################################################
 
-canSizeCl<-function(dat, type=1)
+canSizeCl<-function(dat, totalCC, type=1)
 {
 
-  #Determine diameter class for each tree record
-  dat$DC<-getCanSizeDC(dat$DBH, type)
+  #If plot CC is less than 10% then cansizcl is 0
+  if(totalCC < 10)
+  {
+    cansizcl = 0
+  }
   
-  #Summarize CC by midscale diameter class
-  can.sum<- dat %>%
-    group_by(DC) %>%
-    summarize(CC = sum(TREECC))
-  
-  #Extract cansizcl associated with maximum CC
-  cansizcl<-can.sum$DC[which.max(can.sum$CC)]
-  
+  #Else calculate cansizcl
+  else
+  {
+    #Determine diameter class for each tree record
+    dat$DC<-getCanSizeDC(dat$DBH, type)
+    
+    #Summarize CC by midscale diameter class
+    can.sum<- dat %>%
+      group_by(DC) %>%
+      summarize(CC = sum(TREECC))
+    
+    #Extract cansizcl associated with maximum CC
+    cansizcl<-can.sum$DC[which.max(can.sum$CC)]
+  }
+
   return(cansizcl)
 }

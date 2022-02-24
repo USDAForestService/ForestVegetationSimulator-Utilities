@@ -17,6 +17,7 @@
 #            stand. Frame attributes include: StandID, Year, SpeciesPlants,
 #            TPA, DBH, TREEBA, TREECC, RunTitle, Age, SPCD (FIA species code),
 #            Genus, Leaf_Reten, R3_Shade_Tol, R3_Dia_Meas.
+#totalCC:    Percent canopy cover of stand.
 #############################################################################
 
 #Plot, 0004201604060100990968, crashed due to other hardwood species not
@@ -24,15 +25,12 @@
 
 #Species with NA shade tolerance codes based on AZ and NM FIA datasets in 
 #relation to species in CR variant.
-#2TB
-#ABLA
-#PIMOF
-#2TE
+#2TB (INT)
+#ABLA (INT)
+#PIMOF (INT)
+#2TE (INT)
 
-domType<-function(stdYrFrame){
-  
-  #calculate total tree canopy cover for the stand-year
-  totalCC<-sum(stdYrFrame$TREECC)
+domType<-function(stdYrFrame, totalCC){
   
   #Initialize boolean variable that is used to determine if DomType has been
   #found.
@@ -40,6 +38,19 @@ domType<-function(stdYrFrame){
   
   #Initialize DomType as NA
   DomType<-NA
+  
+  #Initialize dcc1 and dcc2 variables. These variables are used to store
+  #species, genera, leaf retention, or shade tolerance categories encompassed 
+  #in DomType that have the most and second most percent canopy cover
+  #representation.
+  dcc1<-"NA"
+  dcc2<-"NA"
+  
+  #Initialize xdcc1 and xdcc2 variables. These are used to store percent
+  #canopy cover (ratio of species or genus percent canopy cover to total percent
+  #canopy cover) for dcc1 and dcc2 respectively.
+  xdcc1<-0
+  xdcc2<-0
   
   #==========================================================================
   #LEAD 1 - 5
@@ -153,6 +164,12 @@ domType<-function(stdYrFrame){
       names(genusSp)[k]<-spp
     }
     
+    #Sort sppCC, genusCC, leafRetenCC, and shadeTolCC by descending order
+    sppCC<-sort(sppCC, decreasing = T)
+    genusCC<-sort(genusCC, decreasing = T)
+    leafRetenCC<-sort(leafRetenCC, decreasing = T)
+    shadeTolCC<-sort(shadeTolCC, decreasing = T)
+    
     #========================================================================
     #LEAD 11-12
     #
@@ -163,12 +180,19 @@ domType<-function(stdYrFrame){
     #         cover.
     #========================================================================
     
-    #Sort species lists
-    sppCC<-sort(sppCC, decreasing = T)
-    
     #Test if most abundant species is the dominance type
     if(sppCC[1] > (totalCC * 0.60)){
+      
+      #Set dominance type
       DomType = names(sppCC[1])
+      
+      #Set dcc1
+      dcc1 = names(sppCC[1])
+      
+      #Calculate value for dcc1Per
+      xdcc1 = (sppCC[1] / totalCC) * 100
+      
+      #Set domTypeFound to T
       domTypeFound = T
     }
     
@@ -186,6 +210,14 @@ domType<-function(stdYrFrame){
         #Separate names with underscore
         DomType<-paste(spNames, collapse = '_')
         
+        #Set dcc1 and xdcc1
+        dcc1 = names(sppCC[1])
+        xdcc1 = (sppCC[1] / totalCC) * 100
+        
+        #Set dcc2 and xdcc2
+        dcc2 = names(sppCC[2])
+        xdcc2 = (sppCC[2] / totalCC) * 100
+        
         domTypeFound = T
       }
     }
@@ -201,14 +233,18 @@ domType<-function(stdYrFrame){
     #         cover (most abundant species and most abundant genus mutually 
     #         exclusive).
     #========================================================================
-    
-    #Sort genus list
-    genusCC<-sort(genusCC, decreasing = T)
 
     #Check if most abundant genus is the dominance type
     if(!domTypeFound){
       if(genusCC[1] > (totalCC * 0.60)){
+        
+        #Set DomType
         DomType = names(genusCC[1])
+        
+        #Set dcc1 and xdcc1
+        dcc1 = names(genusCC[1])
+        xdcc1 = (genusCC[1] / totalCC) * 100
+    
         domTypeFound = T
       }
     }
@@ -230,6 +266,18 @@ domType<-function(stdYrFrame){
         
         #Separate genus and species name with underscore
         DomType<-paste(genusSpNames, collapse = '_')
+        
+        #Set DomType
+        DomType = names(genusCC[1])
+        
+        #Set dcc1 and xdcc1
+        dcc1 = names(genusCC[1])
+        xdcc1 = (genusCC[1] / totalCC) * 100
+        
+        #Set dcc2 and xdcc2
+        dcc2 = names(sppCC[spIndex])
+        xdcc2 = (sppCC[spIndex] / totalCC) * 100
+        
         domTypeFound = T
       }
     }
@@ -251,6 +299,15 @@ domType<-function(stdYrFrame){
         
         #Separate genera names with an underscore
         DomType<-paste(genusNames, collapse = '_')
+        
+        #Set dcc1 and xdcc1
+        dcc1 = names(genusCC[1])
+        xdcc1 = (genusCC[1] / totalCC) * 100
+        
+        #Set dcc2 and xdcc2
+        dcc2 = names(genusCC[2])
+        xdcc2 = (genusCC[2] / totalCC) * 100
+        
         domTypeFound = T
       }
     }
@@ -272,19 +329,39 @@ domType<-function(stdYrFrame){
     {
       #If evergreen trees <= 75% of total tree canopy cover, then determine if
       #DomType is TDMX or TEDX
-      if(leafRetenCC[1] <= totalCC * 0.75)
+      if(leafRetenCC["EVERGREEN"] <= totalCC * 0.75)
       {
         #If Deciduous trees > 75% of total tree canopy cover then DomType is TDMX
-        if(leafRetenCC[2] > totalCC * 0.75)
+        if(leafRetenCC["DECIDUOUS"] > totalCC * 0.75)
         {
+          #Set DomType
           DomType = 'TDMX'
+          
+          #Set dcc1 and xdcc1
+          dcc1 = names(leafRetenCC[1])
+          xdcc1 = (leafRetenCC[1] / totalCC) * 100
+          
+          #Set dcc2 and xdcc2
+          dcc2 = names(leafRetenCC[2])
+          xdcc2 = (leafRetenCC[2] / totalCC) * 100
+          
           domTypeFound = T
         }
         
         #Else, DomType is TEDX
         else
         {
+          #Set DomType
           DomType = 'TEDX'
+          
+          #Set dcc1 and xdcc1
+          dcc1 = names(leafRetenCC[1])
+          xdcc1 = (leafRetenCC[1] / totalCC) * 100
+          
+          #Set dcc2 and xdcc2
+          dcc2 = names(leafRetenCC[2])
+          xdcc2 = (leafRetenCC[2] / totalCC) * 100
+
           domTypeFound = T
         }
       }
@@ -297,20 +374,53 @@ domType<-function(stdYrFrame){
         #is TEIX
         if(shadeTolCC["TOL"] > shadeTolCC["INT"])
         {
+          #Set DomType
           DomType = "TEIX"
+          
+          #Set dcc1 and xdcc1
+          dcc1 = names(leafRetenCC[1])
+          xdcc1 = (leafRetenCC[1] / totalCC) * 100
+          
+          #Set dcc2 and xdcc2
+          dcc2 = "TOL"
+          xdcc2 = (shadeTolCC["TOL"] / totalCC) * 100
+          
           domTypeFound = T
         }
         
         #Else DomType is TETX
         else
         {
+          #Set DomType
           DomType = "TETX"
+          
+          #Set dcc1 and xdcc1
+          dcc1 = names(leafRetenCC[1])
+          xdcc1 = (leafRetenCC[1] / totalCC) * 100
+          
+          #Set dcc2 and xdcc2
+          dcc2 = "INT"
+          xdcc2 = (shadeTolCC["INT"] / totalCC) * 100
           domTypeFound = T
         }
       }
     }
   }
-  return(DomType)
+  
+  #Collect results to return in a list:
+  #Index 1: DomType
+  #Index 2: dcc1
+  #Index 3: xdcc1
+  #Index 4: dcc2
+  #Index 5: xdcc2
+  
+  results=list("DOMTYPE" = DomType,
+               "DCC1" = dcc1,
+               "XDCC1" = xdcc1,
+               "DCC2" = dcc2,
+               "XDCC2" = xdcc2)
+  
+  return(results)
 }
 
 #############################################################################
