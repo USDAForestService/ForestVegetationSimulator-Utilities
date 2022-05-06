@@ -40,7 +40,7 @@
 #3 = medium - giant tree cover
 #############################################################################
 
-getDiaValues<-function(type = 1)
+getDiaValues<-function(type = 1, debug = F)
 {
   #Define lower and upper DBH limits for midscale mapping
   #Lower diameter limit
@@ -68,6 +68,11 @@ getDiaValues<-function(type = 1)
     #Diameter class values
     dcls<-seq(from = 1, to = 3, by = 1)
   }
+  
+  if(debug) cat("In getDiaValues function", "\n",
+                "Type:", type, "\n",
+                "diameters:", diameters, "\n",
+                "dcls:", dcls, "\n")
   
   #Collect diameters and dcls in a list and return
   results<-list(diameters, dcls)
@@ -228,19 +233,22 @@ findCategory<-function(x, inputValues = 0, outputValues = 0, invalidReturn = 0,
 #3 = medium - giant tree cover
 #############################################################################
 
-getCanSizeDC<-function(DBH, type = 1)
+getCanSizeDC<-function(DBH, type = 1, debug = F)
 {
   #Get diameters and DC values
-  values<-getDiaValues(type)
+  values<-getDiaValues(type, debug)
   
   #Initialize vector the same size as DBH for storing DC values
   DC<-vector(length = length(DBH))
+  
+  if(debug) cat("In getCanSizeDC function", "\n")
   
   #Loop across DBH vector and determine 
   for(i in 1:length(DBH))
   {
     dcls<-findCategory(DBH[i], values[[1]], values[[2]])
     DC[i]<-dcls
+    if(debug) cat("DBH:", DBH[i], "DC:", DC[i],"\n")
   }
   
   #Return DC
@@ -287,20 +295,21 @@ getCanSizeDC<-function(DBH, type = 1)
 #3 = medium - giant tree cover
 #############################################################################
 
-canSizeCl<-function(dat, totalCC, type=1)
+canSizeCl<-function(dat, totalCC, type=1, debug = F)
 {
 
   #If plot CC is less than 10% then cansizcl is 0
   if(totalCC < 10)
   {
     cansizcl = 0
+    if(debug) cat("Total CC:", totalCC, " less than 10.", "\n")
   }
   
   #Else calculate cansizcl
   else
   {
     #Determine diameter class for each tree record
-    dat$DC<-getCanSizeDC(dat$DBH, type)
+    dat$DC<-getCanSizeDC(dat$DBH, type, debug)
     
     #Summarize CC by midscale diameter class
     can.sum<- dat %>%
@@ -309,6 +318,11 @@ canSizeCl<-function(dat, totalCC, type=1)
     
     #Extract cansizcl associated with maximum CC
     cansizcl<-can.sum$DC[which.max(can.sum$CC)]
+    
+    if(debug) cat("In canSizeCl function", "\n",
+                  "DC:", can.sum$DC, "\n",
+                  "CC:", can.sum$CC, "\n",
+                  "cansizcl:", cansizcl, "\n")
   }
 
   return(cansizcl)
