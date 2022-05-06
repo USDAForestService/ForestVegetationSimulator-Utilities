@@ -10,14 +10,13 @@
 #statements will not be included in this file.
 
 library(RSQLite)
-library(DBI)
 library(dplyr)
 library(openxlsx)
 
 source("C:/OpenFVS/utility/state_trans/canSizCls.R")
 source("C:/OpenFVS/utility/state_trans/dbInput.R")
 source("C:/OpenFVS/utility/state_trans/domType.R")
-# source("C:/R3_StateTransition_Modeling/R_Code/baStory.R")
+source("C:/OpenFVS/utility/state_trans/baStory.R")
 
 #############################################################################   
 #Function : main.R
@@ -49,7 +48,7 @@ source("C:/OpenFVS/utility/state_trans/domType.R")
 #              data overwritten or have new data appended to an existing file
 #              as determined by the output argument. If value is T, any 
 #              information existing in output will be overwritten with new
-#              information. If value is F, then the new ouput will be appended
+#              information. If value is F, then the new output will be appended
 #              to existing file. The default value of this argument is F.
 #
 #groupTag:     This is a grouping tag that will be used to extract a grouping
@@ -62,52 +61,80 @@ source("C:/OpenFVS/utility/state_trans/domType.R")
 #              Example group tag:
 #              "ERU="
 #
-#runTitle:     FVS runTitle which will be used to query the input database
-#              as defined by input argument. When run title is specified,
-#              then output will only be produced for this runtitle. If
-#              runTitle is not specified, then output will be produced for
-#              all data in input database. The value of runTitle must be 
-#              surrounded with double quotes. The contents in runTitle 
-#              argument need to be spelled correctly and use approporiate case
-#              sensitivity.If the value of runTitle is not NA, and is spelled
-#              incorrectly the execution of main function will terminate.
+#runTitles:    Vector of FVS runTitles that will be processed. If
+#              runTitles is left as NULL, execution of main function will
+#              terminate. Each run title in runTitles must be surrounded by
+#              double quotes. The values specified for runTitles argument need
+#              to be spelled correctly. If any of the values in runTitles are
+#              spelled incorrectly, the execution of main function will
+#              terminate.
 #
-#              Example run title:
-#              "Run 1"
+#              Example of how to specify single run title:
+#              runTitles = "Run 1"
+#
+#              Example of how to specify multiple run titles:
+#              runTitles = c("Run 1", "Run 2",...)
+#              Note the use of the c(...)
 #############################################################################
 
-main<- function(input, output, overwriteOut = F, groupTag = NA, runTitle = NA)
+main<- function(input, output, overwriteOut = F, groupTag = NA, runTitles = NULL)
 {
-  #Mark: I have commented out the sub statement below. R will not allow a user
-  #to specify single \ in a directory path because it is an escape
-  #character (annoying). A user will have to specify a path with \\ or / for 
-  #input and output arguments (unless there is some other workaround).
+
+  ###########################################################################
+  #Check input arguments
+  ###########################################################################
   
-  #replace backslashes into forward slashes in path
-  #May need to require user to input path as forward slashes 
-  # input<-sub("\\","/", input)
-  
-  #Test if input file extension is valid.
+  #Test existence of input database.
   if (!(file.exists(input))){
-    stop('Invalid input database file. Program Terminated.')
+    stop(paste("Input database not found. Make sure directory path and file name",
+               "in input are spelled correctly."))
   }
   
   #Extract file extension.
-  fileExt<-sub("(.*)\\.","",output)
+  fileExtIn<-sub("(.*)\\.","",input)
+  
+  #Make sure input datbase is SQLite (.db).
+  if (!fileExtIn %in% "db"){
+    stop(paste("Input argument does not have a valid file extension. File",
+               "extension must be .db."))
+  }
+  
+  #Extract file extension.
+  fileExtOut<-sub("(.*)\\.","",output)
   
   #Test if output file extension is valid (.xlsx or .csv).
-  if(!fileExt %in% c("xlsx", "csv"))
+  if(!fileExtOut %in% c("xlsx", "csv"))
   {
     stop("Output argument does not have a valid file extension. File extension must be
          either .xlsx or .csv.")
   }
   
+  #Test if runTitles is NULL
+  if(is.null(runTitles))
+  {
+    stop("No run titles were specified.")
+  }
+  
+  #Test if run titles are NA
+  if(NA %in% runTitles)
+  {
+    stop("NA values found in runTitles.")
+  }
+  
+  #Capitalize runTitles and groupTag
+  runTitles<-toupper(runTitles)
+  groupTag<-toupper(groupTag)
+    
   #Connect to input database
   con<-dbConnect(RSQLite::SQLite(), input)
   cat("Connected to input database:", input, "\n")
   
+  ###########################################################################
+  #Perform checks on input database (con)
+  ###########################################################################
+  
   #Perform database validation
-  message<-validateDBInputs(con, runTitle)
+  message<-validateDBInputs(con, runTitles)
   
   #If validateDBInput function returns a message that is not 'PASS' then
   #disconnect from con and send error message to console.
@@ -124,196 +151,245 @@ main<- function(input, output, overwriteOut = F, groupTag = NA, runTitle = NA)
   #to reflect the path where this data will be stored in R package.
   spInfo<-read.csv("C:/OpenFVS/utility/state_trans/SupportDB.csv")
   
-  #Obtain unique list of stand ids to process
-  standQuery<- paste("SELECT FVS_Summary2.StandID, FVS_Cases.RunTitle
+  #Create list for storing output by runTitles
+  allRunsOutput<-vector(mode = "list", length(runTitles))
+  
+  #==============================
+  #Begin loop across runTitles
+  #==============================
+  
+  for(r in 1:length(runTitles))
+  {
+    #Extract run from runTitles
+    run<-runTitles[r]
+    
+    #Print run that is being processed
+    cat(paste0(rep("*", 75), collapse = ""), "\n")
+    cat("*", "Processing run:", run, "\n")
+    cat(paste0(rep("*", 75), collapse = ""), "\n")
+    
+    #Obtain unique list of stand ids to process for run, r
+    standQuery<- paste("SELECT FVS_Summary2.StandID, FVS_Cases.RunTitle
                       FROM FVS_Summary2
                       INNER JOIN FVS_Cases
                       ON FVS_Summary2.CaseID = FVS_Cases.CaseID
-                      WHERE RunTitle =", paste0("'",runTitle,"'"))
-  stands<-unique(dbGetQuery(con, standQuery)[,1])
-  
-  cat("Total number of stands to process:", length(stands), "\n")
-  
-  #Split stand vector into list containing vectors of stand IDs
-  standList<-split(stands, ceiling(seq_along(stands)/100))
-  # cat("List of stands for processing created.", "\n")
-  
-  #Initialize list for storing stand output. Will have the same length as the 
-  #standList.
-  allStandsOutput<-vector(mode = "list", length(standList))
-  # cat("Length of allStandsOutput:", length(allStandsOutput), "\n")
-  
-  #==============================
-  #Begin loop across standList
-  #==============================
-  
-  #Initialize standSum. This will keep track of number of stands processed.
-  standSum<-0
-  
-  for(i in 1:length(standList))
-  {
-
-    #Select stands to process
-    standSelect<-standList[[i]]
-    cat("Length of standSelect:", length(standSelect), "\n")
+                      WHERE RunTitle LIKE ", paste0("'%",run,"%'"))
+    stands<-unique(dbGetQuery(con, standQuery)[,1])
     
-    #Generate a query that will be created by buildQuery function (see 
-    #ST_Functions.R).
-    dbQuery<-buildQuery(standSelect, runTitle)
+    cat("Total number of stands to process:", length(stands), "\n")
     
-    #Execute SQL query to obtain list of stand data
-    dfDat<-dbGetQuery(con, dbQuery)
-    dfList<-split(dfDat, dfDat$StandID)
-    rm(dfDat)
-    cat("Length of dfList", length(dfList), "\n")
+    #Split stand vector into list containing vectors of stand IDs
+    standList<-split(stands, ceiling(seq_along(stands)/250))
+    # cat("List of stands for processing created.", "\n")
     
-    #Initialize list that will store output for group of stands i.
-    standSelectOutput<-vector(mode="list",length(dfList))
-    cat("Length of standSelectOutput:", length(standSelectOutput), "\n")
+    #Initialize list for storing stand output
+    allStandsOutput<-vector(mode = "list", length(standList))
+    # cat("Length of allStandsOutput:", length(allStandsOutput), "\n")
     
     #==============================
-    #Begin loop across dfList
+    #Begin loop across standList
     #==============================
     
-    for(j in 1:length(dfList))
+    #Initialize standSum. This will keep track of number of stands processed.
+    standSum<-0
+    
+    for(i in 1:length(standList))
     {
-      #Extract stand ID i...
-      #PRINT: Message detailing which stand is being processed
-      standDF<-dfList[[j]]
-      cat("Processing stand:", unique(standDF$StandID),"\n")
       
-      #Determine years that will be evaluated
-      years<-unique(standDF$Year)
+      #Select stands to process
+      standSelect<-standList[[i]]
+      cat("Length of standSelect:", length(standSelect), "\n")
       
-      #Sort years
-      years<-sort(years)
+      #Generate a query that will be created by buildQuery function
+      dbQuery<-buildQuery(standSelect, run)
       
-      #Create list that will store output for stand j for all years
-      standYrOutput<-vector(mode = "list", length(years))
+      cat("Querying stands...", "\n")
       
-      #Merge species information, as well as, forest system
-      standDF<-merge(standDF, spInfo, by = "SpeciesPLANTS", all.x = T)
+      #Execute SQL query to obtain list of stand data
+      dfDat<-dbGetQuery(con, dbQuery)
       
-      #==============================
-      #Begin loop across years
-      #==============================
+      cat("Stand query complete.", "\n")
       
-      for(k in 1:length(years))
+      #If query yields no results, skip to next iteration of loop across
+      #standList
+      if(nrow(dfDat) <= 0)
       {
-        
-        #Extract rows for year j
-        standYrDF<- standDF[standDF$Year == years[k],]
-        
-        #Determine group to report in yrOutput
-        group<-getGroup(standYrDF["Groups"][[1]][1], groupTag)
-        
-        #Create dataframe that will store output for the stand in a given year.
-        yrOutput<-data.frame(RUN = runTitle,
-                             GROUP = group,
-                             PLOT_ID = unique(standYrDF$StandID),
-                             CY = k,
-                             PROJ_YEAR = years[k],
-                             ST_AGE = unique(standYrDF$Age))
-        
-        #Calculate tree BA
-        standYrDF$TREEBA<-standYrDF$DBH^2 * standYrDF$TPA * 0.005454
-        
-        #Calculate tree CC
-        standYrDF$TREECC<-pi * (standYrDF$CrWidth/2)^2 *(standYrDF$TPA/43560) * 100 
-        
-        #Calculate standBA
-        standBA<-sum(standYrDF$TREEBA)
-        
-        #Calculate stand percent canopy cover (uncorrected)
-        standCC<-sum(standYrDF$TREECC)
-        yrOutput$CAN_COV<-round(standCC,2)
-        
-        #Calculate DomType, Dom1, Dom2, Dom1Per, and Dom2Per
-        dtResults<-domType(standYrDF, yrOutput$CAN_COV)
-        
-        #Dominance type
-        yrOutput$DOM_TYPE<-dtResults[["DOMTYPE"]]
-        
-        #Dominance type 1
-        yrOutput$DCC1<-dtResults[["DCC1"]]
-        
-        #Dominance type 1 CC percentage
-        yrOutput$XDCC1<-round(dtResults[["XDCC1"]],2)
-        
-        #Dominance type 2
-        yrOutput$DCC2<-dtResults[["DCC2"]]
-        
-        #Dominance type 2 CC percentage
-        yrOutput$XDCC2<-round(dtResults[["XDCC2"]],2)
-        
-        #Canopy size class - midscale mapping
-        yrOutput$CAN_SIZCL<-canSizeCl(standYrDF[c("DBH", "TREECC")], 
-                                      yrOutput$CAN_COV,
-                                      1)
-        
-        #Canopy size class - timberland
-        yrOutput$CAN_SZTMB<-canSizeCl(standYrDF[c("DBH", "TREECC")], 
-                                      yrOutput$CAN_COV,
-                                      2)
-        
-        #Canopy size class - woodland
-        yrOutput$CAN_SZWDL<-canSizeCl(standYrDF[c("DBH", "TREECC")],
-                                      yrOutput$CAN_COV,
-                                      3)
-        
-        # #BA storiedness
-        # yrOutput$BA_STORY<-baStory(standYrDF, yrOutput$CAN_COV)
-        
-        #Add yrOutput to standYrOutput
-        standYrOutput[[k]]<-yrOutput
-        
-        #==================================
-        #End of loop across years
-        #==================================
+        cat("No valid tree records found in stand query.", "\n")
+        next
       }
       
-      #Combine all year-by-year information for standID i into a single dataframe.
-      standOut<-bind_rows(standYrOutput)
+      #Create list of dataframes to process and then remove dfDat from memory
+      dfList<-split(dfDat, dfDat$StandID)
+      rm(dfDat)
+      cat("Length of dfList", length(dfList), "\n")
       
-      #Now we add stand.out dataframe to our list of stands
-      standSelectOutput[[j]]<-standOut
+      #Initialize list that will store output for group of stands i.
+      standSelectOutput<-vector(mode="list",length(dfList))
+      cat("Length of standSelectOutput:", length(standSelectOutput), "\n")
       
-      #==================================
-      #End of loop across selected stands
-      #==================================
+      #==============================
+      #Begin loop across dfList
+      #==============================
+      
+      for(j in 1:length(dfList))
+      {
+        #Extract stand ID i...
+        #PRINT: Message detailing which stand is being processed
+        standDF<-dfList[[j]]
+        cat("Processing stand:", unique(standDF$StandID),"\n")
+        
+        #Determine years that will be evaluated
+        years<-unique(standDF$Year)
+        
+        #Sort years
+        years<-sort(years)
+        
+        #Create list that will store output for stand j for all years
+        standYrOutput<-vector(mode = "list", length(years))
+        
+        #Merge species information, as well as, forest system
+        standDF<-merge(standDF, spInfo, by = "SpeciesPLANTS", all.x = T)
+        
+        #==============================
+        #Begin loop across years
+        #==============================
+        
+        for(k in 1:length(years))
+        {
+          
+          #Extract rows for year j
+          standYrDF<- standDF[standDF$Year == years[k],]
+          
+          #Determine group to report in yrOutput
+          group<-getGroup(toupper(standYrDF["Groups"][[1]][1]), groupTag)
+          
+          #Create dataframe that will store output for the stand in a given year.
+          yrOutput<-data.frame(RUN = run,
+                               GROUP = group,
+                               PLOT_ID = unique(standYrDF$StandID),
+                               CY = k,
+                               PROJ_YEAR = years[k],
+                               ST_AGE = unique(standYrDF$Age))
+          
+          #Calculate tree BA
+          standYrDF$TREEBA<-standYrDF$DBH^2 * standYrDF$TPA * 0.005454
+          
+          #Calculate tree CC
+          standYrDF$TREECC<-pi * (standYrDF$CrWidth/2)^2 *(standYrDF$TPA/43560) * 100 
+          
+          #Calculate standBA
+          standBA<-sum(standYrDF$TREEBA)
+          
+          #Calculate stand percent canopy cover (uncorrected)
+          standCC<-sum(standYrDF$TREECC)
+          yrOutput$CAN_COV<-round(standCC,2)
+          
+          #Calculate DomType, Dom1, Dom2, Dom1Per, and Dom2Per
+          dtResults<-domType(standYrDF, yrOutput$CAN_COV)
+          
+          #Dominance type
+          yrOutput$DOM_TYPE<-dtResults[["DOMTYPE"]]
+          
+          #Dominance type 1
+          yrOutput$DCC1<-dtResults[["DCC1"]]
+          
+          #Dominance type 1 CC percentage
+          yrOutput$XDCC1<-round(dtResults[["XDCC1"]],2)
+          
+          #Dominance type 2
+          yrOutput$DCC2<-dtResults[["DCC2"]]
+          
+          #Dominance type 2 CC percentage
+          yrOutput$XDCC2<-round(dtResults[["XDCC2"]],2)
+          
+          #Canopy size class - midscale mapping
+          yrOutput$CAN_SIZCL<-canSizeCl(standYrDF[c("DBH", "TREECC")], 
+                                        yrOutput$CAN_COV,
+                                        1)
+          
+          #Canopy size class - timberland
+          yrOutput$CAN_SZTMB<-canSizeCl(standYrDF[c("DBH", "TREECC")], 
+                                        yrOutput$CAN_COV,
+                                        2)
+          
+          #Canopy size class - woodland
+          yrOutput$CAN_SZWDL<-canSizeCl(standYrDF[c("DBH", "TREECC")],
+                                        yrOutput$CAN_COV,
+                                        3)
+          
+          # #BA storiedness
+          yrOutput$BA_STORY<-baStory(standYrDF, yrOutput$CAN_COV)
+          
+          #Add yrOutput to standYrOutput
+          standYrOutput[[k]]<-yrOutput
+          
+          ### END OF LOOP ACROSS YEARS
+        }
+        
+        #Combine all year-by-year information for standID i into a single dataframe.
+        standOut<-bind_rows(standYrOutput)
+        
+        #Now we add stand.out dataframe to our list of stands
+        standSelectOutput[[j]]<-standOut
+        
+        ### END OF LOOP ACROSS SELECTED STANDS
+      }
+      
+      #Update standSum and send to console
+      standSum<-standSum + length(dfList)
+      cat(standSum, "stands processed out of", length(stands), "\n")
+      
+      #Combine data for selected stands
+      standSelectOut<-bind_rows(standSelectOutput)
+      
+      #Added data for group of stands to allStandsOutput.
+      allStandsOutput[[i]]<-standSelectOut
+      
+      ### END OF LOOP ACROSS ALL STANDS
     }
     
-    #Update standSum and send to console
-    standSum<-standSum + length(dfList)
-    cat(standSum, "stands processed out of", length(stands), "\n")
+    #Combine all output from allStandsOutput
+    allRunOut<-bind_rows(allStandsOutput)
     
-    #Combine data for selected stands
-    standSelectOut<-bind_rows(standSelectOutput)
+    #Print out how many stands had zero tree records
+    zeroTree<-length(stands) - standSum
+    cat(zeroTree, "stands contained no tree records.", "\n")
     
-    #Added data for group of stands to allStandsOutput.
-    allStandsOutput[[i]]<-standSelectOut
+    #Add allRunOut to AllRunOutput
+    allRunsOutput[[r]]<-allRunOut
     
-    #==================================
-    #End of loop across all stands
-    #==================================
+    #Print run that has finished being processed
+    cat(paste0(rep("*", 75), collapse = ""), "\n")
+    cat("*", "Finished processing run:", run, "\n")
+    cat(paste0(rep("*", 75), collapse = ""), "\n")
   }
   
-  #Print out how many stands had zero tree records
-  zeroTree<-length(stands) - standSum
-  cat(zeroTree, "stands contained no tree records.", "\n")
+  ### END OF LOOP ACROSS RUNS
+  
+  #Bind all dataframes in allRunsOutput
+  allOut<-bind_rows(allRunsOutput)
+  
+  #If there is no output from any of the runs in runTitles, then throw error
+  #message
+  if(nrow(allOut) <= 0)
+  {
+    stop("No output was produced. Make sure FVS_TreeList exists in input database.")
+  }
+  
+  #Print run that has finished being processed
+  cat(paste0(rep("*", 75), collapse = ""), "\n")
+  cat("*", "Finished processing all runs.", "\n")
+  cat(paste0(rep("*", 75), collapse = ""), "\n")
   
   #Disconnect from con
   dbDisconnect(con)
   cat("Disconnected from input database:", input, "\n")
   
-  #Combine all output from allStandsOutput
-  allOut<-bind_rows(allStandsOutput)
-  
   #Message indicating that data is being sent to output.
-  cat("Sending data to output file:", output, "\n")
+  cat("Writing data to output file:", output, "\n")
   
   #Determine file extension for specified output file.
-  if(fileExt == 'xlsx')
+  if(fileExtOut == 'xlsx')
   {
     #Determine if file exist. If file exists and overwrite is false, then
     #append data to existing file.
@@ -338,7 +414,7 @@ main<- function(input, output, overwriteOut = F, groupTag = NA, runTitle = NA)
   }
   
   #Determine file extension for specified output file.
-  if(fileExt == 'csv')
+  if(fileExtOut == 'csv')
   {
     
     #Add tab to standIDs. This avoids the problems of stand IDs being
@@ -362,7 +438,7 @@ main<- function(input, output, overwriteOut = F, groupTag = NA, runTitle = NA)
   }
   
   #PRINT: Message when output file has been written
-  cat("Data sent to output file:", output, "\n")
+  cat("Data written to output.","\n")
   
   #Return from function main
   return(cat("End of program.", "\n"))

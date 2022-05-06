@@ -52,11 +52,22 @@ validateDBInputs<-function(con, runTitle)
   
   if(validDB)
   {
-    if(!is.na(runTitle) & 
-       (! runTitle %in% unique(dbGetQuery(con, "SELECT RunTitle FROM FVS_Cases")[,1])))
+    
+    #Check if runs from runTitle are found in FVS_Cases table
+    runsFound<- runTitle %in% toupper(unique(dbGetQuery(con, "SELECT RunTitle FROM
+                                                FVS_Cases")[,1]))
+    
+    #If any runs are not found, then report them in error message
+    if(F %in% runsFound)
     {
-      message<-(paste("Run titles", paste0("\'",runTitle,"\'"), "not found in",
-      "input database. Please ensure run titles are spelled correctly."))
+      #Determine missing runs
+      missingRuns<-runTitle[runsFound == F]
+      
+      #Paste missing runs together separated by comma and space
+      missingRuns<-paste(missingRuns, collapse = ", ")
+      
+      message<-(paste("Run titles:",paste0("'",missingRuns,"'", collapse = ""),"not found in",
+      "input database. Please ensure all run titles are spelled correctly."))
       
       #Assign value of F to validDB. Database (con) is not ready for prcoessing.
       validDB = F
@@ -128,8 +139,8 @@ buildQuery<-function(stands, runTitle)
   #query
   if(!is.na(runTitle))
   {
-    runTitleString<-paste0("'",runTitle,"'")
-    query<-paste(query, paste("AND RunTitle =", runTitleString))
+    runTitleString<-paste0("'%",runTitle,"%'")
+    query<-paste(query, paste("AND RunTitle LIKE", runTitleString))
   }
   
   return(query)
