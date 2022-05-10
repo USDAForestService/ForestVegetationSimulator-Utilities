@@ -12,7 +12,7 @@
 #totalCC:    Percent canopy cover of stand.
 #############################################################################
 
-baStory<-function(stdYrFrame, totalCC, debug = T)
+baStory<-function(stdYrFrame, totalCC, debug = F)
 {
   #Calculate totalBA
   totalBA<-sum(stdYrFrame$TREEBA)

@@ -30,7 +30,7 @@
 #PIMOF (INT)
 #2TE (INT)
 
-domType<-function(stdYrFrame, totalCC){
+domType<-function(stdYrFrame, totalCC, debug = F){
   
   #Initialize boolean variable that is used to determine if DomType has been
   #found.
@@ -64,6 +64,9 @@ domType<-function(stdYrFrame, totalCC){
   {
     DomType = "NVG"
     domTypeFound = T
+    if(debug) cat("LEAD 1-5", "totalCC:", totalCC,"less than 10", "\n", "dcc1:",
+                  dcc1,"xdcc1:",xdcc1, "DomType:", DomType,
+                  "\n", fill = 80)
   }
   
   #==========================================================================
@@ -170,6 +173,17 @@ domType<-function(stdYrFrame, totalCC){
     leafRetenCC<-sort(leafRetenCC, decreasing = T)
     shadeTolCC<-sort(shadeTolCC, decreasing = T)
     
+    #Debug
+    if(debug) cat("In domType function", "\n")
+    if(debug) cat("sppCC:", names(sppCC), "\n",
+                  "sppCC values:", sppCC, "\n", "\n",
+                  "genusCC:", names(genusCC), "\n",
+                  "genusCC values:", genusCC,"\n", "\n",
+                  "leafRetenCC:", names(leafRetenCC), "\n",
+                  "leafRetenCC values:", leafRetenCC, "\n", "\n",
+                  "shadeTolCC:", names(shadeTolCC), "\n",
+                  "shadeTolCC values:", shadeTolCC, "\n", "\n")
+
     #========================================================================
     #LEAD 11-12
     #
@@ -190,10 +204,15 @@ domType<-function(stdYrFrame, totalCC){
       dcc1 = names(sppCC[1])
       
       #Calculate value for dcc1Per
-      xdcc1 = (sppCC[1] / totalCC) * 100
+      xdcc1 = sppCC[1]
       
       #Set domTypeFound to T
       domTypeFound = T
+      
+      #Lead 11 debug
+      if(debug) cat("LEAD 11", "sppCC:", sppCC[1], "totalCC:", totalCC,
+                    "dcc1:", dcc1, "xdcc1:", xdcc1, "DomType:", DomType,
+                    "\n", fill = 80)
     }
     
     if(!domTypeFound)
@@ -212,13 +231,19 @@ domType<-function(stdYrFrame, totalCC){
         
         #Set dcc1 and xdcc1
         dcc1 = names(sppCC[1])
-        xdcc1 = (sppCC[1] / totalCC) * 100
+        xdcc1 = sppCC[1]
         
         #Set dcc2 and xdcc2
         dcc2 = names(sppCC[2])
-        xdcc2 = (sppCC[2] / totalCC) * 100
+        xdcc2 = sppCC[2]
         
         domTypeFound = T
+        
+        #Lead 12 debug
+        if(debug) cat("LEAD 12", "sppCC1:", sppCC[1], "sppCC2:", sppCC[2],
+                      "totalCC:", totalCC, "dcc1:", dcc1, "xdcc1:", xdcc1,
+                      "dcc2:", dcc2, "xdcc2:", xdcc2,"DomType:", DomType,
+                      "\n", fill = 80)
       }
     }
     
@@ -243,9 +268,14 @@ domType<-function(stdYrFrame, totalCC){
         
         #Set dcc1 and xdcc1
         dcc1 = names(genusCC[1])
-        xdcc1 = (genusCC[1] / totalCC) * 100
+        xdcc1 = genusCC[1]
     
         domTypeFound = T
+        
+        #LEAD 13
+        if(debug) cat("LEAD 13", "genusCC1:", genusCC[1], "totalCC:", totalCC,
+                      "dcc1:", dcc1, "xdcc1:", xdcc1,"DomType:", DomType, "\n",
+                      fill = 80)
       }
     }
     
@@ -264,21 +294,24 @@ domType<-function(stdYrFrame, totalCC){
         genusSpNames<-sort(c(names(genusCC[1]), names(sppCC[spIndex])), 
                            decreasing = F)
         
-        #Separate genus and species name with underscore
-        DomType<-paste(genusSpNames, collapse = '_')
-        
         #Set DomType
-        DomType = names(genusCC[1])
+        DomType<-paste(genusSpNames, collapse = '_')
         
         #Set dcc1 and xdcc1
         dcc1 = names(genusCC[1])
-        xdcc1 = (genusCC[1] / totalCC) * 100
+        xdcc1 = genusCC[1]
         
         #Set dcc2 and xdcc2
         dcc2 = names(sppCC[spIndex])
-        xdcc2 = (sppCC[spIndex] / totalCC) * 100
+        xdcc2 = sppCC[spIndex]
         
         domTypeFound = T
+        
+        #LEAD 14
+        if(debug) cat("LEAD 14", "genusCC1:", genusCC[1], "sppCC:", sppCC[spIndex],
+                      "totalCC:", totalCC, "dcc1:", dcc1, "xdcc1:", xdcc1, "dcc2:",
+                       dcc2, "xdcc2:", xdcc2, "DomType:", DomType, "\n", 
+                      fill = 80)
       }
     }
   
@@ -302,13 +335,18 @@ domType<-function(stdYrFrame, totalCC){
         
         #Set dcc1 and xdcc1
         dcc1 = names(genusCC[1])
-        xdcc1 = (genusCC[1] / totalCC) * 100
+        xdcc1 = genusCC[1]
         
         #Set dcc2 and xdcc2
         dcc2 = names(genusCC[2])
-        xdcc2 = (genusCC[2] / totalCC) * 100
+        xdcc2 = genusCC[2]
         
         domTypeFound = T
+        
+        if(debug) cat("LEAD 15", "genusCC1:", genusCC[1], "genusCC2:", genusCC[2],
+                      "totalCC:", totalCC, "dcc1:", dcc1, "xdcc1:", xdcc1, "dcc2:",
+                      dcc2, "xdcc2:", xdcc2, "DomType:", DomType, "\n",
+                      fill = 80)
       }
     }
     
@@ -339,13 +377,18 @@ domType<-function(stdYrFrame, totalCC){
           
           #Set dcc1 and xdcc1
           dcc1 = names(leafRetenCC[1])
-          xdcc1 = (leafRetenCC[1] / totalCC) * 100
+          xdcc1 = leafRetenCC[1]
           
           #Set dcc2 and xdcc2
           dcc2 = names(leafRetenCC[2])
-          xdcc2 = (leafRetenCC[2] / totalCC) * 100
+          xdcc2 = leafRetenCC[2]
           
           domTypeFound = T
+          
+          #LEAD 7
+          if(debug) cat("LEAD 7", "totalCC:", totalCC, "dcc1:", dcc1, "xdcc1:",
+                        xdcc1, "dcc2:", dcc2, "xdcc2:", xdcc2, "DomType:",
+                        DomType, "\n", fill = 80)
         }
         
         #Else, DomType is TEDX
@@ -356,13 +399,18 @@ domType<-function(stdYrFrame, totalCC){
           
           #Set dcc1 and xdcc1
           dcc1 = names(leafRetenCC[1])
-          xdcc1 = (leafRetenCC[1] / totalCC) * 100
+          xdcc1 = leafRetenCC[1]
           
           #Set dcc2 and xdcc2
           dcc2 = names(leafRetenCC[2])
-          xdcc2 = (leafRetenCC[2] / totalCC) * 100
+          xdcc2 = leafRetenCC[2]
 
           domTypeFound = T
+          
+          #LEAD 6
+          if(debug) cat("LEAD 6", "totalCC:", totalCC, "dcc1:", dcc1, "xdcc1:",
+                        xdcc1, "dcc2:", dcc2, "xdcc2:", xdcc2, "DomType:",
+                        DomType, "\n", fill = 80)
         }
       }
       
@@ -379,13 +427,18 @@ domType<-function(stdYrFrame, totalCC){
           
           #Set dcc1 and xdcc1
           dcc1 = names(leafRetenCC[1])
-          xdcc1 = (leafRetenCC[1] / totalCC) * 100
+          xdcc1 = leafRetenCC[1]
           
           #Set dcc2 and xdcc2
           dcc2 = "TOL"
-          xdcc2 = (shadeTolCC["TOL"] / totalCC) * 100
+          xdcc2 = shadeTolCC["TOL"]
           
           domTypeFound = T
+          
+          #LEAD 17
+          if(debug) cat("LEAD 18", "totalCC:", totalCC, "dcc1:", dcc1, "xdcc1:",
+                        xdcc1, "dcc2:", dcc2, "xdcc2:", xdcc2, "DomType:",
+                        DomType, "\n", fill = 80)
         }
         
         #Else DomType is TETX
@@ -396,12 +449,17 @@ domType<-function(stdYrFrame, totalCC){
           
           #Set dcc1 and xdcc1
           dcc1 = names(leafRetenCC[1])
-          xdcc1 = (leafRetenCC[1] / totalCC) * 100
+          xdcc1 = leafRetenCC[1]
           
           #Set dcc2 and xdcc2
           dcc2 = "INT"
-          xdcc2 = (shadeTolCC["INT"] / totalCC) * 100
+          xdcc2 = shadeTolCC["INT"]
           domTypeFound = T
+          
+          #LEAD 18
+          if(debug) cat("LEAD 17", "totalCC:", totalCC, "dcc1:", dcc1, "xdcc1:",
+                        xdcc1, "dcc2:", dcc2, "xdcc2:", xdcc2, "DomType:",
+                        DomType, "\n", fill = 80)
         }
       }
     }
