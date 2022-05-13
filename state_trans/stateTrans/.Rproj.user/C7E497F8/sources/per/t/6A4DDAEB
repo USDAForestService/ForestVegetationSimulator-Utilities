@@ -1,0 +1,24 @@
+{
+    "id": "6A4DDAEB",
+    "path": "C:/State_Transition/stateTrans/data-raw/DATASET.R",
+    "project_path": "data-raw/DATASET.R",
+    "type": "r_source",
+    "hash": "3005432970",
+    "contents": "",
+    "dirty": false,
+    "created": 1652363411410.0,
+    "source_on_save": false,
+    "relative_order": 7,
+    "properties": {
+        "source_window_id": "",
+        "Source": "Source"
+    },
+    "folds": "",
+    "lastKnownWriteTime": 1652278171,
+    "encoding": "UTF-8",
+    "collab_server": "",
+    "source_window": "",
+    "last_content_update": 1652278171,
+    "read_only": false,
+    "read_only_alternatives": []
+}
