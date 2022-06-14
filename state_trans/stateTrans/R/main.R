@@ -5,21 +5,6 @@
 #for state and transition models.
 #############################################################################
 
-#NOTE:
-#If we end up making a package for this work then the library and source
-#statements will not be included in this file.
-
-#Testing
-
-# library(RSQLite)
-# library(dplyr)
-# library(openxlsx)
-
-# source("C:/R3_StateTransition_Modeling/R_Code/canSizCls.R")
-# source("C:/R3_StateTransition_Modeling/R_Code/dbInput.R")
-# source("C:/R3_StateTransition_Modeling/R_Code/domType.R")
-# source("C:/R3_StateTransition_Modeling/R_Code/baStory.R")
-
 #############################################################################
 #Function : main.R
 #
@@ -290,7 +275,7 @@ main<- function(input, output, overwriteOut = F, groupTag = NA, runTitles = NULL
 
           #Calculate stand percent canopy cover (uncorrected)
           standCC<-sum(standYrDF$TREECC)
-          yrOutput$CAN_COV<-round(standCC,2)
+          yrOutput$CAN_COV<-round(standCC, 2)
 
           #Calculate DomType, Dom1, Dom2, Dom1Per, and Dom2Per
           dtResults<-domType(standYrDF, yrOutput$CAN_COV)
@@ -327,6 +312,9 @@ main<- function(input, output, overwriteOut = F, groupTag = NA, runTitles = NULL
 
           # #BA storiedness
           yrOutput$BA_STORY<-baStory(standYrDF, yrOutput$CAN_COV)
+
+          #Now correct canopy cover (CAN_COV)
+          yrOutput$CAN_COV<-round(correctCC(yrOutput$CAN_COV),2)
 
           #Add yrOutput to standYrOutput
           standYrOutput[[k]]<-yrOutput

@@ -1,34 +1,28 @@
 #############################################################################
 #Function: domType
 #
-#CURRENT STATUS: Function returns up to 'LEAD 18' of R3 DomType algorithm.
-#Accuracy stills needs to be verified against known dataset. Need to
-#determine shade tolerance for species that do not have a value. May need to
-#correct canopy cover for overlap. Also need to determine how many characters
-#from genus names should be reported.
-#
 #Calculate stand dominance type in accordance with NFS Regional Vegetation
-#Classification Algorithms Vandendriesche (2013) pg. R3-1.
-#
-# Dominance base on percentage of total tree canopy cover
+#Classification Algorithms Vandendriesche (2013 pg. R3-1 - R3-3).
 #
 #Arguments
-#stdYrFrame: Data frame consisting of treelist for single year of single
-#            stand. Frame attributes include: StandID, Year, SpeciesPlants,
-#            TPA, DBH, TREEBA, TREECC, RunTitle, Age, SPCD (FIA species code),
-#            Genus, Leaf_Reten, R3_Shade_Tol, R3_Dia_Meas.
+#
+#stdYrFrame: Dataframe that contains tree records for stand. Must include DBH
+#            and TREECC as a column.
+#
 #totalCC:    Percent canopy cover of stand.
+#
+#debug:	     Boolean variable used to specify if debug output should be
+#            printed to R console. If value is TRUE, then debug output will
+#            printed to R console.
+#
+#Return value
+#
+#List containing dominance type (DOMTYPE), dominant species/genus/category
+#or species/genus/category occurring before underscore in dominance type
+#(DCC1), percent canopy cover represented by DCC1 (XDCC1),
+#species/genus/category occurring after underscore in dominance type (DCC2),
+#percent canopy cover represented by DCC2 (XDCC2).
 #############################################################################
-
-#Plot, 0004201604060100990968, crashed due to other hardwood species not
-#having shade tolerance values.
-
-#Species with NA shade tolerance codes based on AZ and NM FIA datasets in
-#relation to species in CR variant.
-#2TB (INT)
-#ABLA (INT)
-#PIMOF (INT)
-#2TE (INT)
 
 #'@export
 domType<-function(stdYrFrame, totalCC, debug = F){
@@ -61,13 +55,13 @@ domType<-function(stdYrFrame, totalCC, debug = F){
   #            does not consider these types of life forms.
   #==========================================================================
 
-  if(totalCC < 10)
+  if(correctCC(totalCC) < 10)
   {
     DomType = "NVG"
     domTypeFound = T
-    if(debug) cat("LEAD 1-5", "totalCC:", totalCC,"less than 10", "\n", "dcc1:",
-                  dcc1,"xdcc1:",xdcc1, "DomType:", DomType,
-                  "\n", fill = 80)
+    if(debug) cat("LEAD 1-5", "totalCC:", correctCC(totalCC),"less than 10",
+                  "\n", "dcc1:", dcc1,"xdcc1:",xdcc1, "DomType:", DomType, "\n",
+                  fill = 80)
   }
 
   #==========================================================================
@@ -466,6 +460,10 @@ domType<-function(stdYrFrame, totalCC, debug = F){
     }
   }
 
+  #Correct canopy cover values for xdcc1 and xdcc2
+  xdcc1<-correctCC(xdcc1)
+  xdcc2<-correctCC(xdcc2)
+
   #Collect results to return in a list:
   #Index 1: DomType
   #Index 2: dcc1
@@ -490,22 +488,24 @@ domType<-function(stdYrFrame, totalCC, debug = F){
 #exclusive in lead 14 of R3 dominance type algorithm. This function takes
 #the name of the most abundant genus, the names of each species found in the
 #plot (sorted by percent canopy cover in descending order), and a named list
-#of genera. This function returns the index where the name of the most
-#abundant genus does not match the genus in the input list of genera.
+#of genera.
 #
 #Arguments
+#
 #genus:     Name of most abundant genus by percent canopy cover for current
 #           inventory plot in domType function.
+#
 #spNames:   Vector of species names ordered by abundance in terms of percent
 #           canopy cover for current inventory plot in domType function.
+#
 #genusList: Vector of genera whose indices are named by each species found
 #           in current inventory plot in domType function.
+#
+#Return value
+#
+#Index where the name of the most abundant genus does not match the genus in
+#the input list of genera.
 #############################################################################
-
-# genus<-"PSEUDOTSUGA"
-# spNames<-c("PSME", "PIPO", "PICO")
-# genusList<-c("PIPO" = "PINUS", "PICO" = "PINUS", "PSME" = "PSEUDOTSUGA")
-# excGenus(genus, spNames, genusList)
 
 excGenus<-function(genus, spNames, genusList)
 {

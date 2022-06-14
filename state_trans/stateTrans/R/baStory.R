@@ -1,15 +1,23 @@
 #############################################################################
 #Function: baStory
 #
-#CURRENT STATUS:
-#
 #Calculates storiedness in accordance with NFS Regional Vegetation
-#Classification Algorithms Vandendriesche (2013) pg. R3-1.
+#Classification Algorithms Vandendriesche (2013 pg. R3-4 - R3-5).
 #
 #Arguments
-#stdYrFrame: Tree level dataframe that contains DBH and basal area values
-#            for each tree record.
-#totalCC:    Percent canopy cover of stand.
+#
+#stdYrFrame: Dataframe that contains tree records for stand. Must include
+#            DBH and TREEBA as a column.
+#
+#TotalCC:    Uncorrected percent canopy cover of stand.
+#
+#debug:	     Boolean variable used to specify if debug output should be
+#            printed to R console. If value is TRUE, then debug output will
+#            printed to R console.
+#
+#Return value
+#
+#Storiedness value (integer value from 0 - 3)
 #############################################################################
 
 #'@export
@@ -20,10 +28,10 @@ baStory<-function(stdYrFrame, totalCC, debug = F)
   if(debug) cat("BA of plot is", totalBA, "\n")
 
   #Test if plot is below minimum CC. If so, then set story to 0.
-  if(totalCC < 10)
+  if(correctCC(totalCC) < 10)
   {
     story<-0
-    if(debug) cat("Total CC:", totalCC, " less than 10.", "\n")
+    if(debug) cat("Total CC:", correctCC(totalCC), " less than 10.", "\n")
   }
 
   #Else calculate story using storiedness algorithm

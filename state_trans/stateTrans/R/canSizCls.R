@@ -1,6 +1,5 @@
 #############################################################################
 #Function: getDiaValues
-#CURRENT STATUS: This function could use a little more testing.
 #
 #This function takes in a type argument and returns a list containing a vector
 #of diameters and a vector of diameter class values based on R3 midscale
@@ -8,6 +7,7 @@
 #different diameter classes are described in NFS_Reg_Veg_Class.pdf.
 #
 #Arguments
+#
 #type: Indicator variable used to determine which diameters and diameter class
 #      values to return.
 #      1 - Midscale mapping (default and will be used if any value other than
@@ -15,7 +15,12 @@
 #      2 - Timberland dominance type
 #      3 - Woodland dominance type
 #
+#debug:	     Boolean variable used to specify if debug output should be
+#            printed to R console. If value is TRUE, then debug output will
+#            printed to R console.
+#
 #Return values when type = 1
+#
 #diameters = c(0, 5, 10, 20, 30)
 #diameter class values:
 #1 = seedling sapling canopy cover
@@ -25,6 +30,7 @@
 #5 - giant tree canopy cover
 #
 #Return values when type = 2
+#
 #diameters = c(0, 5, 10, 20)
 #diameter class values:
 #1 = seedling sapling canopy cover
@@ -33,6 +39,7 @@
 #4 = large - giant tree cover
 #
 #Return values when type = 3
+#
 #diameters = c(0, 5, 10)
 #diameter class values:
 #1 = seedling sapling canopy cover
@@ -82,8 +89,6 @@ getDiaValues<-function(type = 1, debug = F)
 
 #############################################################################
 #Function: findCategory
-#CURRENT STATUS: I think this function is mostly working but could use a
-#little more testing.
 #
 #This function returns a category or classification from input argument
 #validOutputs based on the value of input argument x. The following logic
@@ -100,21 +105,29 @@ getDiaValues<-function(type = 1, debug = F)
 #3) If x is greater than last value in inputValues, the last item in
 #   validOutputs is returned.
 #
-#4) When 1 - 3 are not true, then x is compared against all i-th and ith+1
-#   values in inputValues. If x is a value GE to ith value and LT ith + 1
+#4) When 1 - 3 are not true, then x is compared against all i-th and i-th+1
+#   values in inputValues. If x is a value GE to ith value and LT i-th + 1
 #   value in inputValues, then ith value in outputValues is returned.
 #
 #Arguments
+#
 #x:             Incoming value to evaluate. Must be numeric and not NA.
+#
 #inputValues:   Values to compare x against. This argument has to be the same
 #               length as outputValues.
+#
 #outputValues:  Classification values to return containing depending on value
-#               x. This arugment has to be the same length as inputValues.
+#               x. This argument has to be the same length as inputValues.
+#
 #invalidReturn: Default value to return when:
 #               1) x is not a valid value
 #               2) InputValues is empty, a character vector, or contains any
 #                  NA values.
 #               3) Length of inputValues does not equal outputValues.
+#
+#Return value
+#
+#Numeric (or integer) category or classification
 #############################################################################
 
 findCategory<-function(x, inputValues = 0, outputValues = 0, invalidReturn = 0,
@@ -199,22 +212,28 @@ findCategory<-function(x, inputValues = 0, outputValues = 0, invalidReturn = 0,
 
 #############################################################################
 #Function: getCanSizDC
-#CURRENT STATUS: This function could use a little more testing.
 #
 #This function takes in a vector of DBH values and a type argument and returns
 #a vector of diameter classes that are used to calculate canopy size class
 #in the canSizeCls function.
 #
 #Arguments
-#DBH:  Vector containing DBH values.
-#type: Indicator variable used to determine which type of diameter class to
-#      return
-#      1 - Midscale mapping (default and will be used if any value other than
+#
+#DBH:   Vector containing DBH values.
+#
+#type:  Indicator variable used to determine which type of diameter class to
+#       return
+#       1 - Midscale mapping (default and will be used if any value other than
 #          2 or 3 is entered for type argument.)
-#      2 - Timberland dominance type
-#      3 - Woodland dominance type
+#       2 - Timberland dominance type
+#       3 - Woodland dominance type
+#
+#debug:	Boolean variable used to specify if debug output should be
+#       printed to R console. If value is TRUE, then debug output will
+#       printed to R console.
 #
 #Possible return values when type = 1
+#
 #1 = seedling sapling canopy cover
 #2 = small tree canopy cover
 #3 = medium and large tree canopy cover
@@ -222,12 +241,14 @@ findCategory<-function(x, inputValues = 0, outputValues = 0, invalidReturn = 0,
 #5 - giant tree canopy cover
 #
 #Possible return values when type = 2
+#
 #1 = seedling sapling canopy cover
 #2 = small tree canopy cover
 #3 = medium tree canopy cover
 #4 = large - giant tree cover
 #
 #Possible return values when type = 3
+#
 #1 = seedling sapling canopy cover
 #2 = small tree canopy cover
 #3 = medium - giant tree cover
@@ -258,17 +279,16 @@ getCanSizeDC<-function(DBH, type = 1, debug = F)
 #############################################################################
 #Function: calcCanSizCl
 #
-#CURRENT STATUS: This function may need a little more refinement. Need to
-#find out if CanSizCl should be zero if stand CC is below a certain threshold
-#(i.e. 10% canopy cover).
-#
 #This function takes in a tree-level dataframe and returns a canopy size
 #class for the inventory plot that the tree records reside on.
 #
 #Argument
+#
 #dat:     Tree level dataframe that contains DBH and canopy percent cover of each
 #         tree record (TREECC).
+#
 #totalCC: Percent canopy cover of stand.
+#
 #type:    Indicator variable used to determine which type of diameter class to
 #         return
 #         1 - Midscale mapping (default and will be used if any value other than
@@ -277,6 +297,7 @@ getCanSizeDC<-function(DBH, type = 1, debug = F)
 #         3 - Woodland dominance type
 #
 #Possible return values when type = 1
+#
 #1 = seedling sapling canopy cover
 #2 = small tree canopy cover
 #3 = medium and large tree canopy cover
@@ -284,12 +305,14 @@ getCanSizeDC<-function(DBH, type = 1, debug = F)
 #5 - giant tree canopy cover
 #
 #Possible return values when type = 2
+#
 #1 = seedling sapling canopy cover
 #2 = small tree canopy cover
 #3 = medium tree canopy cover
 #4 = large - giant tree cover
 #
 #Possible return values when type = 3
+#
 #1 = seedling sapling canopy cover
 #2 = small tree canopy cover
 #3 = medium - giant tree cover
@@ -303,10 +326,10 @@ canSizeCl<-function(dat, totalCC, type=1, debug = F)
   DC<-TREECC<-NULL
 
   #If plot CC is less than 10% then cansizcl is 0
-  if(totalCC < 10)
+  if(correctCC(totalCC) < 10)
   {
     cansizcl = 0
-    if(debug) cat("Total CC:", totalCC, " less than 10.", "\n")
+    if(debug) cat("Total CC:", correctCC(totalCC), " less than 10.", "\n")
   }
 
   #Else calculate cansizcl
@@ -331,3 +354,29 @@ canSizeCl<-function(dat, totalCC, type=1, debug = F)
 
   return(cansizcl)
 }
+
+#############################################################################
+#Function: correctCC
+#
+#This function takes in an uncorrected percent canopy cover value and returns
+#a corrected value using the relationship described on page 2 of Crookston,
+#Nicholas L.; Stage, Albert R. 1999. Percent canopy cover and stand structure
+#statistics from the Forest Vegetation Simulator. Gen. Tech. Rep. RMRS-GTR-24.
+#Ogden, UT: U. S. Department of Agriculture, Forest Service, Rocky Mountain
+#Research Station. 11 p.
+#
+#Argument
+#
+#CC: Uncorrected CC value
+#
+#Return value
+#
+#Corrected CC value.
+#############################################################################
+
+correctCC<-function(CC)
+{
+  corCC = 100 * (1 - exp ( - 0.01* CC))
+  return(corCC)
+}
+
