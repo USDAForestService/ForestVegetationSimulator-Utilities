@@ -142,7 +142,6 @@ main<- function(input, output, overwriteOut = F, groupTag = NA, runTitles = NULL
   #Read in info from SupportDB.csv. The path here will have to be changed in order
   #to reflect the path where this data will be stored in R package.
   supportSP<-stateTrans::supportSP
-  cat(names(supportSP))
 
   #Create list for storing output by runTitles
   allRunsOutput<-vector(mode = "list", length(runTitles))

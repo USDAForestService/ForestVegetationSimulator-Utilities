@@ -1,22 +1,23 @@
 #############################################################################
 #Function: validateDBInputs
-#CURRENT STATUS: This function could use a little more testing.
 #
 #This function performs a series of checks to see if incoming FVS output
 #database is ready for processing. A message is returned from the function
-#which will determine if processing of input database in main function
+#which will determine if processing of input database in main (main.R) function
 #is terminated or continued.
 #
 #Arguments
+#
 #con:       Connection to input .db
-#runTitle:  Name of FVS run title that will be searched for in FVS_Cases
-#           table if not NA.
-#groupCode: Grouping code that will be searched for in FVS_Compute table if
-#           not NA.
+#
+#runTitle:  Name of FVS run title(s) that will be searched for in FVS_Cases
+#           table.
+#
+#Value
+#
+#Character string containing message.
 #############################################################################
 
-# con<-dbConnect(SQLite(), "C:/FVS/R3_Work/FVSOut.db")
-# dbDisconnect(con)
 validateDBInputs<-function(con, runTitle)
 {
   #Flag variable used to determine if further checks should be made on incoming
@@ -83,18 +84,22 @@ validateDBInputs<-function(con, runTitle)
 
 #############################################################################
 #Function: buildQuery
-#CURRENT STATUS: This function could use a little more testing.
 #
-#This function builds and returns an SQL query that is used to read in data
-#from an output FVS database in main function.
+#This function builds and returns a string of SQL statements that can be used
+#to read in data from the FVS_TreeList, FVS_Summary2, and FVS_Cases tables of
+#an FVS output database in main function (main.R). The buildQuery function
+#can be invoked outside of main.R for testing purposes and can be used in the
+#dbGetQuery function of the RSQLite R package.
 #
 #Arguments
-#runTitle:  Name of FVS run title that will be used to query input data found
-#           in con. If this value is NA, then data found in con will not be
-#           queried by run title.
-#groupCode: Grouping code that will be joined to treelist data that is
-#           is processed in main function. If this value is NA, then no
-#           grouping code will be joined to treelist data.
+#
+#stands:	 Character vector of stand IDs.
+#
+#runTitle: Character string pertaining to FVS run title.
+#
+#Value
+#
+#Character string of SQL statements.
 #############################################################################
 
 #'@export
@@ -113,8 +118,7 @@ buildQuery<-function(stands, runTitle)
           ON TL.CaseID = FVS_Summary2.CaseID AND
           TL.Year = FVS_Summary2.Year")
 
-  #Add stand query as long as length of stands is at least 1. Length of stands
-  #should never be one though...
+  #Add stand query as long as length of stands is at least 1.
   if(length(stands) >= 1)
   {
     #Add quotes to stand and commas to stands
@@ -149,16 +153,17 @@ buildQuery<-function(stands, runTitle)
 
 #############################################################################
 #Function: getGroup
-#CURRENT STATUS: This function could use a little more testing.
 #
 #This function takes in a string of FVS group labels and returns the group
 #proceeding the input string identifier as specified in label argument.
 #
 #Arguments
+#
 #groups: String containing group labels as formatted in the FVS_Cases table.
+#
 #label:  Label that is used to extract the group of interest. For instance,
 #        the label "ERU=" would be used to extract "MCW" from the group
-#        code ,ERU=MCW. If label is not found in group, then first group in
+#        code, ERU=MCW. If label is not found in group, then first group in
 #        groups argument is returned.
 #############################################################################
 
