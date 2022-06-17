@@ -1,12 +1,19 @@
 #############################################################################
 #Function: fvsGaak
 #
-#This function creates a gaak table with the SQL instructions for each type
-#of FIA data (plots, conditions, subplots).
+#This function creates a gaak table with the SQL statements for various
+#grouping codes.
 #
 #Argument
 #
-#dbName:   Name of database used in gaak table.
+#dbName: Name of database used in gaak table.
+#
+#type:   Variable to determine what grouping codes are included in GAAK table.
+#        1 = Standard FVS grouping codes (All_Stands, All_Plots)
+#        2 = FIA grouping codes (All_FIA_Conditions, All_FIA_Plots,
+#            All_FIA_Subplots)
+#        3 = Both standard FVS grouping codes and FIA grouping codes
+#        Default value for type argument is 2.
 #
 #Return value
 #
@@ -14,19 +21,22 @@
 #############################################################################
 
 #'@export
-fvsGaak<-function(dbName="FVS_Data")
+fvsGaak<-function(dbName="FVS_Data", type = 2)
 {
+  #Capture invalid type argument values
+  if(type < 1 | type > 3) type = 2
+
   #Create dataframe containg FVS_GroupAddfilesAndKeywords table
   gaak<-data.frame(GROUPS = c("All_Stands","All_Plots","All_FIA_Conditions","All_FIA_Plots", "All_FIA_Subplots"),
                    ADDFILES = c("","","","",""),
                    FVSKEYWORDS = c(paste("Database", "DSNin", paste0(dbName, ".db"), "StandSQL",
-                                         "SELECT *", "FROM  FVS_StandInit", "WHERE Stand_CN = '%Stand_CN%'",
+                                         "SELECT *", "FROM  FVS_StandInit", "WHERE Stand_ID = '%StandID%'",
                                          "EndSQL","TreeSQL", "SELECT *", "FROM FVS_TreeInit",
-                                         "WHERE Stand_CN ='%Stand_CN%'", "EndSQL", "END", sep = "\n"),
+                                         "WHERE Stand_ID ='%StandID%'", "EndSQL", "END", sep = "\n"),
                                    paste("Database", "DSNin", paste0(dbName, ".db"), "StandSQL",
-                                         "SELECT *", "FROM  FVS_PlotInit", "WHERE StandPlot_CN = '%Stand_CN%'",
+                                         "SELECT *", "FROM  FVS_PlotInit", "WHERE StandPlot_ID = '%StandID%'",
                                          "EndSQL","TreeSQL", "SELECT *", "FROM FVS_TreeInit",
-                                         "WHERE StandPlot_CN ='%Stand_CN%'", "EndSQL", "END", sep = "\n"),
+                                         "WHERE StandPlot_ID ='%StandID%'", "EndSQL", "END", sep = "\n"),
                                    paste("Database", "DSNin", paste0(dbName, ".db"), "StandSQL",
                                          "SELECT *", "FROM  FVS_StandInit_Cond", "WHERE Stand_CN = '%Stand_CN%'",
                                          "EndSQL","TreeSQL", "SELECT *", "FROM FVS_TreeInit_Cond",
@@ -39,6 +49,19 @@ fvsGaak<-function(dbName="FVS_Data")
                                          "SELECT *", "FROM  FVS_PlotInit_Plot", "WHERE StandPlot_CN = '%Stand_CN%'",
                                          "EndSQL","TreeSQL", "SELECT *", "FROM FVS_TreeInit_Plot",
                                          "WHERE StandPlot_CN ='%Stand_CN%'", "EndSQL", "END", sep = "\n")))
+
+  #If type is 1, return GAAK with just FVS grouping codes
+  if(type == 1)
+  {
+    gaak<-gaak[1:2,]
+  }
+
+  #If type is 2, return GAAK with just FIA grouping codes
+  if(type == 2)
+  {
+    gaak<-gaak[3:5,]
+  }
+
   return(gaak)
 }
 
