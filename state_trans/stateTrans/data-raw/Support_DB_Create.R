@@ -4,7 +4,7 @@
 #This script is used to create the R3 support SQLite database.
 #############################################################################
 
-library(readxl)
+library(openxlsx)
 library(RSQLite)
 library(devtools)
 
@@ -15,7 +15,7 @@ source("C:/State_Transition/stateTrans/data-raw/Species_Functions.R")
 #============================================================================
 
 #Read in FIA REF_SPECIES.csv
-supportSP<-read.csv("C:/State_Transition/Species_Documentation/REF_SPECIES.csv")
+supportSP<-read.csv("C:/State_Transition/stateTrans/data-raw/REF_SPECIES.csv")
 
 #Extract SPCD, COMMON_NAME, GENUS, SPECIES, and SPECIES_SYMBOL
 supportSP<-supportSP[c("SPCD","COMMON_NAME","GENUS","SPECIES", "SPECIES_SYMBOL")];head(supportSP)
@@ -38,8 +38,11 @@ supportSP$TYPE<-ifelse(supportSP$TYPE == 0, "EVERGREEN", "DECIDUOUS");head(suppo
 supportSP<-subset(supportSP, SPCD < 1000);head(supportSP)
 
 #Read in R3 species spreadsheet
-r3.data<-read_excel("C:/State_Transition/stateTrans/data-raw/FIA_FVS_Tables_Ryan_Nov2021.xlsx",
+r3.data<-readWorkbook("C:/State_Transition/stateTrans/data-raw/FIA_FVS_Tables_Ryan_Nov2021.xlsx",
            sheet = "default tree assignments")
+
+#Replace periods in column names with space character
+colnames(r3.data)<-gsub("\\.", " ", colnames(r3.data));colnames(r3.data)
 
 colnames(r3.data)[names(r3.data)=='PLANTS Code']<-'SPECIES_SYMBOL';names(r3.data)
 
@@ -91,7 +94,7 @@ supportSP$LEAF_RETEN<-ifelse(is.na(supportSP$LEAF_RETEN), supportSP$FIA_TYPE, su
 # Derive ERU_INFO table
 #============================================================================
 
-r3.eru<-read_excel("C:/State_Transition/stateTrans/data-raw/R3_Habitat_Types_Working.xlsx",
+r3.eru<-readWorkbook("C:/State_Transition/stateTrans/data-raw/R3_Habitat_Types_Working.xlsx",
                     sheet = "habitat type x eru")
 
 #Remove duplicate rows based on ERU
