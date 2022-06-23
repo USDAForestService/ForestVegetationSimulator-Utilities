@@ -17,6 +17,7 @@
 #
 #Return value
 #
+#
 #List containing dominance type (DOMTYPE), dominant species/genus/category
 #or species/genus/category occurring before underscore in dominance type
 #(DCC1), percent canopy cover represented by DCC1 (XDCC1),
@@ -278,32 +279,37 @@ domType<-function(stdYrFrame, totalCC, debug = F){
     #type
     if(!domTypeFound)
     {
-      #Find index where species and genus are mutually exclusive
-      spIndex<-excGenus(names(genusCC[1]), names(sppCC), genusSp)
+      # cat("spp:", names(sppCC)[1],
+      #     "genusCC:", names(genusCC),
+      #     "genusSP:", names(genusSp),
+      #     "\n")
 
-      if(genusCC[1] >= (totalCC * 0.20) &&
-         sppCC[spIndex] >= (totalCC * 0.20) &&
-         genusCC[1] + sppCC[spIndex] >= (totalCC * 0.80))
+      #Find index where species and genus are mutually exclusive
+      genIndex<-excGenusSp(names(sppCC)[1], names(genusCC), genusSp)
+
+      if(genusCC[genIndex] >= (totalCC * 0.20) &&
+         sppCC[1] >= (totalCC * 0.20) &&
+         genusCC[genIndex] + sppCC[1] >= (totalCC * 0.80))
       {
         #Get and sort names of genus and species
-        genusSpNames<-sort(c(names(genusCC[1]), names(sppCC[spIndex])),
+        genusSpNames<-sort(c(names(genusCC[genIndex]), names(sppCC[1])),
                            decreasing = F)
 
         #Set DomType
         DomType<-paste(genusSpNames, collapse = '_')
 
         #Set dcc1 and xdcc1
-        dcc1 = names(genusCC[1])
-        xdcc1 = genusCC[1]
+        dcc1 = names(sppCC[1])
+        xdcc1 = sppCC[1]
 
         #Set dcc2 and xdcc2
-        dcc2 = names(sppCC[spIndex])
-        xdcc2 = sppCC[spIndex]
+        dcc2 = names(genusCC[genIndex])
+        xdcc2 = genusCC[genIndex]
 
         domTypeFound = T
 
         #LEAD 14
-        if(debug) cat("LEAD 14", "genusCC1:", genusCC[1], "sppCC:", sppCC[spIndex],
+        if(debug) cat("LEAD 14", "sppCC1:", sppCC[1], "genusCC:", sppCC[genIndex],
                       "totalCC:", totalCC, "dcc1:", dcc1, "xdcc1:", xdcc1, "dcc2:",
                        dcc2, "xdcc2:", xdcc2, "DomType:", DomType, "\n",
                       fill = 80)
@@ -414,11 +420,11 @@ domType<-function(stdYrFrame, totalCC, debug = F){
       else
       {
         #If CC of tolerant evergreens > CC of intolerant evergreens then DomType
-        #is TEIX
+        #is TETX
         if(shadeTolCC["TOL"] > shadeTolCC["INT"])
         {
           #Set DomType
-          DomType = "TEIX"
+          DomType = "TETX"
 
           #Set dcc1 and xdcc1
           dcc1 = names(leafRetenCC[1])
@@ -436,11 +442,11 @@ domType<-function(stdYrFrame, totalCC, debug = F){
                         DomType, "\n", fill = 80)
         }
 
-        #Else DomType is TETX
+        #Else DomType is TEIX
         else
         {
           #Set DomType
-          DomType = "TETX"
+          DomType = "TEIX"
 
           #Set dcc1 and xdcc1
           dcc1 = names(leafRetenCC[1])
@@ -481,25 +487,24 @@ domType<-function(stdYrFrame, totalCC, debug = F){
 }
 
 #############################################################################
-#Function: excGenus
+#Function: excGenusSp
 #
-#This function is used to determine if most abundant genus by percent canopy
-#cover and most abundant species by most abundant canopy cover are mutually
-#exclusive in lead 14 of R3 dominance type algorithm. This function takes
-#the name of the most abundant genus, the names of each species found in the
-#plot (sorted by percent canopy cover in descending order), and a named list
-#of genera.
+#This function is used to determine a genus that is mutually exclusive from
+#the genus of the most abundant species by percent canopy cover in lead 14 of
+#R3 dominance type algorithm. This function takes the name of the most
+#abundant species, the names of each genus (sorted by percent canopy cover
+#in descending order), and a named list of genera (unsorted).
 #
 #Arguments
 #
-#genus:     Name of most abundant genus by percent canopy cover for current
-#           inventory plot in domType function.
+#sp:        Name of most abundant species by percent canopy cover for current
+#           stand in domType function.
 #
-#spNames:   Vector of species names ordered by abundance in terms of percent
-#           canopy cover for current inventory plot in domType function.
+#spNames:   Vector of genera names ordered by abundance in terms of percent
+#           canopy cover for current stand in domType function.
 #
 #genusList: Vector of genera whose indices are named by each species found
-#           in current inventory plot in domType function.
+#           in current stand in domType function.
 #
 #Return value
 #
@@ -507,7 +512,7 @@ domType<-function(stdYrFrame, totalCC, debug = F){
 #the input list of genera.
 #############################################################################
 
-excGenus<-function(genus, spNames, genusList)
+excGenusSp<-function(sp, genNames, genusList)
 {
   #Initialize boolean flag variable. This variable will be set to true when
   #genus argument and genus found in genusList do NOT match.
@@ -519,18 +524,22 @@ excGenus<-function(genus, spNames, genusList)
   #Initialize mutual exclusive index to 1
   excIndex = 1
 
-  #Traverse across spNames and look for first instance when genus and genus from
+  #Find genus of most abundant species (sp) based on percent canopy cover
+  genIndex<-match(sp, names(genusList))
+
+  #Extract genus from genus list
+  genus<-genusList[genIndex]
+
+  # cat("genIndex:", genIndex,
+  #     "genus:", genus,
+  #     "\n")
+
+  #Traverse across genNames and look for first instance when genus and genus from
   #genusList do NOT match.
-  while(i <= length(spNames) & !validMatch)
+  while(i <= length(genNames) & !validMatch)
   {
-    #Extract species from spNames
-    sp<-spNames[i]
-
-    #Find index where sp matches the species name in genusList
-    spIndex<-match(sp, names(genusList))
-
-    #Extract genus from genusList
-    genus2<-genusList[spIndex]
+    #Extract genus from genera ordered by abundance of percent canopy cover
+    genus2<-genNames[i]
 
     #If genus and genus2 are not the same then validMatch becomes true
     if(genus != genus2)
@@ -544,3 +553,4 @@ excGenus<-function(genus, spNames, genusList)
 
   return(excIndex)
 }
+
