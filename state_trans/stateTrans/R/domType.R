@@ -17,6 +17,7 @@
 #
 #Return value
 #
+#
 #List containing dominance type (DOMTYPE), dominant species/genus/category
 #or species/genus/category occurring before underscore in dominance type
 #(DCC1), percent canopy cover represented by DCC1 (XDCC1),
