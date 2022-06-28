@@ -210,7 +210,7 @@ findCategory<-function(x, inputValues = 0, outputValues = 0, invalidReturn = 0,
   return(cat)
 }
 
-#############################################################################
+############################################################################
 #Function: getCanSizDC
 #
 #This function takes in a vector of DBH values and a type argument and returns
