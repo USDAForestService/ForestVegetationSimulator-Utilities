@@ -321,6 +321,11 @@ getCanSizeDC<-function(DBH, type = 1, debug = F)
 #'@export
 canSizeCl<-function(dat, totalCC, type=1, debug = F)
 {
+  #Print stand
+  if(debug) cat("Stand:", unique(dat$StandID), "\n")
+
+  #Initialize named vector for storing CC by diameter class
+  ccVec<-c("1" = 0, "2" = 0, "3" = 0, "4" = 0, "5" = 0)
 
   #Statement used to avoid NOTE when stateTrans package is built.
   DC<-TREECC<-NULL
@@ -338,17 +343,57 @@ canSizeCl<-function(dat, totalCC, type=1, debug = F)
     #Determine diameter class for each tree record
     dat$DC<-getCanSizeDC(dat$DBH, type, debug)
 
-    #Summarize CC by midscale diameter class
-    can.sum<- dat %>%
-      dplyr::group_by(DC) %>%
-      dplyr::summarize(CC = sum(TREECC))
+    #Loop across dat and sum canopy cover values for each class in ccVec
+    for(i in 1:nrow(dat))
+    {
+      #obtain DC for tree i
+      dcIndex<-dat$DC[i]
+
+      #Sum CC for DC in ccVec
+      ccVec[dcIndex]<- ccVec[dcIndex] + dat$TREECC[i]
+    }
 
     #Extract cansizcl associated with maximum CC
-    cansizcl<-can.sum$DC[which.max(can.sum$CC)]
+    cansizcl<-names(ccVec)[which.max(ccVec)]
 
     if(debug) cat("In canSizeCl function", "\n",
-                  "DC:", can.sum$DC, "\n",
-                  "CC:", can.sum$CC, "\n",
+                  "Initial cansizcl", "\n",
+                  "DC:", names(ccVec), "\n",
+                  "CC:", ccVec, "\n",
+                  "cansizcl:", cansizcl, "\n")
+
+    #Timber canopy size class adjustments
+    if(type == 2)
+    {
+      if(cansizcl == "2" & sum(ccVec[3:5]) >= ccVec[2])
+      {
+        ccVec[1:2]<-0
+        cansizcl<-names(ccVec)[which.max(ccVec)]
+      }
+
+      if(cansizcl == "1" & sum(ccVec[2:5]) >= ccVec[1])
+      {
+        ccVec[1]<-0
+        cansizcl<-names(ccVec)[which.max(ccVec)]
+      }
+    }
+
+    #Woodland size class adjustments
+    if(type == 3)
+    {
+      if(cansizcl == "1" & sum(ccVec[2:5]) >= ccVec[1])
+      {
+        ccVec[1]<-0
+        cansizcl<-names(ccVec)[which.max(ccVec)]
+      }
+    }
+
+    #Convert cansizcl to integer
+    cansizcl<-as.integer(cansizcl)
+
+    if(debug) cat("Final cansizcl", "\n",
+                  "DC:", names(ccVec), "\n",
+                  "CC:", ccVec, "\n",
                   "cansizcl:", cansizcl, "\n")
   }
 
@@ -378,5 +423,41 @@ correctCC<-function(CC)
 {
   corCC = 100 * (1 - exp ( - 0.01* CC))
   return(corCC)
+}
+
+#############################################################################
+#Function: roundCC
+#
+#This function takes in an uncorrected percent canopy cover value and returns
+#a rounded value using the criteria described on page R3-3 of NFS Regional
+#Vegetation Classification Algorithms.
+#
+#Argument
+#
+#CC:          Uncorrected CC value
+#
+#ccThreshold: Percent canopy cover value that determines how argument CC is
+#             rounded. By Default this argument is set to 10.
+#
+#Return value
+#
+#Rounded CC value.
+#############################################################################
+
+roundCC<-function(CC, ccThreshold = 10)
+{
+  #Round to nearest 5
+  if(CC > 10)
+  {
+    ccRound = round(CC / 5) * 5
+  }
+
+  #Round to nearest 1
+  else
+  {
+    ccRound = round(CC / 1) * 1
+  }
+
+  return(ccRound)
 }
 

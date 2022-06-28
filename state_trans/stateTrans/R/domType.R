@@ -17,7 +17,6 @@
 #
 #Return value
 #
-#
 #List containing dominance type (DOMTYPE), dominant species/genus/category
 #or species/genus/category occurring before underscore in dominance type
 #(DCC1), percent canopy cover represented by DCC1 (XDCC1),
@@ -27,6 +26,9 @@
 
 #'@export
 domType<-function(stdYrFrame, totalCC, debug = F){
+
+  #Print stand
+  if(debug) cat("Stand:", unique(stdYrFrame$StandID), "\n")
 
   #Initialize boolean variable that is used to determine if DomType has been
   #found.

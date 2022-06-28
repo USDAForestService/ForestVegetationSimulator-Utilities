@@ -62,14 +62,22 @@
 #              Example of how to specify multiple run titles:
 #              runTitles = c("Run 1", "Run 2",...)
 #              Note the use of the c(...)
+#
+#allRuns:      Boolean variable that is used to determine if all runs in
+#              argument input should be processed. If value is TRUE (T), then
+#              all runs will be processed and any runs specified in argument
+#              runTitles will be ignored. By default this variable is set
+#              to FALSE (F).
 #############################################################################
 
 #'@importFrom dplyr %>%
 #'@export
-main<- function(input, output, overwriteOut = F, groupTag = NA, runTitles = NULL)
+main<- function(input, output, overwriteOut = F, groupTag = NA, runTitles = "Run 1",
+                allRuns = F)
 {
 
-  #including this statement to avoid NOTE that occurs when stateTrans package is built.
+  #Including this statement to avoid NOTE that occurs when stateTrans package
+  #is built.
   supportSP<-NULL
 
   ###########################################################################
@@ -101,18 +109,6 @@ main<- function(input, output, overwriteOut = F, groupTag = NA, runTitles = NULL
          either .xlsx or .csv.")
   }
 
-  #Test if runTitles is NULL
-  if(is.null(runTitles))
-  {
-    stop("No run titles were specified.")
-  }
-
-  #Test if run titles are NA
-  if(NA %in% runTitles)
-  {
-    stop("NA values found in runTitles.")
-  }
-
   #Capitalize runTitles and groupTag
   runTitles<-toupper(runTitles)
   groupTag<-toupper(groupTag)
@@ -126,7 +122,7 @@ main<- function(input, output, overwriteOut = F, groupTag = NA, runTitles = NULL
   ###########################################################################
 
   #Perform database validation
-  message<-validateDBInputs(con, runTitles)
+  message<-validateDBInputs(con, runTitles, allRuns)
 
   #If validateDBInput function returns a message that is not 'PASS' then
   #disconnect from con and send error message to console.
@@ -137,6 +133,13 @@ main<- function(input, output, overwriteOut = F, groupTag = NA, runTitles = NULL
 
     #Print error message
     stop(message)
+  }
+
+  #If all runs is in effect, extract all unique runTitles from input (con).
+  if(allRuns)
+  {
+    runTitles<-unique(RSQLite::dbGetQuery(con, "SELECT RunTitle FROM FVS_Cases")[,1])
+    runTitles<-toupper(runTitles)
   }
 
   #Read in info from SupportDB.csv. The path here will have to be changed in order
@@ -251,6 +254,7 @@ main<- function(input, output, overwriteOut = F, groupTag = NA, runTitles = NULL
 
           #Extract rows for year j
           standYrDF<- standDF[standDF$Year == years[k],]
+          cat("Year:", years[k],"\n")
 
           #Determine group to report in yrOutput
           group<-getGroup(toupper(standYrDF["Groups"][[1]][1]), groupTag)

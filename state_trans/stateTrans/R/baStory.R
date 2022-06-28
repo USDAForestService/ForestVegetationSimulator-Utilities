@@ -23,6 +23,9 @@
 #'@export
 baStory<-function(stdYrFrame, totalCC, debug = F)
 {
+  #Print stand
+  if(debug) cat("Stand:", unique(stdYrFrame$StandID), "\n")
+
   #Calculate totalBA
   totalBA<-sum(stdYrFrame$TREEBA)
   if(debug) cat("BA of plot is", totalBA, "\n")
