@@ -25,7 +25,7 @@
 #############################################################################
 
 #'@export
-domType<-function(stdYrFrame, totalCC, debug = F){
+domType<-function(stdYrFrame, totalCC, tpa, debug = F){
 
   #Print stand
   if(debug) cat("Stand:", unique(stdYrFrame$StandID), "\n")
@@ -58,12 +58,13 @@ domType<-function(stdYrFrame, totalCC, debug = F){
   #            does not consider these types of life forms.
   #==========================================================================
 
-  if(correctCC(totalCC) < 10)
+  if(correctCC(totalCC) < 10 & tpa < 100)
   {
     DomType = "NVG"
     domTypeFound = T
-    if(debug) cat("LEAD 1-5", "totalCC:", correctCC(totalCC),"less than 10",
-                  "\n", "dcc1:", dcc1,"xdcc1:",xdcc1, "DomType:", DomType, "\n",
+    if(debug) cat("LEAD 1-5", "totalCC:", correctCC(totalCC),"less than 10 and",
+                  "tpa:", tpa,"less than 100.", "\n", "dcc1:", dcc1,"xdcc1:",xdcc1,
+                  "DomType:", DomType, "\n",
                   fill = 80)
   }
 

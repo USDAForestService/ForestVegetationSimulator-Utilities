@@ -319,7 +319,7 @@ getCanSizeDC<-function(DBH, type = 1, debug = F)
 #############################################################################
 
 #'@export
-canSizeCl<-function(dat, totalCC, type=1, debug = F)
+canSizeCl<-function(dat, totalCC, tpa, type=1, debug = F)
 {
   #Print stand
   if(debug) cat("Stand:", unique(dat$StandID), "\n")
@@ -331,10 +331,11 @@ canSizeCl<-function(dat, totalCC, type=1, debug = F)
   DC<-TREECC<-NULL
 
   #If plot CC is less than 10% then cansizcl is 0
-  if(correctCC(totalCC) < 10)
+  if(correctCC(totalCC) < 10 & tpa < 100)
   {
     cansizcl = 0
-    if(debug) cat("Total CC:", correctCC(totalCC), " less than 10.", "\n")
+    if(debug) cat("Total CC:", correctCC(totalCC), " less than 10 and tpa:", tpa,
+    "less than 100.", "\n")
   }
 
   #Else calculate cansizcl

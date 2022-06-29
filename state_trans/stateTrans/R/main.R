@@ -142,8 +142,7 @@ main<- function(input, output, overwriteOut = F, groupTag = NA, runTitles = "Run
     runTitles<-toupper(runTitles)
   }
 
-  #Read in info from SupportDB.csv. The path here will have to be changed in order
-  #to reflect the path where this data will be stored in R package.
+  #Access supportDB
   supportSP<-stateTrans::supportSP
 
   #Create list for storing output by runTitles
@@ -188,9 +187,12 @@ main<- function(input, output, overwriteOut = F, groupTag = NA, runTitles = "Run
     #Initialize standSum. This will keep track of number of stands processed.
     standSum<-0
 
+    #Initialize noLiveTrees. This variable keeps track of number of stands that
+    #have no live trees.
+    noLiveTrees<-0
+
     for(i in 1:length(standList))
     {
-
       #Select stands to process
       standSelect<-standList[[i]]
       cat("Length of standSelect:", length(standSelect), "\n")
@@ -213,25 +215,23 @@ main<- function(input, output, overwriteOut = F, groupTag = NA, runTitles = "Run
         next
       }
 
-      #Create list of dataframes to process and then remove dfDat from memory
-      dfList<-split(dfDat, dfDat$StandID)
-      rm(dfDat)
-      cat("Length of dfList", length(dfList), "\n")
-
       #Initialize list that will store output for group of stands i.
-      standSelectOutput<-vector(mode="list",length(dfList))
+      standSelectOutput<-vector(mode="list",length(standSelect))
       cat("Length of standSelectOutput:", length(standSelectOutput), "\n")
 
       #==============================
-      #Begin loop across dfList
+      #Begin loop across standSelect
       #==============================
 
-      for(j in 1:length(dfList))
+      for(j in 1:length(standSelect))
       {
-        #Extract stand ID i...
-        #PRINT: Message detailing which stand is being processed
-        standDF<-dfList[[j]]
-        cat("Processing stand:", unique(standDF$StandID),"\n")
+        #Extract stand from dfDat
+        standDF<-dfDat[dfDat$StandID %in% standSelect[j],]
+        cat("Processing stand:", standSelect[j],"\n")
+
+        #Skip to next stand if standDF has no nrows. This would occur if stand
+        #has no live or dead records associated with it.
+        if(nrow(standDF) <= 0) next
 
         #Determine years that will be evaluated
         years<-unique(standDF$Year)
@@ -245,12 +245,17 @@ main<- function(input, output, overwriteOut = F, groupTag = NA, runTitles = "Run
         #Merge species information, as well as, forest system
         standDF<-merge(standDF, supportSP, by = "SpeciesPLANTS", all.x = T)
 
+        #Determine if stand has no live trees
+        if(sum(standDF$TPA) <= 0) noLiveTrees = noLiveTrees + 1
+
         #==============================
         #Begin loop across years
         #==============================
 
         for(k in 1:length(years))
         {
+          #Initialize standAttr vector which houses BA, totalCC, and TPA
+          standAttr<-c("BA" = 0, "TOTALCC" = 0, "TPA" = 0)
 
           #Extract rows for year j
           standYrDF<- standDF[standDF$Year == years[k],]
@@ -274,14 +279,18 @@ main<- function(input, output, overwriteOut = F, groupTag = NA, runTitles = "Run
           standYrDF$TREECC<-pi * (standYrDF$CrWidth/2)^2 *(standYrDF$TPA/43560) * 100
 
           #Calculate standBA
-          standBA<-sum(standYrDF$TREEBA)
+          standAttr["BA"]<-sum(standYrDF$TREEBA)
 
           #Calculate stand percent canopy cover (uncorrected)
           standCC<-sum(standYrDF$TREECC)
           yrOutput$CAN_COV<-round(standCC, 2)
+          standAttr["TOTALCC"]<-yrOutput$CAN_COV
+
+          #Calculate trees per acre
+          standAttr["TPA"]<-sum(standYrDF$TPA)
 
           #Calculate DomType, Dom1, Dom2, Dom1Per, and Dom2Per
-          dtResults<-domType(standYrDF, yrOutput$CAN_COV)
+          dtResults<-domType(standYrDF, standAttr["TOTALCC"], standAttr["TPA"])
 
           #Dominance type
           yrOutput$DOM_TYPE<-dtResults[["DOMTYPE"]]
@@ -299,25 +308,43 @@ main<- function(input, output, overwriteOut = F, groupTag = NA, runTitles = "Run
           yrOutput$XDCC2<-round(dtResults[["XDCC2"]],2)
 
           #Canopy size class - midscale mapping
-          yrOutput$CAN_SIZCL<-canSizeCl(standYrDF[c("DBH", "TREECC")],
-                                        yrOutput$CAN_COV,
-                                        1)
+          yrOutput$CAN_SIZCL<-canSizeCl(dat = standYrDF[c("DBH", "TREECC")],
+                                        totalCC = standAttr["TOTALCC"],
+                                        tpa = standAttr["TPA"],
+                                        type = 1)
 
           #Canopy size class - timberland
-          yrOutput$CAN_SZTMB<-canSizeCl(standYrDF[c("DBH", "TREECC")],
-                                        yrOutput$CAN_COV,
-                                        2)
+          yrOutput$CAN_SZTMB<-canSizeCl(dat = standYrDF[c("DBH", "TREECC")],
+                                        totalCC = standAttr["TOTALCC"],
+                                        tpa = standAttr["TPA"],
+                                        type = 2)
 
           #Canopy size class - woodland
-          yrOutput$CAN_SZWDL<-canSizeCl(standYrDF[c("DBH", "TREECC")],
-                                        yrOutput$CAN_COV,
-                                        3)
+          yrOutput$CAN_SZWDL<-canSizeCl(dat = standYrDF[c("DBH", "TREECC")],
+                                        totalCC = standAttr["TOTALCC"],
+                                        tpa = standAttr["TPA"],
+                                        type = 3)
 
           # #BA storiedness
-          yrOutput$BA_STORY<-baStory(standYrDF, yrOutput$CAN_COV)
+          yrOutput$BA_STORY<-baStory(stdYrFrame = standYrDF,
+                                     totalCC = standAttr["TOTALCC"],
+                                     tpa = standAttr["TPA"],
+                                     ba = standAttr["BA"])
 
           #Now correct canopy cover (CAN_COV)
-          yrOutput$CAN_COV<-round(correctCC(yrOutput$CAN_COV),2)
+          yrOutput$CAN_COV<-round(correctCC(standAttr["TOTALCC"]),2)
+
+          #Add TPA to yrOutput
+          yrOutput$TPA<-standAttr["TPA"]
+
+          #Add BA to yrOutput
+          yrOutput$BA<-standAttr["BA"]
+
+          #Order dataframe by column position
+          yrOutput<-yrOutput[,c("RUN", "GROUP",	"PLOT_ID", "CY", "PROJ_YEAR",
+                                "ST_AGE",	"TPA", "BA", "CAN_COV", "DOM_TYPE",
+                                "DCC1", "XDCC1", "DCC2",	"XDCC2", "CAN_SIZCL",
+                                "CAN_SZTMB", "CAN_SZWDL", "BA_STORY")]
 
           #Add yrOutput to standYrOutput
           standYrOutput[[k]]<-yrOutput
@@ -335,7 +362,7 @@ main<- function(input, output, overwriteOut = F, groupTag = NA, runTitles = "Run
       }
 
       #Update standSum and send to console
-      standSum<-standSum + length(dfList)
+      standSum<-standSum + length(standSelect)
       cat(standSum, "stands processed out of", length(stands), "\n")
 
       #Combine data for selected stands
@@ -350,9 +377,8 @@ main<- function(input, output, overwriteOut = F, groupTag = NA, runTitles = "Run
     #Combine all output from allStandsOutput
     allRunOut<-dplyr::bind_rows(allStandsOutput)
 
-    #Print out how many stands had zero tree records
-    zeroTree<-length(stands) - standSum
-    cat(zeroTree, "stands contained no tree records.", "\n")
+    #Print number of stands that had no tree records
+    cat(noLiveTrees, "stands contained no live tree records.", "\n")
 
     #Add allRunOut to AllRunOutput
     allRunsOutput[[r]]<-allRunOut
@@ -424,8 +450,7 @@ main<- function(input, output, overwriteOut = F, groupTag = NA, runTitles = "Run
     #append data to existing file.
     if(file.exists(output) & overwriteOut == F)
     {
-
-      #Send updated results back to workbook
+      #Send updated results back to csv
       utils::write.table(allOut, output, sep = ",", append = T, row.names = F)
     }
 
