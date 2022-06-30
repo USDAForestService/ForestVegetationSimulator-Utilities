@@ -9,7 +9,11 @@
 #stdYrFrame: Dataframe that contains tree records for stand. Must include
 #            DBH and TREEBA as a column.
 #
-#TotalCC:    Uncorrected percent canopy cover of stand.
+#TotalCC:    Uncorrected percent canopy cover of the stand.
+#
+#tpa:        Trees per acre of the stand.
+#
+#ba:         Basal area per acre of the stand.
 #
 #debug:	     Boolean variable used to specify if debug output should be
 #            printed to R console. If value is TRUE, then debug output will
@@ -29,11 +33,21 @@ baStory<-function(stdYrFrame, totalCC, tpa, ba, debug = F)
   #Print BA
   if(debug) cat("BA of plot is", ba, "\n")
 
-  #Test if plot is below minimum CC. If so, then set story to 0.
+  #Test if plot is below minimum CC and TPA. If so, then set story to 0.
   if(correctCC(totalCC) < 10 & tpa < 100)
   {
     story<-0
-    if(debug) cat("Total CC:", correctCC(totalCC), " less than 10.", "\n")
+    if(debug) cat("Total CC:", correctCC(totalCC), " LT 10 and TPA:", tpa,
+                                "LT 100.", "\n")
+  }
+
+  #Test if plot is below minimum CC and above minimum TPA. If so, then set story
+  #to 1.
+  else if(correctCC(totalCC) < 10 & tpa >= 100)
+  {
+    story<-1
+    if(debug) cat("Total CC:", correctCC(totalCC), " LT 10 and TPA:", tpa,
+    "GE 100.", "\n")
   }
 
   #Else calculate story using storiedness algorithm

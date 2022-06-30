@@ -11,6 +11,8 @@
 #
 #totalCC:    Percent canopy cover of stand.
 #
+#tpa:     Trees per acre of the stand.
+#
 #debug:	     Boolean variable used to specify if debug output should be
 #            printed to R console. If value is TRUE, then debug output will
 #            printed to R console.

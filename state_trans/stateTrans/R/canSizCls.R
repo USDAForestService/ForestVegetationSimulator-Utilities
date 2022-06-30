@@ -185,7 +185,7 @@ findCategory<-function(x, inputValues = 0, outputValues = 0, invalidReturn = 0,
 
       #If at the end of inputValues vector, then done becomes true. This is
       #a precautionary condition if a valid output is not found for x during
-      #search. This condition should rarely, if ever, evaluate as true...
+      #search.
       if(i == length(inputValues))
       {
         done = T
@@ -289,6 +289,8 @@ getCanSizeDC<-function(DBH, type = 1, debug = F)
 #
 #totalCC: Percent canopy cover of stand.
 #
+#tpa:     Trees per acre of the stand.
+#
 #type:    Indicator variable used to determine which type of diameter class to
 #         return
 #         1 - Midscale mapping (default and will be used if any value other than
@@ -330,12 +332,20 @@ canSizeCl<-function(dat, totalCC, tpa, type=1, debug = F)
   #Statement used to avoid NOTE when stateTrans package is built.
   DC<-TREECC<-NULL
 
-  #If plot CC is less than 10% then cansizcl is 0
+  #If plot CC is less than 10% and TPA less than 100, then cansizcl is 0
   if(correctCC(totalCC) < 10 & tpa < 100)
   {
     cansizcl = 0
-    if(debug) cat("Total CC:", correctCC(totalCC), " less than 10 and tpa:", tpa,
-    "less than 100.", "\n")
+    if(debug) cat("Total CC:", correctCC(totalCC), " LT 10 and TPA:", tpa,
+                  "LT 100.", "\n")
+  }
+
+  #If plot CC is less than 10% and TPA GE 100, then cansizcl is 1
+  else if(correctCC(totalCC) < 10 & tpa >= 100)
+  {
+    cansizcl = 1
+    if(debug) cat("Total CC:", correctCC(totalCC), " LT 10 and TPA:", tpa,
+                  "GE 100.", "\n")
   }
 
   #Else calculate cansizcl
