@@ -1,0 +1,26 @@
+{
+    "id": "B339C395",
+    "path": "C:/Veg_Classification/vegClass/R/main.R",
+    "project_path": "R/main.R",
+    "type": "r_source",
+    "hash": "1523250051",
+    "contents": "",
+    "dirty": false,
+    "created": 1656511218836.0,
+    "source_on_save": false,
+    "relative_order": 4,
+    "properties": {
+        "source_window_id": "",
+        "Source": "Source",
+        "cursorPosition": "175,58",
+        "scrollLine": "163"
+    },
+    "folds": "",
+    "lastKnownWriteTime": 1657230760,
+    "encoding": "UTF-8",
+    "collab_server": "",
+    "source_window": "",
+    "last_content_update": 1657230760307,
+    "read_only": false,
+    "read_only_alternatives": []
+}
