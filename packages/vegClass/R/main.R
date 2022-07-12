@@ -42,7 +42,7 @@
 #              code (such as ERU) from a set of FVS group labels. For instance,
 #              if you have a group label such as ERU=MCD, then the groupTag
 #              would be ERU= and you would have a value of MCD returned in
-#              the output. The default value of this argument is NA. The value
+#              the output. The default value of this argument is ---. The value
 #              for groupTag must be surrounded in double quotes.
 #
 #              Example group tag:
@@ -70,9 +70,8 @@
 #              to FALSE (F).
 #############################################################################
 
-#'@importFrom dplyr %>%
 #'@export
-main<- function(input, output, overwriteOut = F, groupTag = NA, runTitles = "Run 1",
+main<- function(input, output, overwriteOut = F, groupTag = "---", runTitles = "Run 1",
                 allRuns = F)
 {
 
@@ -353,7 +352,7 @@ main<- function(input, output, overwriteOut = F, groupTag = NA, runTitles = "Run
         }
 
         #Combine all year-by-year information for standID i into a single dataframe.
-        standOut<-dplyr::bind_rows(standYrOutput)
+        standOut<-do.call("rbind", standYrOutput)
 
         #Now we add stand.out dataframe to our list of stands
         standSelectOutput[[j]]<-standOut
@@ -366,7 +365,7 @@ main<- function(input, output, overwriteOut = F, groupTag = NA, runTitles = "Run
       cat(standSum, "stands processed out of", length(stands), "\n")
 
       #Combine data for selected stands
-      standSelectOut<-dplyr::bind_rows(standSelectOutput)
+      standSelectOut<-do.call("rbind", standSelectOutput)
 
       #Added data for group of stands to allStandsOutput.
       allStandsOutput[[i]]<-standSelectOut
@@ -375,7 +374,7 @@ main<- function(input, output, overwriteOut = F, groupTag = NA, runTitles = "Run
     }
 
     #Combine all output from allStandsOutput
-    allRunOut<-dplyr::bind_rows(allStandsOutput)
+    allRunOut<-do.call("rbind", allStandsOutput)
 
     #Print number of stands that had no tree records
     cat(noLiveTrees, "stands contained no live tree records.", "\n")
@@ -392,7 +391,7 @@ main<- function(input, output, overwriteOut = F, groupTag = NA, runTitles = "Run
   ### END OF LOOP ACROSS RUNS
 
   #Bind all dataframes in allRunsOutput
-  allOut<-dplyr::bind_rows(allRunsOutput)
+  allOut<-do.call("rbind", allRunsOutput)
 
   #If there is no output from any of the runs in runTitles, then throw error
   #message
@@ -425,7 +424,7 @@ main<- function(input, output, overwriteOut = F, groupTag = NA, runTitles = "Run
       oldData<-openxlsx::readWorkbook(output)
 
       #Combine new results with old data
-      allOut<-dplyr::bind_rows(oldData, allOut)
+      allOut<-rbind(oldData, allOut)
 
       #Send updated results back to workbook
       openxlsx::write.xlsx(allOut, output, overwrite = T)
