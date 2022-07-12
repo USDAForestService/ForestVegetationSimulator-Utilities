@@ -1,0 +1,21 @@
+#############################################################################
+#vegClass_Example.R
+#
+#This script provides an example of how to call the main function from the
+#vegClass package. The main function is used to produce output for state
+#and transition models.
+#############################################################################
+
+#Attach vegClass package
+library(vegClass)
+
+#Example call to main function
+main(input = "C:/Veg_Classification/vegClassInstall/FVSOut.db",
+     output = "C:/Veg_Classification/vegClassInstall/FVSOut.xlsx",
+     overwriteOut = F,
+     groupTag = "eru=",
+     runTitles = c("MCD Run", "MEW Run"))
+
+#You can call function main as many times as you desire in an R script or R
+#project. You can simply copy and paste the code above and change the arguments
+#as needed.

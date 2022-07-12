@@ -1,0 +1,26 @@
+{
+    "id": "1714D1E0",
+    "path": "C:/Veg_Classification/vegClass/R/domType.R",
+    "project_path": "R/domType.R",
+    "type": "r_source",
+    "hash": "2853737115",
+    "contents": "",
+    "dirty": false,
+    "created": 1656443439223.0,
+    "source_on_save": false,
+    "relative_order": 1,
+    "properties": {
+        "source_window_id": "",
+        "Source": "Source",
+        "cursorPosition": "64,64",
+        "scrollLine": "0"
+    },
+    "folds": "",
+    "lastKnownWriteTime": 1656537983,
+    "encoding": "UTF-8",
+    "collab_server": "",
+    "source_window": "",
+    "last_content_update": 1656537983997,
+    "read_only": false,
+    "read_only_alternatives": []
+}
