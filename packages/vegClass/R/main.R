@@ -176,25 +176,30 @@ main<- function(input, output, overwriteOut = F, groupTag = "---", runTitles = "
     # cat("List of stands for processing created.", "\n")
 
     #Initialize list for storing stand output
-    allStandsOutput<-vector(mode = "list", length(standList))
+    allStandsOutput<-vector(mode = "list", length(stands))
     # cat("Length of allStandsOutput:", length(allStandsOutput), "\n")
 
-    #==============================
-    #Begin loop across standList
-    #==============================
-
-    #Initialize standSum. This will keep track of number of stands processed.
+    #Initialize standSum. This will keep track of number of total stands processed.
     standSum<-0
 
     #Initialize noLiveTrees. This variable keeps track of number of stands that
     #have no live trees.
     noLiveTrees<-0
 
+    #Initialize standAccum. This variable is used for storing stand output in
+    #allStandOutput list and also for determine number of trees that had no
+    #tree records (live or dead).
+    standAccum<-0
+
+    #==============================
+    #Begin loop across standList
+    #==============================
+
     for(i in 1:length(standList))
     {
       #Select stands to process
       standSelect<-standList[[i]]
-      cat("Length of standSelect:", length(standSelect), "\n")
+      cat("Number of stands to query:", length(standSelect), "\n")
 
       #Generate a query that will be created by buildQuery function
       dbQuery<-buildQuery(standSelect, run)
@@ -214,10 +219,6 @@ main<- function(input, output, overwriteOut = F, groupTag = "---", runTitles = "
         next
       }
 
-      #Initialize list that will store output for group of stands i.
-      standSelectOutput<-vector(mode="list",length(standSelect))
-      cat("Length of standSelectOutput:", length(standSelectOutput), "\n")
-
       #==============================
       #Begin loop across standSelect
       #==============================
@@ -231,6 +232,9 @@ main<- function(input, output, overwriteOut = F, groupTag = "---", runTitles = "
         #Skip to next stand if standDF has no nrows. This would occur if stand
         #has no live or dead records associated with it.
         if(nrow(standDF) <= 0) next
+
+        #Increment standAccum
+        standAccum<-standAccum + 1
 
         #Determine years that will be evaluated
         years<-unique(standDF$Year)
@@ -247,9 +251,9 @@ main<- function(input, output, overwriteOut = F, groupTag = "---", runTitles = "
         #Determine if stand has no live trees
         if(sum(standDF$TPA) <= 0) noLiveTrees = noLiveTrees + 1
 
-        #==============================
-        #Begin loop across years
-        #==============================
+        #=====================================
+        #Begin loop across years in standDF
+        #=====================================
 
         for(k in 1:length(years))
         {
@@ -354,8 +358,8 @@ main<- function(input, output, overwriteOut = F, groupTag = "---", runTitles = "
         #Combine all year-by-year information for standID i into a single dataframe.
         standOut<-do.call("rbind", standYrOutput)
 
-        #Now we add stand.out dataframe to our list of stands
-        standSelectOutput[[j]]<-standOut
+        #Added standOut dataframe to allStandsOutput list
+        allStandsOutput[[standAccum]]<-standOut
 
         ### END OF LOOP ACROSS SELECTED STANDS
       }
@@ -364,20 +368,17 @@ main<- function(input, output, overwriteOut = F, groupTag = "---", runTitles = "
       standSum<-standSum + length(standSelect)
       cat(standSum, "stands processed out of", length(stands), "\n")
 
-      #Combine data for selected stands
-      standSelectOut<-do.call("rbind", standSelectOutput)
-
-      #Added data for group of stands to allStandsOutput.
-      allStandsOutput[[i]]<-standSelectOut
-
-      ### END OF LOOP ACROSS ALL STANDS
+      ### END OF LOOP ACROSS ALL STANDS IN RUN
     }
 
     #Combine all output from allStandsOutput
     allRunOut<-do.call("rbind", allStandsOutput)
 
     #Print number of stands that had no tree records
-    cat(noLiveTrees, "stands contained no live tree records.", "\n")
+    cat(noLiveTrees, "stands contained only dead tree records.", "\n")
+
+    #Print number of stands that had no valid tree records
+    cat(length(stands) - standAccum, "stands contained no tree records.", "\n")
 
     #Add allRunOut to AllRunOutput
     allRunsOutput[[r]]<-allRunOut
