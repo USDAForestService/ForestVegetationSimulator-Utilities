@@ -7,7 +7,6 @@ Description: This package provides a suite of functions that are used to derive
  vegetation classifications from Forest Vegetation Simulator output.
 Imports: 
     RSQLite (>= 2.2.4),
-    openxlsx (>= 4.2.3),
     utils
 License: MIT
 Roxygen: list(markdown = TRUE)
