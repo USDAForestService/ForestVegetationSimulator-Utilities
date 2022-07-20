@@ -19,15 +19,11 @@
 #              "C:/FVS/R3_Work/FVSOut.db"
 #              "C:\\FVS\\R3_Work\\FVSOut.db"
 #
-#output:       Directory path and filename to an .csv or .xlsx file. Path
-#              name must be surrounded with double quotes "" and double
-#              back slashes or single forward slashes need to be used for
-#              specifying paths.
+#output:       Directory path and filename to a .csv file. Path name must be
+#              surrounded with double quotes "" and double back slashes or
+#              single forward slashes need to be used for specifying paths.
 #
 #              Examples of valid output formats:
-#              "C:/FVS/R3_Work/FVSOut.xlsx"
-#              "C:\\FVS\\R3_Work\\FVSOut.xlsx"
-#
 #              "C:/FVS/R3_Work/FVSOut.csv"
 #              "C:\\FVS\\R3_Work\\FVSOut.csv"
 #
@@ -42,7 +38,7 @@
 #              code (such as ERU) from a set of FVS group labels. For instance,
 #              if you have a group label such as ERU=MCD, then the groupTag
 #              would be ERU= and you would have a value of MCD returned in
-#              the output. The default value of this argument is NA. The value
+#              the output. The default value of this argument is ---. The value
 #              for groupTag must be surrounded in double quotes.
 #
 #              Example group tag:
@@ -61,7 +57,7 @@
 #
 #              Example of how to specify multiple run titles:
 #              runTitles = c("Run 1", "Run 2",...)
-#              Note the use of the c(...)
+#              Note the use of the c(...) when prcoessing multiple runs.
 #
 #allRuns:      Boolean variable that is used to determine if all runs in
 #              argument input should be processed. If value is TRUE (T), then
@@ -70,9 +66,8 @@
 #              to FALSE (F).
 #############################################################################
 
-#'@importFrom dplyr %>%
 #'@export
-main<- function(input, output, overwriteOut = F, groupTag = NA, runTitles = "Run 1",
+main<- function(input, output, overwriteOut = F, groupTag = "---", runTitles = "Run 1",
                 allRuns = F)
 {
 
@@ -102,11 +97,11 @@ main<- function(input, output, overwriteOut = F, groupTag = NA, runTitles = "Run
   #Extract file extension.
   fileExtOut<-sub("(.*)\\.","",output)
 
-  #Test if output file extension is valid (.xlsx or .csv).
-  if(!fileExtOut %in% c("xlsx", "csv"))
+  #Test if output file extension is valid (.csv).
+  if(!fileExtOut %in% c("csv"))
   {
     stop("Output argument does not have a valid file extension. File extension must be
-         either .xlsx or .csv.")
+         .csv.")
   }
 
   #Capitalize runTitles and groupTag
@@ -135,6 +130,9 @@ main<- function(input, output, overwriteOut = F, groupTag = NA, runTitles = "Run
     stop(message)
   }
 
+  #If the output file exists and overWriteOut is true, unlink the file
+  if(file.exists(output) & overwriteOut) unlink(output)
+
   #If all runs is in effect, extract all unique runTitles from input (con).
   if(allRuns)
   {
@@ -142,11 +140,8 @@ main<- function(input, output, overwriteOut = F, groupTag = NA, runTitles = "Run
     runTitles<-toupper(runTitles)
   }
 
-  #Access supportDB
+  #Store supportSp in dataframe
   supportSP<-vegClass::supportSP
-
-  #Create list for storing output by runTitles
-  allRunsOutput<-vector(mode = "list", length(runTitles))
 
   #==============================
   #Begin loop across runTitles
@@ -163,39 +158,39 @@ main<- function(input, output, overwriteOut = F, groupTag = NA, runTitles = "Run
     cat(paste0(rep("*", 75), collapse = ""), "\n")
 
     #Obtain unique list of stand ids to process for run, r
-    standQuery<- paste("SELECT FVS_Summary2.StandID, FVS_Cases.RunTitle
-                      FROM FVS_Summary2
-                      INNER JOIN FVS_Cases
-                      ON FVS_Summary2.CaseID = FVS_Cases.CaseID
+    standQuery<- paste("SELECT FVS_Cases.StandID
+                      FROM FVS_Cases
                       WHERE RunTitle LIKE ", paste0("'%",run,"%'"))
-    stands<-unique(RSQLite::dbGetQuery(con, standQuery)[,1])
+    stands<-RSQLite::dbGetQuery(con, standQuery)[,1]
+    # stands<-allStands$StandID[allStands$RunTitle %in% run]
 
-    cat("Total number of stands to process:", length(stands), "\n")
+    cat("Total number of stands to process for run", paste0(run,":"),
+        length(stands),"\n")
 
     #Split stand vector into list containing vectors of stand IDs
     standList<-split(stands, ceiling(seq_along(stands)/100))
     # cat("List of stands for processing created.", "\n")
 
-    #Initialize list for storing stand output
-    allStandsOutput<-vector(mode = "list", length(standList))
-    # cat("Length of allStandsOutput:", length(allStandsOutput), "\n")
-
-    #==============================
-    #Begin loop across standList
-    #==============================
-
-    #Initialize standSum. This will keep track of number of stands processed.
+    #Initialize standSum. This will keep track of number of total stands processed.
     standSum<-0
 
     #Initialize noLiveTrees. This variable keeps track of number of stands that
     #have no live trees.
     noLiveTrees<-0
 
+    #Initialize standAccum. This variable is used for determining number of trees
+    #that had no tree records (live or dead) for current run.
+    standAccum<-0
+
+    #==============================
+    #Begin loop across standList
+    #==============================
+
     for(i in 1:length(standList))
     {
       #Select stands to process
       standSelect<-standList[[i]]
-      cat("Length of standSelect:", length(standSelect), "\n")
+      cat("Number of stands to query:", length(standSelect), "\n")
 
       #Generate a query that will be created by buildQuery function
       dbQuery<-buildQuery(standSelect, run)
@@ -215,10 +210,6 @@ main<- function(input, output, overwriteOut = F, groupTag = NA, runTitles = "Run
         next
       }
 
-      #Initialize list that will store output for group of stands i.
-      standSelectOutput<-vector(mode="list",length(standSelect))
-      cat("Length of standSelectOutput:", length(standSelectOutput), "\n")
-
       #==============================
       #Begin loop across standSelect
       #==============================
@@ -232,6 +223,9 @@ main<- function(input, output, overwriteOut = F, groupTag = NA, runTitles = "Run
         #Skip to next stand if standDF has no nrows. This would occur if stand
         #has no live or dead records associated with it.
         if(nrow(standDF) <= 0) next
+
+        #Increment standAccum
+        standAccum<-standAccum + 1
 
         #Determine years that will be evaluated
         years<-unique(standDF$Year)
@@ -248,9 +242,9 @@ main<- function(input, output, overwriteOut = F, groupTag = NA, runTitles = "Run
         #Determine if stand has no live trees
         if(sum(standDF$TPA) <= 0) noLiveTrees = noLiveTrees + 1
 
-        #==============================
-        #Begin loop across years
-        #==============================
+        #=====================================
+        #Begin loop across years in standDF
+        #=====================================
 
         for(k in 1:length(years))
         {
@@ -353,10 +347,36 @@ main<- function(input, output, overwriteOut = F, groupTag = NA, runTitles = "Run
         }
 
         #Combine all year-by-year information for standID i into a single dataframe.
-        standOut<-dplyr::bind_rows(standYrOutput)
+        standOut<-do.call("rbind", standYrOutput)
 
-        #Now we add stand.out dataframe to our list of stands
-        standSelectOutput[[j]]<-standOut
+        #============================================================
+        #Write stand output to output to csv (even if xlsx file is
+        #requested)
+        #============================================================
+
+        #Add tab to standIDs. This avoids the problems of stand IDs being
+        #converted to scientific notation in csv.
+        standOut$PLOT_ID<-paste0(standOut$PLOT_ID, "\t")
+
+        #If file doesn't exist write to file
+        if(!file.exists(output))
+        {
+          utils::write.table(standOut,
+                             output,
+                             sep = ",",
+                             row.names = F)
+        }
+
+        #Else append standOut to output
+        else
+        {
+          utils::write.table(standOut,
+                             output,
+                             sep = ",",
+                             append = T,
+                             row.names = F,
+                             col.names = F)
+        }
 
         ### END OF LOOP ACROSS SELECTED STANDS
       }
@@ -365,23 +385,17 @@ main<- function(input, output, overwriteOut = F, groupTag = NA, runTitles = "Run
       standSum<-standSum + length(standSelect)
       cat(standSum, "stands processed out of", length(stands), "\n")
 
-      #Combine data for selected stands
-      standSelectOut<-dplyr::bind_rows(standSelectOutput)
+      #Remove dfDat
+      rm(dfDat)
 
-      #Added data for group of stands to allStandsOutput.
-      allStandsOutput[[i]]<-standSelectOut
-
-      ### END OF LOOP ACROSS ALL STANDS
+      ### END OF LOOP ACROSS ALL STANDS IN RUN
     }
 
-    #Combine all output from allStandsOutput
-    allRunOut<-dplyr::bind_rows(allStandsOutput)
-
     #Print number of stands that had no tree records
-    cat(noLiveTrees, "stands contained no live tree records.", "\n")
+    cat(noLiveTrees, "stands contained only dead tree records.", "\n")
 
-    #Add allRunOut to AllRunOutput
-    allRunsOutput[[r]]<-allRunOut
+    #Print number of stands that had no valid tree records
+    cat(length(stands) - standAccum, "stands contained no tree records.", "\n")
 
     #Print run that has finished being processed
     cat(paste0(rep("*", 75), collapse = ""), "\n")
@@ -390,16 +404,6 @@ main<- function(input, output, overwriteOut = F, groupTag = NA, runTitles = "Run
   }
 
   ### END OF LOOP ACROSS RUNS
-
-  #Bind all dataframes in allRunsOutput
-  allOut<-dplyr::bind_rows(allRunsOutput)
-
-  #If there is no output from any of the runs in runTitles, then throw error
-  #message
-  if(nrow(allOut) <= 0)
-  {
-    stop("No output was produced. Make sure FVS_TreeList exists in input database.")
-  }
 
   #Print run that has finished being processed
   cat(paste0(rep("*", 75), collapse = ""), "\n")
@@ -411,58 +415,46 @@ main<- function(input, output, overwriteOut = F, groupTag = NA, runTitles = "Run
   cat("Disconnected from input database:", input, "\n")
 
   #Message indicating that data is being sent to output.
-  cat("Writing data to output file:", output, "\n")
+  # cat("Writing data to output file:", output, "\n")
 
-  #Determine file extension for specified output file.
-  if(fileExtOut == 'xlsx')
-  {
-    #Determine if file exist. If file exists and overwrite is false, then
-    #append data to existing file.
-    if(file.exists(output) & overwriteOut == F)
-    {
-      #Read in existing data from output file. Here we assume that old output
-      #data is in worksheet 1.
-      oldData<-openxlsx::readWorkbook(output)
+  ###########################################################################
+  #Logic for writing out to xlsx is below. Taking this out for now.
+  ###########################################################################
 
-      #Combine new results with old data
-      allOut<-dplyr::bind_rows(oldData, allOut)
-
-      #Send updated results back to workbook
-      openxlsx::write.xlsx(allOut, output, overwrite = T)
-    }
-
-    #Else overwrite existing file.
-    else
-    {
-      openxlsx::write.xlsx(allOut, output, overwrite = T)
-    }
-  }
-
-  #Determine file extension for specified output file.
-  if(fileExtOut == 'csv')
-  {
-
-    #Add tab to standIDs. This avoids the problems of stand IDs being
-    #converted to scientific notation in Excel.
-    allOut$PLOT_ID<-paste0(allOut$PLOT_ID, "\t")
-
-    #Determine if file exist. If file exists and overwrite is false, then
-    #append data to existing file.
-    if(file.exists(output) & overwriteOut == F)
-    {
-      #Send updated results back to csv
-      utils::write.table(allOut, output, sep = ",", append = T, row.names = F)
-    }
-
-    #Else overwrite existing file.
-    else
-    {
-      utils::write.table(allOut, output, sep = ",", row.names = F)
-    }
-  }
+  # #Determine file extension for specified output file.
+  # if(fileExtOut == 'xlsx')
+  # {
+  #
+  #   #Read in data from temporary csv file
+  #   tempData<-read.csv(tempOut)
+  #
+  #   #Determine if file exist. If file exists and overwrite is false, then
+  #   #append data to existing file.
+  #   if(file.exists(output) & overwriteOut == F)
+  #   {
+  #     #Read in existing data from output file. Here we assume that old output
+  #     #data is in worksheet 1.
+  #     oldData<-openxlsx::readWorkbook(output)
+  #
+  #     #Combine new results with old data
+  #     allOut<-rbind(oldData, tempData)
+  #
+  #     #Send updated results back to workbook
+  #     openxlsx::write.xlsx(allOut, output, overwrite = T)
+  #   }
+  #
+  #   #Else overwrite existing file.
+  #   else
+  #   {
+  #     openxlsx::write.xlsx(tempData, output, overwrite = T)
+  #   }
+  #
+  #   #Remove tempOut
+  #   unlink(tempOut)
+  # }
 
   #PRINT: Message when output file has been written
-  cat("Data written to output.","\n")
+  # cat("Data written to output.","\n")
 
   #Return from function main
   return(cat("End of program.", "\n"))
