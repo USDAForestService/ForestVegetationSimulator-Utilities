@@ -171,20 +171,30 @@ buildQuery<-function(stands, runTitle)
 
 getGroup<-function(groups, label)
 {
-  #Paste comma to end of groups
-  groups<-paste0(groups,",")
-  # cat(paste(groups, "\n"))
+  #Extract targetGroup if present in groups
+  if(grepl(label, groups))
+  {
+    #Paste comma to end of groups
+    groups<-paste0(groups,",")
+    # cat(paste(groups, "\n"))
 
-  #Remove all characters through label
-  groups<-sub(paste0("(.*)",label,""),"",groups)
-  # cat(paste(groups, "\n"))
+    #Remove all characters through label
+    groups<-sub(paste0("(.*)",label,""),"",groups)
+    # cat(paste(groups, "\n"))
 
-  #Remove all characters after first comma
-  groups<-sub(",(.*)","",groups)
-  # cat(paste(groups, "\n"))
+    #Remove all characters after first comma
+    groups<-sub(",(.*)","",groups)
+    # cat(paste(groups, "\n"))
 
-  #Assign groups to targetGroup
-  targetGroup<-groups
+    #Assign groups to targetGroup
+    targetGroup<-groups
+  }
+
+  #Else assign All to targetGroup
+  else
+  {
+    targetGroup<-"ALL"
+  }
 
   #Return targetGroup
   return(targetGroup)
