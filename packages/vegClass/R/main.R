@@ -57,18 +57,30 @@
 #
 #              Example of how to specify multiple run titles:
 #              runTitles = c("Run 1", "Run 2",...)
-#              Note the use of the c(...) when prcoessing multiple runs.
+#              Note the use of the c(...) when processing multiple runs.
 #
 #allRuns:      Boolean variable that is used to determine if all runs in
 #              argument input should be processed. If value is TRUE (T), then
 #              all runs will be processed and any runs specified in argument
-#              runTitles will be ignored. By default this variable is set
+#              runTitles will be ignored. By default this argument is set
 #              to FALSE (F).
+#
+#numToQuery:   Integer value corresponding to the number of stands that are
+#              queried from the input argument at a single time. In general,
+#              higher values will lead to more RAM being used in R but faster
+#              processing time. Lower values will lead to less RAM being used
+#              in R but slower processing time. By default this argument is
+#              set to 50.
 #############################################################################
 
 #'@export
-main<- function(input, output, overwriteOut = F, groupTag = "---", runTitles = "Run 1",
-                allRuns = F)
+main<- function(input,
+                output,
+                overwriteOut = F,
+                groupTag = "---",
+                runTitles = "Run 1",
+                allRuns = F,
+                numToQuery = 50)
 {
 
   #Including this statement to avoid NOTE that occurs when vegClass package
@@ -88,7 +100,7 @@ main<- function(input, output, overwriteOut = F, groupTag = "---", runTitles = "
   #Extract file extension.
   fileExtIn<-sub("(.*)\\.","",input)
 
-  #Make sure input datbase is SQLite (.db).
+  #Make sure input database is SQLite (.db).
   if (!fileExtIn %in% "db"){
     stop(paste("Input argument does not have a valid file extension. File",
                "extension must be .db."))
@@ -168,7 +180,7 @@ main<- function(input, output, overwriteOut = F, groupTag = "---", runTitles = "
         length(stands),"\n")
 
     #Split stand vector into list containing vectors of stand IDs
-    standList<-split(stands, ceiling(seq_along(stands)/100))
+    standList<-split(stands, ceiling(seq_along(stands)/numToQuery))
     # cat("List of stands for processing created.", "\n")
 
     #Initialize standSum. This will keep track of number of total stands processed.
@@ -178,9 +190,9 @@ main<- function(input, output, overwriteOut = F, groupTag = "---", runTitles = "
     #have no live trees.
     noLiveTrees<-0
 
-    #Initialize standAccum. This variable is used for determining number of trees
-    #that had no tree records (live or dead) for current run.
-    standAccum<-0
+    #Initialize noVaidRecords. This variable is used for determining number of
+    #stands that have no valid tree records (live or dead).
+    noValidRecords<-0
 
     #==============================
     #Begin loop across standList
@@ -222,10 +234,21 @@ main<- function(input, output, overwriteOut = F, groupTag = "---", runTitles = "
 
         #Skip to next stand if standDF has no nrows. This would occur if stand
         #has no live or dead records associated with it.
-        if(nrow(standDF) <= 0) next
+        if(nrow(standDF) <= 0)
+        {
+          noValidRecords <- noValidRecords + 1
+          cat("Stand:", standSelect[j], "has no valid tree records.", "\n")
+          next
+        }
 
-        #Increment standAccum
-        standAccum<-standAccum + 1
+        #If stand only contains dead tree records increment noLiveTrees and move
+        #to next iteration of loop
+        if(max(standDF$TPA) <= 0)
+        {
+          noLiveTrees = noLiveTrees + 1
+          cat("Stand:", standSelect[j], "has no live tree records.", "\n")
+          next
+        }
 
         #Determine years that will be evaluated
         years<-unique(standDF$Year)
@@ -238,9 +261,6 @@ main<- function(input, output, overwriteOut = F, groupTag = "---", runTitles = "
 
         #Merge species information, as well as, forest system
         standDF<-merge(standDF, supportSP, by = "SpeciesPLANTS", all.x = T)
-
-        #Determine if stand has no live trees
-        if(sum(standDF$TPA) <= 0) noLiveTrees = noLiveTrees + 1
 
         #=====================================
         #Begin loop across years in standDF
@@ -283,7 +303,7 @@ main<- function(input, output, overwriteOut = F, groupTag = "---", runTitles = "
           #Calculate trees per acre
           standAttr["TPA"]<-sum(standYrDF$TPA)
 
-          #Calculate DomType, Dom1, Dom2, Dom1Per, and Dom2Per
+          #Calculate DomType, dcc1, dcc2, xdcc1, and xdcc2
           dtResults<-domType(standYrDF, standAttr["TOTALCC"], standAttr["TPA"])
 
           #Dominance type
@@ -395,7 +415,7 @@ main<- function(input, output, overwriteOut = F, groupTag = "---", runTitles = "
     cat(noLiveTrees, "stands contained only dead tree records.", "\n")
 
     #Print number of stands that had no valid tree records
-    cat(length(stands) - standAccum, "stands contained no tree records.", "\n")
+    cat(noValidRecords, "stands contained no tree records.", "\n")
 
     #Print run that has finished being processed
     cat(paste0(rep("*", 75), collapse = ""), "\n")
