@@ -263,7 +263,6 @@ pvConvert<-function(pv)
 #Message indicating that database has been created.
 ################################################################################
 
-
 #'@export
 dbCombine <- function(dbIn = NULL,
                       dbOut = NULL,
@@ -310,19 +309,30 @@ dbCombine <- function(dbIn = NULL,
   else
   {
     dbTables <- toupper(dbTables)
-  }
 
-  #Select only tables found in validTables
-  dbTables <- dbTables[dbTables %in% validTables]
-  cat("Database table names to consider:",
-      dbTables,
-      "\n")
+    #Select only tables found in validTables
+    dbTables <- dbTables[dbTables %in% validTables]
+    cat("Database table names to consider:",
+        dbTables,
+        "\n")
+
+    #If dbTables is empty after selection from validTables, stop with error
+    #message.
+    if(length(dbTables) <= 0)
+    {
+      stop("No valid databases tables to process.")
+    }
+  }
 
   #Catch erroneous gaakType values
   if(gaakType < 1 | gaakType > 3)
   {
     gaakType = 2
   }
+
+  #Replace \\ with / in dbIn and dbOut
+  dbIn <- gsub("\\\\", "/", dbIn)
+  dbOut <- gsub("\\\\", "/", dbOut)
 
   #Loop through dbIn and test if any of the files don't exist
   for(i in 1:length(dbIn))
@@ -338,6 +348,22 @@ dbCombine <- function(dbIn = NULL,
     {
       cat("Database", i, dbIn[i], "\n")
     }
+  }
+
+  #If there is more than one value specified in dbOut, stop with error message.
+  if(length(dbOut) > 1)
+  {
+    stop("Only one output file can be specified for dbOut.")
+  }
+
+  #Test if dbOut file path is valid
+  #Extract path to dbOut by extract all characters before the last / in output.
+  outPath <- gsub("/[^/]+$", "", dbOut)
+
+  #Test existence of output path and if it does not exist report error.
+  if (!(file.exists(outPath))){
+    stop(paste("Path to output:", outPath, "was not found.",
+               "Make sure directory path to output is spelled correctly."))
   }
 
   #Test if output file is a SQLite database
