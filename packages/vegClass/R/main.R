@@ -87,6 +87,10 @@ main<- function(input,
   #is built.
   supportSP<-NULL
 
+  #Change \\ to / in input and output arguments
+  input <- gsub("\\\\", "/", input)
+  output <- gsub("\\\\", "/", output)
+
   ###########################################################################
   #Check input arguments
   ###########################################################################
@@ -97,7 +101,7 @@ main<- function(input,
                "in input are spelled correctly."))
   }
 
-  #Extract file extension.
+  #Extract file extension for input argument.
   fileExtIn<-sub("(.*)\\.","",input)
 
   #Make sure input database is SQLite (.db).
@@ -106,7 +110,16 @@ main<- function(input,
                "extension must be .db."))
   }
 
-  #Extract file extension.
+  #Extract path to output by extract all characters before the last / in output.
+  outPath <- gsub("/[^/]+$", "", output)
+
+  #Test existence of output path and if it does not exist report error.
+  if (!(file.exists(outPath))){
+    stop(paste("Path to output:", outPath, "was not found.",
+    "Make sure directory path to output is spelled correctly."))
+  }
+
+  #Extract file extension for output argument.
   fileExtOut<-sub("(.*)\\.","",output)
 
   #Test if output file extension is valid (.csv).
@@ -169,30 +182,36 @@ main<- function(input,
     cat("*", "Processing run:", run, "\n")
     cat(paste0(rep("*", 75), collapse = ""), "\n")
 
-    #Obtain unique list of stand ids to process for run, r
+    #Obtain unique list of stand ids to process for run.
     standQuery<- paste("SELECT FVS_Cases.StandID
                       FROM FVS_Cases
                       WHERE RunTitle LIKE ", paste0("'%",run,"%'"))
     stands<-RSQLite::dbGetQuery(con, standQuery)[,1]
-    # stands<-allStands$StandID[allStands$RunTitle %in% run]
 
     cat("Total number of stands to process for run", paste0(run,":"),
         length(stands),"\n")
 
     #Split stand vector into list containing vectors of stand IDs
-    standList<-split(stands, ceiling(seq_along(stands)/numToQuery))
-    # cat("List of stands for processing created.", "\n")
+    standList<-split(stands,
+                     ceiling(seq_along(stands)/numToQuery))
 
     #Initialize standSum. This will keep track of number of total stands processed.
     standSum<-0
 
     #Initialize noLiveTrees. This variable keeps track of number of stands that
-    #have no live trees.
+    #have no live trees during the simulation time frame.
     noLiveTrees<-0
 
-    #Initialize noVaidRecords. This variable is used for determining number of
-    #stands that have no valid tree records (live or dead).
+    #Initialize noValidRecords. This variable is used for determining number of
+    #stands that have no valid tree records (live or dead). This occurs if a
+    #stand/plot has a record in the STANDINIT/PLOTINIT table but not records in
+    #the corresponding TREEINIT table of the input FVS dataset.
     noValidRecords<-0
+
+    #Initialize invalidStands. This variable is used to keep track of number of
+    #stands that are flagged as invalid during processing. Stands are considered
+    #invalid when the inventory is comprised entirely of dead trees.
+    invalidStands <- 0
 
     #==============================
     #Begin loop across standList
@@ -204,7 +223,8 @@ main<- function(input,
       standSelect<-standList[[i]]
       cat("Number of stands to query:", length(standSelect), "\n")
 
-      #Generate a query that will be created by buildQuery function
+      #Generate a query that will be used to read data from input argument (FVS
+      #output database)
       dbQuery<-buildQuery(standSelect, run)
 
       cat("Querying stands...", "\n")
@@ -232,6 +252,10 @@ main<- function(input,
         standDF<-dfDat[dfDat$StandID %in% standSelect[j],]
         cat("Processing stand:", standSelect[j],"\n")
 
+        #Initialize invalidStand. This variable is used to determine if a stand
+        #is invalid and should not be written to output argument.
+        invalidStand = F
+
         #Skip to next stand if standDF has no nrows. This would occur if stand
         #has no live or dead records associated with it.
         if(nrow(standDF) <= 0)
@@ -241,11 +265,12 @@ main<- function(input,
           next
         }
 
-        #If stand only contains dead tree records increment noLiveTrees and move
-        #to next iteration of loop
+        #If stand only contains dead tree records for the duration of the'
+        #simualtion timeframe, increment noLiveTrees and move to next iteration
+        #of loop.
         if(max(standDF$TPA) <= 0)
         {
-          noLiveTrees = noLiveTrees + 1
+          noLiveTrees <- noLiveTrees + 1
           cat("Stand:", standSelect[j], "has no live tree records.", "\n")
           next
         }
@@ -257,10 +282,14 @@ main<- function(input,
         years<-sort(years)
 
         #Create list that will store output for stand j for all years
-        standYrOutput<-vector(mode = "list", length(years))
+        standYrOutput<-vector(mode = "list",
+                              length(years))
 
-        #Merge species information, as well as, forest system
-        standDF<-merge(standDF, supportSP, by = "SpeciesPLANTS", all.x = T)
+        #Merge species information to standDF
+        standDF<-merge(standDF,
+                       supportSP,
+                       by = "SpeciesPLANTS",
+                       all.x = T)
 
         #=====================================
         #Begin loop across years in standDF
@@ -268,10 +297,11 @@ main<- function(input,
 
         for(k in 1:length(years))
         {
-          #Initialize standAttr vector which houses BA, totalCC, and TPA
+          #Initialize standAttr vector which stores BA, totalCC, and TPA of
+          #stand/plot.
           standAttr<-c("BA" = 0, "TOTALCC" = 0, "TPA" = 0)
 
-          #Extract rows for year j
+          #Extract rows for year k
           standYrDF<- standDF[standDF$Year == years[k],]
           cat("Year:", years[k],"\n")
 
@@ -286,22 +316,30 @@ main<- function(input,
                                PROJ_YEAR = years[k],
                                ST_AGE = unique(standYrDF$Age))
 
+          #Calculate trees per acre for stand/plot.
+          standAttr["TPA"]<-sum(standYrDF$TPA)
+
+          #If the initial inventory year (k == 1) has no live trees, set
+          #invalidStand to T. Stand will be processed but not sent to output.
+          if(k == 1 & standAttr["TPA"] <= 0)
+          {
+            invalidStands <- invalidStands + 1
+            invalidStand = T
+          }
+
           #Calculate tree BA
           standYrDF$TREEBA<-standYrDF$DBH^2 * standYrDF$TPA * 0.005454
 
           #Calculate tree CC
           standYrDF$TREECC<-pi * (standYrDF$CrWidth/2)^2 *(standYrDF$TPA/43560) * 100
 
-          #Calculate standBA
+          #Calculate BA for stand/plot
           standAttr["BA"]<-sum(standYrDF$TREEBA)
 
-          #Calculate stand percent canopy cover (uncorrected)
+          #Calculate stand percent canopy cover (uncorrected) for stand/plot.
           standCC<-sum(standYrDF$TREECC)
           yrOutput$CAN_COV<-round(standCC, 2)
           standAttr["TOTALCC"]<-yrOutput$CAN_COV
-
-          #Calculate trees per acre
-          standAttr["TPA"]<-sum(standYrDF$TPA)
 
           #Calculate DomType, dcc1, dcc2, xdcc1, and xdcc2
           dtResults<-domType(standYrDF, standAttr["TOTALCC"], standAttr["TPA"])
@@ -339,7 +377,7 @@ main<- function(input,
                                         tpa = standAttr["TPA"],
                                         type = 3)
 
-          # #BA storiedness
+          #BA storiedness
           yrOutput$BA_STORY<-baStory(stdYrFrame = standYrDF,
                                      totalCC = standAttr["TOTALCC"],
                                      tpa = standAttr["TPA"],
@@ -366,7 +404,19 @@ main<- function(input,
           ### END OF LOOP ACROSS YEARS
         }
 
-        #Combine all year-by-year information for standID i into a single dataframe.
+        #If stand was marked as invalid, move to next iteration of loop and do
+        #not send to output.
+        if(invalidStand)
+        {
+          cat("Stand:",
+              standSelect[j],
+              "is invalid and information will not be sent to output.",
+              "\n")
+          next
+        }
+
+        #Combine all year-by-year information for standID into a single
+        #dataframe.
         standOut<-do.call("rbind", standYrOutput)
 
         #============================================================
@@ -411,11 +461,20 @@ main<- function(input,
       ### END OF LOOP ACROSS ALL STANDS IN RUN
     }
 
-    #Print number of stands that had no tree records
-    cat(noLiveTrees, "stands contained only dead tree records.", "\n")
+    #Print number of stands that had no projectable tree records.
+    cat(noLiveTrees,
+        "stands contained no live tree records during simulation timeframe.",
+        "\n")
 
-    #Print number of stands that had no valid tree records
-    cat(noValidRecords, "stands contained no tree records.", "\n")
+    #Print number of stands that had no valid tree records (live or dead records)
+    cat(noValidRecords,
+        "stands contained no valid tree records.",
+        "\n")
+
+    #Print number of stands that were flagged as invalid during processing.
+    cat(invalidStands,
+        "stands were found to be invalid for processing.",
+        "\n")
 
     #Print run that has finished being processed
     cat(paste0(rep("*", 75), collapse = ""), "\n")
@@ -425,7 +484,7 @@ main<- function(input,
 
   ### END OF LOOP ACROSS RUNS
 
-  #Print run that has finished being processed
+  #Print message indicating that all runs have been processed
   cat(paste0(rep("*", 75), collapse = ""), "\n")
   cat("*", "Finished processing all runs.", "\n")
   cat(paste0(rep("*", 75), collapse = ""), "\n")
