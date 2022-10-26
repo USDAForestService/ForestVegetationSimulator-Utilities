@@ -37,8 +37,8 @@ validateDBInputs<-function(con, runTitle, allRuns)
     if(is.element(F, c("FVS_TreeList", "FVS_Cases") %in%
                   RSQLite::dbListTables(con)))
     {
-      message<-paste("One of the following tables was not found in incoming database:",
-    "FVS_TreeList, FVS_Cases.")
+      message<-paste("One of the following tables was not found in input",
+                     "database: FVS_TreeList, FVS_Cases.")
 
       #Assign value of F to validDB. Database (con) is not ready for prcoessing.
       validDB = F
@@ -56,8 +56,8 @@ validateDBInputs<-function(con, runTitle, allRuns)
     if(!allRuns)
     {
       #Check if runs from runTitle are found in FVS_Cases table
-      runsFound<- runTitle %in% toupper(unique(RSQLite::dbGetQuery(con, "SELECT RunTitle FROM
-                                                FVS_Cases")[,1]))
+      runsFound<- runTitle %in% toupper(unique(RSQLite::dbGetQuery(con,
+      "SELECT RunTitle FROM FVS_Cases")[,1]))
 
       #If any runs are not found, then report them in error message
       if(F %in% runsFound)
@@ -68,8 +68,9 @@ validateDBInputs<-function(con, runTitle, allRuns)
         #Paste missing runs together separated by comma and space
         missingRuns<-paste(missingRuns, collapse = ", ")
 
-        message<-(paste("Run titles:",paste0("'",missingRuns,"'", collapse = ""),"not found in",
-                        "input database. Please ensure all run titles are spelled correctly."))
+        message<-(paste("Run titles:",paste0("'",missingRuns,"'", collapse = ""),
+                        "not found in input database. Please ensure all run",
+                         "titles are spelled correctly."))
 
         #Assign value of F to validDB. Database (con) is not ready for prcoessing.
         validDB = F
@@ -84,7 +85,7 @@ validateDBInputs<-function(con, runTitle, allRuns)
   return(message)
 }
 
-#############################################################################
+################################################################################
 #Function: treeQuery
 #
 #This function builds and returns a string of SQL statements that can be used
@@ -99,7 +100,7 @@ validateDBInputs<-function(con, runTitle, allRuns)
 #Value
 #
 #Character string of SQL statements.
-#############################################################################
+################################################################################
 
 #'@export
 treeQuery<-function(cases)
@@ -211,7 +212,7 @@ computeQuery<-function(cases)
   return(query)
 }
 
-#############################################################################
+################################################################################
 #Function: getGroup
 #
 #This function takes in a string of FVS group labels and returns the group
@@ -225,7 +226,7 @@ computeQuery<-function(cases)
 #        the label "ERU=" would be used to extract "MCW" from the group
 #        code, ERU=MCW. If label is not found in group, then first group in
 #        groups argument is returned.
-#############################################################################
+################################################################################
 
 getGroup<-function(groups, label)
 {

@@ -74,7 +74,9 @@
 #
 #addCompute:   Boolean variable used to indicate if information in FVS_Compute
 #              table should be included in output. By default this argument
-#              is set to TRUE.
+#              is set to TRUE. If the FVS_Compute table does not exist in input
+#              then only the variables calculated by the vegClass package will
+#              be returned in output.
 #
 #startYear:    Integer value corresponding to the year that data should start
 #              being reported in output argment. Data with years prior to this
@@ -93,10 +95,6 @@ main<- function(input,
                 addCompute = T,
                 startYear = 0)
 {
-
-  #Including this statement to avoid NOTE that occurs when vegClass package
-  #is built.
-  supportSP<-NULL
 
   #Change \\ to / in input and output arguments
   input <- gsub("\\\\", "/", input)
@@ -175,9 +173,6 @@ main<- function(input,
     runTitles<-unique(RSQLite::dbGetQuery(con, "SELECT RunTitle FROM FVS_Cases")[,1])
     runTitles<-toupper(runTitles)
   }
-
-  #Store supportSp in dataframe
-  supportSP<-vegClass::supportSP
 
   #==============================
   #Begin loop across runTitles
@@ -319,14 +314,6 @@ main<- function(input,
         standYrOutput<-vector(mode = "list",
                               length(years))
 
-        #Merge species information to standDF
-        cat("Columns in species data:", colnames(supportSP), "\n")
-        standDF<-merge(standDF,
-                       supportSP,
-                       by = "SpeciesPLANTS",
-                       all.x = T)
-        cat("Species data joined to tree data.", "\n")
-
         #=====================================
         #Begin loop across years in standDF
         #=====================================
@@ -341,10 +328,6 @@ main<- function(input,
             cat("Skipping last year:", years[k], "\n")
             next
           }
-
-          #Initialize standAttr vector which stores BA, totalCC, and TPA of
-          #stand/plot.
-          standAttr<-c("BA" = 0, "TOTALCC" = 0, "TPA" = 0)
 
           #Extract rows for year k
           standYrDF<- standDF[standDF$Year == years[k],]
@@ -361,33 +344,19 @@ main<- function(input,
                                YEAR = years[k],
                                CY = k)
 
-          #Calculate trees per acre for stand/plot.
-          standAttr["TPA"]<-sum(standYrDF$TPA)
-
           #If the initial inventory year (k == 1) has no live trees, set
           #invalidStand to T. Stand will be processed but not sent to output.
-          if(k == 1 & standAttr["TPA"] <= 0)
+          if(k == 1 & plotTPA(standYrDF) <= 0)
           {
             invalidStands <- invalidStands + 1
             invalidStand = T
           }
 
-          #Calculate tree BA
-          standYrDF$TREEBA<-standYrDF$DBH^2 * standYrDF$TPA * 0.005454
-
-          #Calculate tree CC
-          standYrDF$TREECC<-pi * (standYrDF$CrWidth/2)^2 *(standYrDF$TPA/43560) * 100
-
-          #Calculate BA for stand/plot
-          standAttr["BA"]<-sum(standYrDF$TREEBA)
-
-          #Calculate stand percent canopy cover (uncorrected) for stand/plot.
-          standCC<-sum(standYrDF$TREECC)
-          yrOutput$CAN_COV<-round(standCC, 2)
-          standAttr["TOTALCC"]<-yrOutput$CAN_COV
-
           #Calculate DomType, dcc1, dcc2, xdcc1, and xdcc2
-          dtResults<-domType(standYrDF, standAttr["TOTALCC"], standAttr["TPA"])
+          dtResults<-domType(data = standYrDF)
+
+          #Calculate canopy cover uncorrected for overlap (CAN_COV)
+          yrOutput$CAN_COV<-round(plotCC(standYrDF, type = 2),2)
 
           #Dominance type
           yrOutput$DOM_TYPE<-dtResults[["DOMTYPE"]]
@@ -395,41 +364,29 @@ main<- function(input,
           #Dominance type 1
           yrOutput$DCC1<-dtResults[["DCC1"]]
 
-          #Dominance type 1 CC percentage
+          #Dominance type 1 CC
           yrOutput$XDCC1<-round(dtResults[["XDCC1"]],2)
 
           #Dominance type 2
           yrOutput$DCC2<-dtResults[["DCC2"]]
 
-          #Dominance type 2 CC percentage
+          #Dominance type 2 CC
           yrOutput$XDCC2<-round(dtResults[["XDCC2"]],2)
 
           #Canopy size class - midscale mapping
-          yrOutput$CAN_SIZCL<-canSizeCl(dat = standYrDF[c("DBH", "TREECC")],
-                                        totalCC = standAttr["TOTALCC"],
-                                        tpa = standAttr["TPA"],
+          yrOutput$CAN_SIZCL<-canSizeCl(data = standYrDF,
                                         type = 1)
 
           #Canopy size class - timberland
-          yrOutput$CAN_SZTMB<-canSizeCl(dat = standYrDF[c("DBH", "TREECC")],
-                                        totalCC = standAttr["TOTALCC"],
-                                        tpa = standAttr["TPA"],
+          yrOutput$CAN_SZTMB<-canSizeCl(data = standYrDF,
                                         type = 2)
 
           #Canopy size class - woodland
-          yrOutput$CAN_SZWDL<-canSizeCl(dat = standYrDF[c("DBH", "TREECC")],
-                                        totalCC = standAttr["TOTALCC"],
-                                        tpa = standAttr["TPA"],
+          yrOutput$CAN_SZWDL<-canSizeCl(data = standYrDF,
                                         type = 3)
 
           #BA storiedness
-          yrOutput$BA_STORY<-baStory(stdYrFrame = standYrDF,
-                                     totalCC = standAttr["TOTALCC"],
-                                     tpa = standAttr["TPA"],
-                                     ba = standAttr["BA"])
-
-          #Now correct canopy cover (CAN_COV)
-          yrOutput$CAN_COV<-round(correctCC(standAttr["TOTALCC"]),2)
+          yrOutput$BA_STORY<-baStory(standYrDF)
 
           #Add yrOutput to standYrOutput
           standYrOutput[[k]]<-yrOutput
@@ -453,7 +410,8 @@ main<- function(input,
         standOut<-do.call("rbind", standYrOutput)
 
         #Add tab to standIDs. This avoids the problems of stand IDs being
-        #converted to scientific notation in csv.
+        #converted to scientific notation in csv. There may be a better way to
+        #deal with this but not quite sure what it is.
         standOut$STANDID<-paste0(standOut$STANDID, "\t")
 
         #Join compute variables to output if addCompute is TRUE and FVS_Compute
@@ -535,7 +493,7 @@ main<- function(input,
         colNames <- colNames[!colNames %in% leadingCols]
 
         #Append leading columns to cols
-        colNames<-c(leadingCols, colNames)
+        colNames <- c(leadingCols, colNames)
 
         #Rearrange the column headers in standOut
         standOut <- standOut[, c(colNames)]
@@ -610,48 +568,6 @@ main<- function(input,
   #Disconnect from con
   RSQLite::dbDisconnect(con)
   cat("Disconnected from input database:", input, "\n")
-
-  #Message indicating that data is being sent to output.
-  # cat("Writing data to output file:", output, "\n")
-
-  ###########################################################################
-  #Logic for writing out to xlsx is below. Taking this out for now.
-  ###########################################################################
-
-  # #Determine file extension for specified output file.
-  # if(fileExtOut == 'xlsx')
-  # {
-  #
-  #   #Read in data from temporary csv file
-  #   tempData<-read.csv(tempOut)
-  #
-  #   #Determine if file exist. If file exists and overwrite is false, then
-  #   #append data to existing file.
-  #   if(file.exists(output) & overwriteOut == F)
-  #   {
-  #     #Read in existing data from output file. Here we assume that old output
-  #     #data is in worksheet 1.
-  #     oldData<-openxlsx::readWorkbook(output)
-  #
-  #     #Combine new results with old data
-  #     allOut<-rbind(oldData, tempData)
-  #
-  #     #Send updated results back to workbook
-  #     openxlsx::write.xlsx(allOut, output, overwrite = T)
-  #   }
-  #
-  #   #Else overwrite existing file.
-  #   else
-  #   {
-  #     openxlsx::write.xlsx(tempData, output, overwrite = T)
-  #   }
-  #
-  #   #Remove tempOut
-  #   unlink(tempOut)
-  # }
-
-  #PRINT: Message when output file has been written
-  # cat("Data written to output.","\n")
 
   #Return from function main
   return(cat("End of program.", "\n"))

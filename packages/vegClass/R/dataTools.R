@@ -645,7 +645,7 @@ dbCombine <- function(dbIn = NULL,
            force = T)
   }
 
-  return("Data created!")
+  return(cat("Data created!"))
 }
 
 ################################################################################

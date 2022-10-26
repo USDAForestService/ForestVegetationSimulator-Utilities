@@ -8,16 +8,15 @@
 #
 #Arguments
 #
-#type: Indicator variable used to determine which diameters and diameter class
-#      values to return.
-#      1 - Midscale mapping (default and will be used if any value other than
+#type:  Indicator variable used to determine which diameters and diameter class
+#       values to return.
+#       1 - Midscale mapping (default and will be used if any value other than
 #          2 or 3 is entered for type argument.)
-#      2 - Timberland dominance type
-#      3 - Woodland dominance type
+#       2 - Timberland dominance type
+#       3 - Woodland dominance type
 #
-#debug:	     Boolean variable used to specify if debug output should be
-#            printed to R console. If value is TRUE, then debug output will
-#            printed to R console.
+#debug: Boolean variable used to specify if debug output should be printed to R
+#       console. If value is TRUE, then debug output will printed to R console.
 #
 #Return values when type = 1
 #
@@ -87,7 +86,7 @@ getDiaValues<-function(type = 1, debug = F)
   return(results)
 }
 
-#############################################################################
+################################################################################
 #Function: findCategory
 #
 #This function returns a category or classification from input argument
@@ -128,7 +127,7 @@ getDiaValues<-function(type = 1, debug = F)
 #Return value
 #
 #Numeric (or integer) category or classification
-#############################################################################
+################################################################################
 
 findCategory<-function(x, inputValues = 0, outputValues = 0, invalidReturn = 0,
                        useLowerBound = F)
@@ -210,7 +209,7 @@ findCategory<-function(x, inputValues = 0, outputValues = 0, invalidReturn = 0,
   return(cat)
 }
 
-###########################################################################
+################################################################################
 #Function: getCanSizDC
 #
 #This function takes in a vector of DBH values and a type argument and returns
@@ -224,7 +223,7 @@ findCategory<-function(x, inputValues = 0, outputValues = 0, invalidReturn = 0,
 #type:  Indicator variable used to determine which type of diameter class to
 #       return
 #       1 - Midscale mapping (default and will be used if any value other than
-#          2 or 3 is entered for type argument.)
+#           2 or 3 is entered for type argument.)
 #       2 - Timberland dominance type
 #       3 - Woodland dominance type
 #
@@ -252,7 +251,7 @@ findCategory<-function(x, inputValues = 0, outputValues = 0, invalidReturn = 0,
 #1 = seedling sapling canopy cover
 #2 = small tree canopy cover
 #3 = medium - giant tree cover
-#############################################################################
+################################################################################
 
 getCanSizeDC<-function(DBH, type = 1, debug = F)
 {
@@ -264,7 +263,7 @@ getCanSizeDC<-function(DBH, type = 1, debug = F)
 
   if(debug) cat("In getCanSizeDC function", "\n")
 
-  #Loop across DBH vector and determine
+  #Loop across DBH vector and determine diameter class
   for(i in 1:length(DBH))
   {
     dcls<-findCategory(DBH[i], values[[1]], values[[2]])
@@ -276,7 +275,7 @@ getCanSizeDC<-function(DBH, type = 1, debug = F)
   return(DC)
 }
 
-#############################################################################
+################################################################################
 #Function: calcCanSizCl
 #
 #This function takes in a tree-level dataframe and returns a canopy size
@@ -284,12 +283,19 @@ getCanSizeDC<-function(DBH, type = 1, debug = F)
 #
 #Argument
 #
-#dat:     Tree level dataframe that contains DBH and canopy percent cover of each
-#         tree record (TREECC).
+#data:    Tree level dataframe corresponding to trees from a single stand.
 #
-#totalCC: Percent canopy cover of stand.
+#stand:   Name of column corresponding to stand associated with tree records
+#         in data. By default this value is set to "StandID".
 #
-#tpa:     Trees per acre of the stand.
+#dbh:     Name of column corresponding DBH values of tree records in data. By
+#         default this argument is set to "DBH".
+#
+#expf:    Name of column in data argument corresponding to expansion factor of
+#         tree records By default this argument is set to "TPA".
+#
+#crwidth: Name of column corresponding crown width values of tree records in
+#         data. By default this argument is set to "CrWidth".
 #
 #type:    Indicator variable used to determine which type of diameter class to
 #         return
@@ -318,33 +324,59 @@ getCanSizeDC<-function(DBH, type = 1, debug = F)
 #1 = seedling sapling canopy cover
 #2 = small tree canopy cover
 #3 = medium - giant tree cover
-#############################################################################
+################################################################################
 
 #'@export
-canSizeCl<-function(dat, totalCC, tpa, type=1, debug = F)
+canSizeCl<-function(data,
+                    stand = "StandID",
+                    dbh = "DBH",
+                    expf = "TPA",
+                    crwidth = "CrWidth",
+                    type=1,
+                    debug = F)
 {
+
+  #Check of missing columns in data
+  missing <- c(stand, dbh, expf, crwidth) %in% colnames(data)
+
+  #If there is a FALSE value in missing report message and return NA value
+  if(F %in% missing)
+  {
+    cat("One or more input arguments not found in data. Check spelling.", "\n")
+    return(NA)
+  }
+
   #Print stand
-  if(debug) cat("Stand:", unique(dat$StandID), "\n")
+  if(debug) cat("Stand:", unique(data[[stand]]), "\n")
 
   #Initialize named vector for storing CC by diameter class
   ccVec<-c("1" = 0, "2" = 0, "3" = 0, "4" = 0, "5" = 0)
 
   #Statement used to avoid NOTE when stateTrans package is built.
-  DC<-TREECC<-NULL
+  DC<-NULL
+
+  #Calculate percent canopy cover for each tree record
+  data$TREECC <- pi * (data[[crwidth]]/2)^2 *(data[[expf]]/43560) * 100
+
+  #Calculate TPA
+  tpa <- plotTPA(data)
+
+  #Calculate CC corrected for overlap
+  totalCC <- plotCC(data, type = 2)
 
   #If plot CC is less than 10% and TPA less than 100, then cansizcl is 0
-  if(correctCC(totalCC) < 10 & tpa < 100)
+  if(totalCC < 10 & tpa < 100)
   {
     cansizcl = 0
-    if(debug) cat("Total CC:", correctCC(totalCC), " LT 10 and TPA:", tpa,
+    if(debug) cat("Total CC:", totalCC, " LT 10 and TPA:", tpa,
                   "LT 100.", "\n")
   }
 
   #If plot CC is less than 10% and TPA GE 100, then cansizcl is 1
-  else if(correctCC(totalCC) < 10 & tpa >= 100)
+  else if(totalCC < 10 & tpa >= 100)
   {
     cansizcl = 1
-    if(debug) cat("Total CC:", correctCC(totalCC), " LT 10 and TPA:", tpa,
+    if(debug) cat("Total CC:", totalCC, " LT 10 and TPA:", tpa,
                   "GE 100.", "\n")
   }
 
@@ -352,16 +384,16 @@ canSizeCl<-function(dat, totalCC, tpa, type=1, debug = F)
   else
   {
     #Determine diameter class for each tree record
-    dat$DC<-getCanSizeDC(dat$DBH, type, debug)
+    data$DC<-getCanSizeDC(data[[dbh]], type, debug)
 
     #Loop across dat and sum canopy cover values for each class in ccVec
-    for(i in 1:nrow(dat))
+    for(i in 1:nrow(data))
     {
       #obtain DC for tree i
-      dcIndex<-dat$DC[i]
+      dcIndex<-data$DC[i]
 
       #Sum CC for DC in ccVec
-      ccVec[dcIndex]<- ccVec[dcIndex] + dat$TREECC[i]
+      ccVec[dcIndex]<- ccVec[dcIndex] + data$TREECC[i]
     }
 
     #Extract cansizcl associated with maximum CC
@@ -411,32 +443,7 @@ canSizeCl<-function(dat, totalCC, tpa, type=1, debug = F)
   return(cansizcl)
 }
 
-#############################################################################
-#Function: correctCC
-#
-#This function takes in an uncorrected percent canopy cover value and returns
-#a corrected value using the relationship described on page 2 of Crookston,
-#Nicholas L.; Stage, Albert R. 1999. Percent canopy cover and stand structure
-#statistics from the Forest Vegetation Simulator. Gen. Tech. Rep. RMRS-GTR-24.
-#Ogden, UT: U. S. Department of Agriculture, Forest Service, Rocky Mountain
-#Research Station. 11 p.
-#
-#Argument
-#
-#CC: Uncorrected CC value
-#
-#Return value
-#
-#Corrected CC value.
-#############################################################################
-
-correctCC<-function(CC)
-{
-  corCC = 100 * (1 - exp ( - 0.01* CC))
-  return(corCC)
-}
-
-#############################################################################
+################################################################################
 #Function: roundCC
 #
 #This function takes in an uncorrected percent canopy cover value and returns
@@ -453,7 +460,7 @@ correctCC<-function(CC)
 #Return value
 #
 #Rounded CC value.
-#############################################################################
+################################################################################
 
 roundCC<-function(CC, ccThreshold = 10)
 {
