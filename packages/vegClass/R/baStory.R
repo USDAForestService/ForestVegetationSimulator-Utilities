@@ -1,4 +1,4 @@
-#############################################################################
+################################################################################
 #Function: baStory
 #
 #Calculates storiedness in accordance with NFS Regional Vegetation
@@ -6,47 +6,82 @@
 #
 #Arguments
 #
-#stdYrFrame: Dataframe that contains tree records for stand. Must include
-#            DBH and TREEBA as a column.
+#data:    Tree level dataframe corresponding to trees from a single stand.
 #
-#TotalCC:    Uncorrected percent canopy cover of the stand.
+#stand:   Name of column corresponding to stand associated with tree records
+#         in data. By default this value is set to "StandID".
 #
-#tpa:        Trees per acre of the stand.
+#dbh:     Name of column in data argument corresponding to DBH of tree records.
+#         By default this argument is set to "DBH".
 #
-#ba:         Basal area per acre of the stand.
+#expf:    Name of column in data argument corresponding to TPA of tree records.
+#         By default this argument is set to "TPA".
 #
-#debug:	     Boolean variable used to specify if debug output should be
-#            printed to R console. If value is TRUE, then debug output will
-#            printed to R console.
+#crwidth: Name of column corresponding crown width values of tree records in
+#         data. By default this argument is set to "CrWidth".
+
+#debug:	  Boolean variable used to specify if debug output should be printed to
+#         R console. If value is TRUE, then debug output will printed to R
+#         console.
 #
 #Return value
 #
 #Storiedness value (integer value from 0 - 3)
-#############################################################################
+################################################################################
 
 #'@export
-baStory<-function(stdYrFrame, totalCC, tpa, ba, debug = F)
+baStory<-function(data,
+                  stand = "StandID",
+                  dbh = "DBH",
+                  expf = "TPA",
+                  crwidth = "CrWidth",
+                  debug = F)
 {
+  #Check of missing columns in data
+  missing <- c(stand, dbh, expf, crwidth) %in% colnames(data)
+
+  #If there is a FALSE value in missing report message and return NA value
+  if(F %in% missing)
+  {
+    cat("One or more input arguments not found in data. Check spelling.", "\n")
+    return(NA)
+  }
+
   #Print stand
-  if(debug) cat("Stand:", unique(stdYrFrame$StandID), "\n")
+  if(debug) cat("Stand:", unique(data[[stand]]), "\n")
+
+  #Calculate TREECC and TREEBA
+  data$TREECC <- pi * (data[[crwidth]]/2)^2 *(data[[expf]]/43560) * 100
+  data$TREEBA <- data[[dbh]]^2 * data[[expf]] * 0.005454
+
+  #Calculate CC corrected for overlap
+  totalCC <- plotCC(data, type = 2)
+
+  #Calculate BA
+  ba <- plotBA(data)
+
+  #Calculate TPA
+  tpa <- plotTPA(data)
 
   #Print BA
   if(debug) cat("BA of plot is", ba, "\n")
+  if(debug) cat("CC of plot is", totalCC, "\n")
+  if(debug) cat("TPA of plot is", tpa, "\n")
 
   #Test if plot is below minimum CC and TPA. If so, then set story to 0.
-  if(correctCC(totalCC) < 10 & tpa < 100)
+  if(totalCC < 10 & tpa < 100)
   {
     story<-0
-    if(debug) cat("Total CC:", correctCC(totalCC), " LT 10 and TPA:", tpa,
+    if(debug) cat("Total CC:", totalCC, " LT 10 and TPA:", tpa,
                                 "LT 100.", "\n")
   }
 
   #Test if plot is below minimum CC and above minimum TPA. If so, then set story
   #to 1.
-  else if(correctCC(totalCC) < 10 & tpa >= 100)
+  else if(totalCC < 10 & tpa >= 100)
   {
     story<-1
-    if(debug) cat("Total CC:", correctCC(totalCC), " LT 10 and TPA:", tpa,
+    if(debug) cat("Total CC:", totalCC, " LT 10 and TPA:", tpa,
     "GE 100.", "\n")
   }
 
@@ -59,9 +94,10 @@ baStory<-function(stdYrFrame, totalCC, tpa, ba, debug = F)
 
     #Test if sum of BA for trees greater than 24 inches is greater than 70% of
     #total stand basal area. If true then stand is single story.
-    if((sum(stdYrFrame$TREEBA[stdYrFrame$DBH >= 24]) / ba )>= 0.7)
+    if((sum(data$TREEBA[data[[dbh]] >= 24]) / ba )>= 0.7)
     {
-      if(debug) cat("BA for trees >= 24 inches:", sum(stdYrFrame$TREEBA[stdYrFrame$DBH >= 24]),
+      if(debug) cat("BA for trees >= 24 inches:",
+                    sum(data$TREEBA[data[[dbh]] >= 24]),
                     "GE", "total BA:", ba, "\n")
       story = 1
     }
@@ -83,8 +119,7 @@ baStory<-function(stdYrFrame, totalCC, tpa, ba, debug = F)
         top = bottom + 8
 
         #Calculate BA in current 8" DBH range
-        baSlide<-sum(stdYrFrame$TREEBA[stdYrFrame$DBH >= bottom & stdYrFrame$DBH <
-                                         top])
+        baSlide<-sum(data$TREEBA[data[[dbh]] >= bottom & data[[dbh]] < top])
         if(debug) cat("baSlide", "for trees between", bottom, "and",
                       top, "DBH:", baSlide, "\n")
 
