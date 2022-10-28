@@ -39,6 +39,15 @@ plotBA <- function(data,
                    max = 999,
                    debug = F)
 {
+  if(debug)
+  {
+    cat("In function plotBA", "\n")
+    cat("Columns:", "\n",
+        "Stand:", stand, "\n",
+        "dbh:", dbh, "\n",
+        "expf:", expf, "\n", "\n")
+  }
+
   #Check of missing columns in data
   missing <- c(dbh, expf, stand) %in% colnames(data)
 
@@ -73,9 +82,8 @@ plotBA <- function(data,
   #Print stand and BA if debug is true.
   if(debug)
   {
-    cat("In function plotBA", "\n")
     cat("Stand:", unique(data[[stand]]), "\n")
-    cat("BA:", BA, "\n")
+    cat("BA:", BA, "\n", "\n")
   }
 
   #Return BA
@@ -120,6 +128,15 @@ plotTPA <- function(data,
                     max = 999,
                     debug = F)
 {
+  if(debug)
+  {
+    cat("In function plotTPA", "\n")
+    cat("Columns:", "\n",
+      "Stand:", stand, "\n",
+      "dbh:", dbh, "\n",
+      "expf:", expf, "\n", "\n")
+  }
+
   #Check of missing columns in data
   missing <- c(expf, stand) %in% colnames(data)
 
@@ -152,9 +169,8 @@ plotTPA <- function(data,
   #Print stand and TPA if debug is true.
   if(debug)
   {
-    cat("In function plotTPA", "\n")
     cat("Stand:", unique(data[[stand]]), "\n")
-    cat("TPA:", TPA, "\n")
+    cat("TPA:", TPA, "\n", "\n")
   }
 
   #Return TPA
@@ -208,6 +224,16 @@ plotCC <- function(data,
                    debug = F,
                    type = 1)
 {
+  if(debug)
+  {
+    cat("In function plotCC", "\n")
+    cat("Columns:", "\n",
+        "Stand:", stand, "\n",
+        "dbh:", dbh, "\n",
+        "rrWidth:", crwidth, "\n",
+        "expf:", expf, "\n", "\n")
+  }
+
   #Check of missing columns in data
   missing <- c(crwidth, expf, stand) %in% colnames(data)
 
@@ -253,9 +279,8 @@ plotCC <- function(data,
   #Print stand and CC if debug is true.
   if(debug)
   {
-    cat("In function plotCC", "\n")
     cat("Stand:", unique(data[[stand]]), "\n")
-    cat("CC:", CC, "\n")
+    cat("CC:", CC, "\n", "\n")
   }
 
   #Return CC
@@ -308,6 +333,15 @@ plotQMD<-function(data,
                   max = 999,
                   debug = F)
 {
+  if(debug)
+  {
+    cat("In function plotQMD", "\n")
+    cat("Columns:", "\n",
+        "Stand:", stand, "\n",
+        "dbh:", dbh, "\n",
+        "expf:", expf, "\n", "\n")
+  }
+
   #Check of missing columns in data
   missing <- c(dbh, expf, stand) %in% colnames(data)
 
@@ -353,9 +387,8 @@ plotQMD<-function(data,
   #Print stand and QMD if debug is true.
   if(debug)
   {
-    cat("In function plotQMD", "\n")
     cat("Stand:", unique(data[[stand]]), "\n")
-    cat("QMD:", QMD, "\n")
+    cat("QMD:", QMD, "\n", "\n")
   }
 
   #Return QMD
@@ -435,6 +468,16 @@ plotSDI <- function(data,
                     type = 1,
                     debug = F)
 {
+
+  if(debug)
+  {
+    cat("In function plotSDI", "\n")
+    cat("Columns:", "\n",
+        "Stand:", stand, "\n",
+        "dbh:", dbh, "\n",
+        "expf:", expf, "\n", "\n")
+  }
+
   #Check of missing columns in data
   missing <- c(dbh, expf, stand) %in% colnames(data)
 
@@ -497,7 +540,7 @@ plotSDI <- function(data,
     {
       cat("TPA:", TPA, "\n",
           "QMD:", QMD, "\n",
-          "SDI:", SDI, "\n")
+          "SDI:", SDI, "\n", "\n")
     }
   }
 

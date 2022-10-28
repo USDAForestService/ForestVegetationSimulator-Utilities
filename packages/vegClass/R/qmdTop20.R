@@ -45,10 +45,17 @@ qmdTop20 <- function(data,
                      dbh = "DBH",
                      crwidth = "CrWidth",
                      expf = "TPA",
-                     min = 0.1,
                      debug = F)
 {
-  if(debug) cat("In function qmdTop20", "\n")
+  if(debug)
+  {
+    cat("In function qmdTop20", "\n")
+    cat("Columns:", "\n",
+        "Stand:", stand, "\n",
+        "dbh:", dbh, "\n",
+        "crwidth:", crwidth, "\n",
+        "expf:", expf, "\n", "\n")
+  }
 
   #Check of missing columns in data
   missing <- c(dbh, expf, stand) %in% colnames(data)
@@ -70,20 +77,16 @@ qmdTop20 <- function(data,
                dbh = dbh,
                crwidth = crwidth,
                expf = expf,
-               min = min,
-               max = max,
                type = 2)
 
   #If CC is greater than or equal to 10, set min to 0.2
   if(CC >= 10) minDBH = 0.2
-  else minDBH = min
+  else minDBH = 0.1
 
   #Calculate TPA
   PTPA <- plotTPA(data,
                   stand = stand,
-                  expf = expf,
-                  min = minDBH,
-                  max = max)
+                  expf = expf)
 
   #Calculate TPA of top 20. This value is PTPA * .20 or 20, depending on which
   #is larger.

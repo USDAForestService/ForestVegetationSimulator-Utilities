@@ -37,6 +37,16 @@ baStory<-function(data,
                   crwidth = "CrWidth",
                   debug = F)
 {
+  if(debug)
+  {
+    cat("In function baStory", "\n")
+    cat("Columns:", "\n",
+        "Stand:", stand, "\n",
+        "dbh:", dbh, "\n",
+        "crwidth:", crwidth, "\n",
+        "expf:", expf, "\n", "\n")
+  }
+
   #Check of missing columns in data
   missing <- c(stand, dbh, expf, crwidth) %in% colnames(data)
 

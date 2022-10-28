@@ -352,11 +352,39 @@ main<- function(input,
             invalidStand = T
           }
 
-          #Calculate DomType, dcc1, dcc2, xdcc1, and xdcc2
-          dtResults<-domType(data = standYrDF)
-
           #Calculate canopy cover uncorrected for overlap (CAN_COV)
           yrOutput$CAN_COV<-round(plotCC(standYrDF, type = 2),2)
+
+          #Calculate BA, TPA, QMD, and SDI for seedlings + stems
+          yrOutput$BA <- plotBA(standYrDF)
+          yrOutput$TPA <- plotTPA(standYrDF)
+          yrOutput$QMD <- plotQMD(standYrDF)
+          yrOutput$ZSDI <- plotSDI(standYrDF, type = 1)
+          yrOutput$RSDI <- plotSDI(standYrDF, type = 2)
+
+          #Calculate BA, TPA, QMD, and SDI for stems only
+          yrOutput$BA_STM <- plotBA(standYrDF,
+                                    min = 1)
+
+          yrOutput$TPA_STM <- plotTPA(standYrDF,
+                                      min = 1)
+
+          yrOutput$QMD_STM <- plotQMD(standYrDF,
+                                      min = 1)
+
+          yrOutput$ZSDI_STM <- plotSDI(standYrDF,
+                                       type = 1,
+                                       min = 1)
+
+          yrOutput$RSDI_STM <- plotSDI(standYrDF,
+                                       type = 2,
+                                       min = 1)
+
+          #Calculate QMD_TOP20
+          yrOutput$QMD_TOP20 <- qmdTop20(standYrDF)
+
+          #Calculate DomType, dcc1, dcc2, xdcc1, and xdcc2
+          dtResults<-domType(data = standYrDF)
 
           #Dominance type
           yrOutput$DOM_TYPE<-dtResults[["DOMTYPE"]]
@@ -529,7 +557,7 @@ main<- function(input,
 
       #Update standSum and send to console
       standSum<-standSum + length(caseSelect)
-      cat(standSum, "stands processed out of", length(cases["StandID"]), "\n")
+      cat(standSum, "stands processed out of", nrow(cases), "\n")
 
       #Remove treeData
       rm(treeData)
