@@ -14,6 +14,9 @@
 #species: Name of column corresponding to USDA plant symbols associated with
 #         tree records in data.
 #
+#dbh:     Name of column in data argument corresponding to DBH of tree records.
+#         By default this argument is set to "DBH".
+#
 #expf:    Name of column in data argument corresponding to expansion factor of
 #         tree records By default this argument is set to "TPA".
 #
@@ -40,6 +43,7 @@
 domType<-function(data,
                   stand = "StandID",
                   species = "SpeciesPLANTS",
+                  dbh = "DBH",
                   expf = "TPA",
                   crwidth = "CrWidth",
                   debug = F){
@@ -56,6 +60,13 @@ domType<-function(data,
 
   #Print stand
   if(debug) cat("Stand:", unique(data[[stand]]), "\n")
+
+  if(debug) cat("Columns:", "\n",
+                "stand:", stand, "\n",
+                "species:", species, "\n",
+                "dbh:", dbh, "\n",
+                "expf:", expf, "\n",
+                "crwidth:", crwidth, "\n", "\n")
 
   #Initialize boolean variable that is used to determine if DomType has been
   #found.
@@ -76,14 +87,22 @@ domType<-function(data,
   xdcc1<-0
   xdcc2<-0
 
-  #Calculate TREECC
-  data$TREECC <- pi * (data[[crwidth]]/2)^2 *(data[[expf]]/43560) * 100
-
   #Calculate CC
-  totalCC <- plotCC(data)
+  totalCC <- plotCC(data,
+                    stand = stand,
+                    dbh = dbh,
+                    crwidth = crwidth,
+                    expf = expf,
+                    type = 2)
 
   #Calculate TPA
-  tpa <- plotTPA(data)
+  tpa <- plotTPA(data,
+                 stand = stand,
+                 dbh = dbh,
+                 expf = expf)
+
+  #Calculate TREECC
+  data$TREECC <- pi * (data[[crwidth]]/2)^2 *(data[[expf]]/43560) * 100
 
   #Print CC and TPA if debug is TRUE
   if(debug) cat("CC of plot is", totalCC, "\n")

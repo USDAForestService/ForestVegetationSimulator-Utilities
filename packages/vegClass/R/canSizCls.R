@@ -349,6 +349,12 @@ canSizeCl<-function(data,
   #Print stand
   if(debug) cat("Stand:", unique(data[[stand]]), "\n")
 
+  if(debug) cat("Columns:", "\n",
+                "stand:", stand, "\n",
+                "dbh:", dbh, "\n",
+                "expf:", expf, "\n",
+                "crwidth:", crwidth, "\n", "\n")
+
   #Initialize named vector for storing CC by diameter class
   ccVec<-c("1" = 0, "2" = 0, "3" = 0, "4" = 0, "5" = 0)
 
@@ -359,10 +365,18 @@ canSizeCl<-function(data,
   data$TREECC <- pi * (data[[crwidth]]/2)^2 *(data[[expf]]/43560) * 100
 
   #Calculate TPA
-  tpa <- plotTPA(data)
+  tpa <- plotTPA(data,
+                 stand = stand,
+                 dbh = dbh,
+                 expf = expf)
 
   #Calculate CC corrected for overlap
-  totalCC <- plotCC(data, type = 2)
+  totalCC <- plotCC(data,
+                    stand = stand,
+                    dbh = dbh,
+                    crwidth = crwidth,
+                    expf = expf,
+                    type = 2)
 
   #If plot CC is less than 10% and TPA less than 100, then cansizcl is 0
   if(totalCC < 10 & tpa < 100)

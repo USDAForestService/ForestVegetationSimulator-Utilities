@@ -54,14 +54,31 @@ baStory<-function(data,
   data$TREECC <- pi * (data[[crwidth]]/2)^2 *(data[[expf]]/43560) * 100
   data$TREEBA <- data[[dbh]]^2 * data[[expf]] * 0.005454
 
+  if(debug) cat("Columns:", "\n",
+                "stand:", stand, "\n",
+                "dbh:", dbh, "\n",
+                "expf:", expf, "\n",
+                "crwidth:", crwidth, "\n", "\n")
+
   #Calculate CC corrected for overlap
-  totalCC <- plotCC(data, type = 2)
+  totalCC <- plotCC(data,
+                    stand = stand,
+                    dbh = dbh,
+                    crwidth = crwidth,
+                    expf = expf,
+                    type = 2)
 
   #Calculate BA
-  ba <- plotBA(data)
+  ba <- plotBA(data,
+               stand = stand,
+               dbh = dbh,
+               expf = expf)
 
   #Calculate TPA
-  tpa <- plotTPA(data)
+  tpa <- plotTPA(data,
+                 stand = stand,
+                 dbh = dbh,
+                 expf = expf)
 
   #Print BA
   if(debug) cat("BA of plot is", ba, "\n")
