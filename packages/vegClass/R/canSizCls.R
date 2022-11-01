@@ -1,3 +1,179 @@
+################################################################################
+#Function: calcCanSizCl
+#
+#This function takes in a tree-level dataframe and returns a canopy size
+#class for the inventory plot that the tree records reside on.
+#
+#Argument
+#
+#data:    Tree level dataframe corresponding to trees from a single stand.
+#
+#stand:   Name of column corresponding to stand associated with tree records
+#         in data. By default this value is set to "StandID".
+#
+#dbh:     Name of column corresponding DBH values of tree records in data. By
+#         default this argument is set to "DBH".
+#
+#expf:    Name of column in data argument corresponding to expansion factor of
+#         tree records By default this argument is set to "TPA".
+#
+#crwidth: Name of column corresponding crown width values of tree records in
+#         data. By default this argument is set to "CrWidth".
+#
+#TPA:     Trees per acre of stand/plot.
+#
+#CC:      Percent canopy cover corrected for overlap of stand/plot.
+#
+#type:    Indicator variable used to determine which type of diameter class to
+#         return
+#         1 - Midscale mapping (default and will be used if any value other than
+#         2 or 3 is entered for type argument.)
+#         2 - Timberland dominance type
+#         3 - Woodland dominance type
+#
+#Possible return values when type = 1
+#
+#1 = seedling sapling canopy cover
+#2 = small tree canopy cover
+#3 = medium and large tree canopy cover
+#4 = very large tree canopy cover
+#5 - giant tree canopy cover
+#
+#Possible return values when type = 2
+#
+#1 = seedling sapling canopy cover
+#2 = small tree canopy cover
+#3 = medium tree canopy cover
+#4 = large - giant tree cover
+#
+#Possible return values when type = 3
+#
+#1 = seedling sapling canopy cover
+#2 = small tree canopy cover
+#3 = medium - giant tree cover
+################################################################################
+
+#'@export
+canSizeCl<-function(data,
+                    stand = "StandID",
+                    dbh = "DBH",
+                    expf = "TPA",
+                    crwidth = "CrWidth",
+                    TPA,
+                    CC,
+                    type=1,
+                    debug = F)
+{
+
+  if(debug)
+  {
+    cat("In function canSizCls", "\n")
+    cat("Stand:", unique(data[[stand]]), "\n")
+    cat("Columns:", "\n",
+        "Stand:", stand, "\n",
+        "dbh:", dbh, "\n",
+        "crwidth:", crwidth, "\n",
+        "expf:", expf, "\n", "\n")
+  }
+
+  #Check of missing columns in data
+  missing <- c(stand, dbh, expf, crwidth) %in% colnames(data)
+
+  #If there is a FALSE value in missing report message and return NA value
+  if(F %in% missing)
+  {
+    cat("One or more input arguments not found in data. Check spelling.", "\n")
+    return(NA)
+  }
+
+  #Initialize named vector for storing CC by diameter class
+  ccVec<-c("1" = 0, "2" = 0, "3" = 0, "4" = 0, "5" = 0)
+
+  #Statement used to avoid NOTE when stateTrans package is built.
+  DC<-NULL
+
+  #Calculate percent canopy cover for each tree record
+  data$TREECC <- pi * (data[[crwidth]]/2)^2 *(data[[expf]]/43560) * 100
+
+  #If plot CC is less than 10% and TPA less than 100, then cansizcl is 0
+  if(CC < 10 & TPA < 100)
+  {
+    cansizcl = 0
+    if(debug) cat("Total CC:", CC, " LT 10 and TPA:", TPA,
+                  "LT 100.", "\n")
+  }
+
+  #If plot CC is less than 10% and TPA GE 100, then cansizcl is 1
+  else if(CC < 10 & TPA >= 100)
+  {
+    cansizcl = 1
+    if(debug) cat("Total CC:", CC, " LT 10 and TPA:", TPA,
+                  "GE 100.", "\n")
+  }
+
+  #Else calculate cansizcl
+  else
+  {
+    #Determine diameter class for each tree record
+    data$DC<-getCanSizeDC(data[[dbh]], type, debug)
+
+    #Loop across dat and sum canopy cover values for each class in ccVec
+    for(i in 1:nrow(data))
+    {
+      #obtain DC for tree i
+      dcIndex<-data$DC[i]
+
+      #Sum CC for DC in ccVec
+      ccVec[dcIndex]<- ccVec[dcIndex] + data$TREECC[i]
+    }
+
+    #Extract cansizcl associated with maximum CC
+    cansizcl<-names(ccVec)[which.max(ccVec)]
+
+    if(debug) cat("In canSizeCl function", "\n",
+                  "Initial cansizcl", "\n",
+                  "DC:", names(ccVec), "\n",
+                  "CC:", ccVec, "\n",
+                  "cansizcl:", cansizcl, "\n")
+
+    #Timber canopy size class adjustments
+    if(type == 2)
+    {
+      if(cansizcl == "2" & sum(ccVec[3:5]) >= ccVec[2])
+      {
+        ccVec[1:2]<-0
+        cansizcl<-names(ccVec)[which.max(ccVec)]
+      }
+
+      if(cansizcl == "1" & sum(ccVec[2:5]) >= ccVec[1])
+      {
+        ccVec[1]<-0
+        cansizcl<-names(ccVec)[which.max(ccVec)]
+      }
+    }
+
+    #Woodland size class adjustments
+    if(type == 3)
+    {
+      if(cansizcl == "1" & sum(ccVec[2:5]) >= ccVec[1])
+      {
+        ccVec[1]<-0
+        cansizcl<-names(ccVec)[which.max(ccVec)]
+      }
+    }
+
+    #Convert cansizcl to integer
+    cansizcl<-as.integer(cansizcl)
+
+    if(debug) cat("Final cansizcl", "\n",
+                  "DC:", names(ccVec), "\n",
+                  "CC:", ccVec, "\n",
+                  "cansizcl:", cansizcl, "\n")
+  }
+
+  return(cansizcl)
+}
+
 #############################################################################
 #Function: getDiaValues
 #
@@ -273,174 +449,6 @@ getCanSizeDC<-function(DBH, type = 1, debug = F)
 
   #Return DC
   return(DC)
-}
-
-################################################################################
-#Function: calcCanSizCl
-#
-#This function takes in a tree-level dataframe and returns a canopy size
-#class for the inventory plot that the tree records reside on.
-#
-#Argument
-#
-#data:    Tree level dataframe corresponding to trees from a single stand.
-#
-#stand:   Name of column corresponding to stand associated with tree records
-#         in data. By default this value is set to "StandID".
-#
-#dbh:     Name of column corresponding DBH values of tree records in data. By
-#         default this argument is set to "DBH".
-#
-#expf:    Name of column in data argument corresponding to expansion factor of
-#         tree records By default this argument is set to "TPA".
-#
-#crwidth: Name of column corresponding crown width values of tree records in
-#         data. By default this argument is set to "CrWidth".
-#
-#type:    Indicator variable used to determine which type of diameter class to
-#         return
-#         1 - Midscale mapping (default and will be used if any value other than
-#         2 or 3 is entered for type argument.)
-#         2 - Timberland dominance type
-#         3 - Woodland dominance type
-#
-#Possible return values when type = 1
-#
-#1 = seedling sapling canopy cover
-#2 = small tree canopy cover
-#3 = medium and large tree canopy cover
-#4 = very large tree canopy cover
-#5 - giant tree canopy cover
-#
-#Possible return values when type = 2
-#
-#1 = seedling sapling canopy cover
-#2 = small tree canopy cover
-#3 = medium tree canopy cover
-#4 = large - giant tree cover
-#
-#Possible return values when type = 3
-#
-#1 = seedling sapling canopy cover
-#2 = small tree canopy cover
-#3 = medium - giant tree cover
-################################################################################
-
-#'@export
-canSizeCl<-function(data,
-                    stand = "StandID",
-                    dbh = "DBH",
-                    expf = "TPA",
-                    crwidth = "CrWidth",
-                    type=1,
-                    debug = F)
-{
-
-  #Check of missing columns in data
-  missing <- c(stand, dbh, expf, crwidth) %in% colnames(data)
-
-  #If there is a FALSE value in missing report message and return NA value
-  if(F %in% missing)
-  {
-    cat("One or more input arguments not found in data. Check spelling.", "\n")
-    return(NA)
-  }
-
-  #Print stand
-  if(debug) cat("Stand:", unique(data[[stand]]), "\n")
-
-  #Initialize named vector for storing CC by diameter class
-  ccVec<-c("1" = 0, "2" = 0, "3" = 0, "4" = 0, "5" = 0)
-
-  #Statement used to avoid NOTE when stateTrans package is built.
-  DC<-NULL
-
-  #Calculate percent canopy cover for each tree record
-  data$TREECC <- pi * (data[[crwidth]]/2)^2 *(data[[expf]]/43560) * 100
-
-  #Calculate TPA
-  tpa <- plotTPA(data)
-
-  #Calculate CC corrected for overlap
-  totalCC <- plotCC(data, type = 2)
-
-  #If plot CC is less than 10% and TPA less than 100, then cansizcl is 0
-  if(totalCC < 10 & tpa < 100)
-  {
-    cansizcl = 0
-    if(debug) cat("Total CC:", totalCC, " LT 10 and TPA:", tpa,
-                  "LT 100.", "\n")
-  }
-
-  #If plot CC is less than 10% and TPA GE 100, then cansizcl is 1
-  else if(totalCC < 10 & tpa >= 100)
-  {
-    cansizcl = 1
-    if(debug) cat("Total CC:", totalCC, " LT 10 and TPA:", tpa,
-                  "GE 100.", "\n")
-  }
-
-  #Else calculate cansizcl
-  else
-  {
-    #Determine diameter class for each tree record
-    data$DC<-getCanSizeDC(data[[dbh]], type, debug)
-
-    #Loop across dat and sum canopy cover values for each class in ccVec
-    for(i in 1:nrow(data))
-    {
-      #obtain DC for tree i
-      dcIndex<-data$DC[i]
-
-      #Sum CC for DC in ccVec
-      ccVec[dcIndex]<- ccVec[dcIndex] + data$TREECC[i]
-    }
-
-    #Extract cansizcl associated with maximum CC
-    cansizcl<-names(ccVec)[which.max(ccVec)]
-
-    if(debug) cat("In canSizeCl function", "\n",
-                  "Initial cansizcl", "\n",
-                  "DC:", names(ccVec), "\n",
-                  "CC:", ccVec, "\n",
-                  "cansizcl:", cansizcl, "\n")
-
-    #Timber canopy size class adjustments
-    if(type == 2)
-    {
-      if(cansizcl == "2" & sum(ccVec[3:5]) >= ccVec[2])
-      {
-        ccVec[1:2]<-0
-        cansizcl<-names(ccVec)[which.max(ccVec)]
-      }
-
-      if(cansizcl == "1" & sum(ccVec[2:5]) >= ccVec[1])
-      {
-        ccVec[1]<-0
-        cansizcl<-names(ccVec)[which.max(ccVec)]
-      }
-    }
-
-    #Woodland size class adjustments
-    if(type == 3)
-    {
-      if(cansizcl == "1" & sum(ccVec[2:5]) >= ccVec[1])
-      {
-        ccVec[1]<-0
-        cansizcl<-names(ccVec)[which.max(ccVec)]
-      }
-    }
-
-    #Convert cansizcl to integer
-    cansizcl<-as.integer(cansizcl)
-
-    if(debug) cat("Final cansizcl", "\n",
-                  "DC:", names(ccVec), "\n",
-                  "CC:", ccVec, "\n",
-                  "cansizcl:", cansizcl, "\n")
-  }
-
-  return(cansizcl)
 }
 
 ################################################################################

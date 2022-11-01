@@ -14,12 +14,18 @@
 #species: Name of column corresponding to USDA plant symbols associated with
 #         tree records in data.
 #
+#dbh:     Name of column in data argument corresponding to DBH of tree records.
+#         By default this argument is set to "DBH".
+#
 #expf:    Name of column in data argument corresponding to expansion factor of
 #         tree records By default this argument is set to "TPA".
 #
 #crwidth: Name of column corresponding crown width values of tree records in
 #         data. By default this argument is set to "CrWidth".
 #
+#TPA:     TPA of stand/plot.
+#
+#CC:      Canopy cover uncorrected for overlap of stand/plot.
 #
 #debug:	  Boolean variable used to specify if debug output should be printed to
 #         R console. If value is TRUE, then debug output will printed to R
@@ -40,22 +46,42 @@
 domType<-function(data,
                   stand = "StandID",
                   species = "SpeciesPLANTS",
+                  dbh = "DBH",
                   expf = "TPA",
                   crwidth = "CrWidth",
+                  TPA,
+                  CC,
                   debug = F){
 
+  #Intialize results vector to NA
+  results=list("DOMTYPE" = NA,
+               "DCC1" = NA,
+               "XDCC1" = NA,
+               "DCC2" = NA,
+               "XDCC2" = NA)
+
   #Check of missing columns in data
-  missing <- c(stand, expf, crwidth) %in% colnames(data)
+  missing <- c(stand, species, dbh, expf, crwidth) %in% colnames(data)
 
   #If there is a FALSE value in missing report message and return NA value
   if(F %in% missing)
   {
     cat("One or more input arguments not found in data. Check spelling.", "\n")
-    return(NA)
+    return(results)
   }
 
   #Print stand
-  if(debug) cat("Stand:", unique(data[[stand]]), "\n")
+  if(debug)
+  {
+    cat("In function domType", "\n")
+    cat("Stand:", unique(data[[stand]]), "\n")
+    cat("Columns:", "\n",
+                "stand:", stand, "\n",
+                "species:", species, "\n",
+                "dbh:", dbh, "\n",
+                "expf:", expf, "\n",
+                "crwidth:", crwidth, "\n", "\n")
+  }
 
   #Initialize boolean variable that is used to determine if DomType has been
   #found.
@@ -79,15 +105,9 @@ domType<-function(data,
   #Calculate TREECC
   data$TREECC <- pi * (data[[crwidth]]/2)^2 *(data[[expf]]/43560) * 100
 
-  #Calculate CC
-  totalCC <- plotCC(data)
-
-  #Calculate TPA
-  tpa <- plotTPA(data)
-
   #Print CC and TPA if debug is TRUE
-  if(debug) cat("CC of plot is", totalCC, "\n")
-  if(debug) cat("TPA of plot is", tpa, "\n")
+  if(debug) cat("CC of plot is", CC, "\n")
+  if(debug) cat("TPA of plot is", TPA, "\n")
 
   #Identify unique species in stand
   spStand <- unique(data[[species]])
@@ -95,7 +115,7 @@ domType<-function(data,
   #Initialize vector that will store genus value for each species
   genusStand <- vector("character", length(spStand))
 
-  #Initialize vector that will store shade tolertance value for each species
+  #Initialize vector that will store shade tolerance value for each species
   shadeTolStand <- vector("character", length(spStand))
 
   #Initialize vector that will store shade leaf reten value for each species
@@ -147,13 +167,13 @@ domType<-function(data,
   #            does not consider these types of life forms.
   #==========================================================================
 
-  #If corrected CC is less and then 10 and tpa less than 100, DOMTYPE is NVG
-  if(correctCC(totalCC) < 10 & tpa < 100)
+  #If corrected CC is less and then 10 and TPA less than 100, DOMTYPE is NVG
+  if(correctCC(CC) < 10 & TPA < 100)
   {
     DomType = "NVG"
     domTypeFound = T
-    if(debug) cat("LEAD 1-5", "totalCC:", correctCC(totalCC),"LT 10 and",
-                  "tpa:", tpa,"LT 100.", "\n", "dcc1:", dcc1,"xdcc1:",xdcc1,
+    if(debug) cat("LEAD 1-5", "CC:", correctCC(CC),"LT 10 and",
+                  "TPA:", TPA,"LT 100.", "\n", "dcc1:", dcc1,"xdcc1:",xdcc1,
                   "DomType:", DomType, "\n",
                   fill = 80)
   }
@@ -267,7 +287,7 @@ domType<-function(data,
     #========================================================================
 
     #Test if most abundant species is the dominance type
-    if(sppCC[1] > (totalCC * 0.60)){
+    if(sppCC[1] > (CC * 0.60)){
 
       #Set dominance type
       DomType = names(sppCC[1])
@@ -282,7 +302,7 @@ domType<-function(data,
       domTypeFound = T
 
       #Lead 11 debug
-      if(debug) cat("LEAD 11", "sppCC:", sppCC[1], "totalCC:", totalCC,
+      if(debug) cat("LEAD 11", "sppCC:", sppCC[1], "CC:", CC,
                     "dcc1:", dcc1, "xdcc1:", xdcc1, "DomType:", DomType,
                     "\n", fill = 80)
     }
@@ -291,9 +311,9 @@ domType<-function(data,
     {
       #Test if Canopy cover of two most abundant tree species > 80% of total
       #tree canopy cover, each individually > 20% of total tree canopy cover
-      if(sppCC[1] >= (totalCC * 0.20) &&
-         sppCC[2] >= (totalCC * 0.20) &&
-         sppCC[1] + sppCC[2] >= (totalCC * 0.80)){
+      if(sppCC[1] >= (CC * 0.20) &&
+         sppCC[2] >= (CC * 0.20) &&
+         sppCC[1] + sppCC[2] >= (CC * 0.80)){
 
         #Get and sort species names
         spNames<-sort(c(names(sppCC[1]), names(sppCC[2])), decreasing = F)
@@ -313,7 +333,7 @@ domType<-function(data,
 
         #Lead 12 debug
         if(debug) cat("LEAD 12", "sppCC1:", sppCC[1], "sppCC2:", sppCC[2],
-                      "totalCC:", totalCC, "dcc1:", dcc1, "xdcc1:", xdcc1,
+                      "CC:", CC, "dcc1:", dcc1, "xdcc1:", xdcc1,
                       "dcc2:", dcc2, "xdcc2:", xdcc2,"DomType:", DomType,
                       "\n", fill = 80)
       }
@@ -333,7 +353,7 @@ domType<-function(data,
 
     #Check if most abundant genus is the dominance type
     if(!domTypeFound){
-      if(genusCC[1] > (totalCC * 0.60)){
+      if(genusCC[1] > (CC * 0.60)){
 
         #Set DomType
         DomType = names(genusCC[1])
@@ -345,7 +365,7 @@ domType<-function(data,
         domTypeFound = T
 
         #LEAD 13
-        if(debug) cat("LEAD 13", "genusCC1:", genusCC[1], "totalCC:", totalCC,
+        if(debug) cat("LEAD 13", "genusCC1:", genusCC[1], "CC:", CC,
                       "dcc1:", dcc1, "xdcc1:", xdcc1,"DomType:", DomType, "\n",
                       fill = 80)
       }
@@ -358,9 +378,9 @@ domType<-function(data,
       #Find index where species and genus are mutually exclusive
       genIndex<-excGenusSp(names(sppCC)[1], names(genusCC), genusSp)
 
-      if(genusCC[genIndex] >= (totalCC * 0.20) &&
-         sppCC[1] >= (totalCC * 0.20) &&
-         genusCC[genIndex] + sppCC[1] >= (totalCC * 0.80))
+      if(genusCC[genIndex] >= (CC * 0.20) &&
+         sppCC[1] >= (CC * 0.20) &&
+         genusCC[genIndex] + sppCC[1] >= (CC * 0.80))
       {
         #Get and sort names of genus and species
         genusSpNames<-sort(c(names(genusCC[genIndex]), names(sppCC[1])),
@@ -381,7 +401,7 @@ domType<-function(data,
 
         #LEAD 14
         if(debug) cat("LEAD 14", "sppCC1:", sppCC[1], "genusCC:", sppCC[genIndex],
-                      "totalCC:", totalCC, "dcc1:", dcc1, "xdcc1:", xdcc1, "dcc2:",
+                      "CC:", CC, "dcc1:", dcc1, "xdcc1:", xdcc1, "dcc2:",
                        dcc2, "xdcc2:", xdcc2, "DomType:", DomType, "\n",
                       fill = 80)
       }
@@ -394,9 +414,9 @@ domType<-function(data,
 
     if(!domTypeFound)
     {
-      if(genusCC[1] >= (totalCC * 0.20) &&
-         genusCC[2] >= (totalCC * 0.20) &&
-         genusCC[1] + genusCC[2] >= (totalCC * 0.80)){
+      if(genusCC[1] >= (CC * 0.20) &&
+         genusCC[2] >= (CC * 0.20) &&
+         genusCC[1] + genusCC[2] >= (CC * 0.80)){
 
         #Get and sort names of genera
         genusNames<-sort(c(names(genusCC[1]), names(genusCC[2])),
@@ -416,7 +436,7 @@ domType<-function(data,
         domTypeFound = T
 
         if(debug) cat("LEAD 15", "genusCC1:", genusCC[1], "genusCC2:", genusCC[2],
-                      "totalCC:", totalCC, "dcc1:", dcc1, "xdcc1:", xdcc1, "dcc2:",
+                      "CC:", CC, "dcc1:", dcc1, "xdcc1:", xdcc1, "dcc2:",
                       dcc2, "xdcc2:", xdcc2, "DomType:", DomType, "\n",
                       fill = 80)
       }
@@ -439,10 +459,10 @@ domType<-function(data,
     {
       #If evergreen trees <= 75% of total tree canopy cover, then determine if
       #DomType is TDMX or TEDX
-      if(leafRetenCC["EVERGREEN"] <= totalCC * 0.75)
+      if(leafRetenCC["EVERGREEN"] <= CC * 0.75)
       {
         #If Deciduous trees > 75% of total tree canopy cover then DomType is TDMX
-        if(leafRetenCC["DECIDUOUS"] > totalCC * 0.75)
+        if(leafRetenCC["DECIDUOUS"] > CC * 0.75)
         {
           #Set DomType
           DomType = 'TDMX'
@@ -458,7 +478,7 @@ domType<-function(data,
           domTypeFound = T
 
           #LEAD 7
-          if(debug) cat("LEAD 7", "totalCC:", totalCC, "dcc1:", dcc1, "xdcc1:",
+          if(debug) cat("LEAD 7", "CC:", CC, "dcc1:", dcc1, "xdcc1:",
                         xdcc1, "dcc2:", dcc2, "xdcc2:", xdcc2, "DomType:",
                         DomType, "\n", fill = 80)
         }
@@ -480,7 +500,7 @@ domType<-function(data,
           domTypeFound = T
 
           #LEAD 6
-          if(debug) cat("LEAD 6", "totalCC:", totalCC, "dcc1:", dcc1, "xdcc1:",
+          if(debug) cat("LEAD 6", "CC:", CC, "dcc1:", dcc1, "xdcc1:",
                         xdcc1, "dcc2:", dcc2, "xdcc2:", xdcc2, "DomType:",
                         DomType, "\n", fill = 80)
         }
@@ -508,7 +528,7 @@ domType<-function(data,
           domTypeFound = T
 
           #LEAD 17
-          if(debug) cat("LEAD 18", "totalCC:", totalCC, "dcc1:", dcc1, "xdcc1:",
+          if(debug) cat("LEAD 18", "CC:", CC, "dcc1:", dcc1, "xdcc1:",
                         xdcc1, "dcc2:", dcc2, "xdcc2:", xdcc2, "DomType:",
                         DomType, "\n", fill = 80)
         }
@@ -529,7 +549,7 @@ domType<-function(data,
           domTypeFound = T
 
           #LEAD 18
-          if(debug) cat("LEAD 17", "totalCC:", totalCC, "dcc1:", dcc1, "xdcc1:",
+          if(debug) cat("LEAD 17", "CC:", CC, "dcc1:", dcc1, "xdcc1:",
                         xdcc1, "dcc2:", dcc2, "xdcc2:", xdcc2, "DomType:",
                         DomType, "\n", fill = 80)
         }
