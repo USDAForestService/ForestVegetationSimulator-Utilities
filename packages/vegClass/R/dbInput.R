@@ -213,6 +213,58 @@ computeQuery<-function(cases)
 }
 
 ################################################################################
+#Function: potFireQuery
+#
+#This function builds and returns a string of SQL statements that can be used
+#to read in data from the FVS_Potfire table. The potFireQuery function can be
+#invoked outside of main.R for testing purposes and can be used in the
+#dbGetQuery function of the RSQLite R package.
+#
+#Arguments
+#
+#cases:	 Character vector of cases IDs.
+#
+#Value
+#
+#Character string of SQL statements.
+################################################################################
+
+#'@export
+potFireQuery<-function(cases)
+{
+  #Define portion of query that will always be used.
+  query<-
+    paste("SELECT PFire.Year, PFire.CaseID, PFire.PTorch_Sev,",
+          "PFire.PTorch_Mod, PFire.Torch_Index, PFire.Crown_Index,",
+          "PFire.Canopy_Ht, PFire.Canopy_Density",
+          "FROM FVS_PotFire PFire")
+
+  #Add stand query as long as length of cases is at least 1.
+  if(length(cases) >= 1)
+  {
+    #Add quotes to stand and commas to cases
+    cases<-paste0("'",cases,"'", ",")
+
+    #Collapse cases into a single string
+    cases<-paste(cases, collapse = "")
+
+    #Remove last comma from cases
+    cases<-substr(cases,1, nchar(cases)-1)
+
+    #Add parantheses around cases
+    cases<-paste0("(", cases, ")")
+
+    #Create WHERE clause with cases
+    caseQuery<-paste0("WHERE PFire.CaseID IN", cases)
+
+    #Add standQuery to query
+    query<-paste(query, caseQuery)
+  }
+
+  return(query)
+}
+
+################################################################################
 #Function: getGroup
 #
 #This function takes in a string of FVS group labels and returns the group

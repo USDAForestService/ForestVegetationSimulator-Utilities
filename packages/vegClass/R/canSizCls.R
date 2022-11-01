@@ -20,6 +20,10 @@
 #crwidth: Name of column corresponding crown width values of tree records in
 #         data. By default this argument is set to "CrWidth".
 #
+#TPA:     Trees per acre of stand/plot.
+#
+#CC:      Percent canopy cover corrected for overlap of stand/plot.
+#
 #type:    Indicator variable used to determine which type of diameter class to
 #         return
 #         1 - Midscale mapping (default and will be used if any value other than
@@ -55,6 +59,8 @@ canSizeCl<-function(data,
                     dbh = "DBH",
                     expf = "TPA",
                     crwidth = "CrWidth",
+                    TPA,
+                    CC,
                     type=1,
                     debug = F)
 {
@@ -62,6 +68,7 @@ canSizeCl<-function(data,
   if(debug)
   {
     cat("In function canSizCls", "\n")
+    cat("Stand:", unique(data[[stand]]), "\n")
     cat("Columns:", "\n",
         "Stand:", stand, "\n",
         "dbh:", dbh, "\n",
@@ -79,15 +86,6 @@ canSizeCl<-function(data,
     return(NA)
   }
 
-  #Print stand
-  if(debug) cat("Stand:", unique(data[[stand]]), "\n")
-
-  if(debug) cat("Columns:", "\n",
-                "stand:", stand, "\n",
-                "dbh:", dbh, "\n",
-                "expf:", expf, "\n",
-                "crwidth:", crwidth, "\n", "\n")
-
   #Initialize named vector for storing CC by diameter class
   ccVec<-c("1" = 0, "2" = 0, "3" = 0, "4" = 0, "5" = 0)
 
@@ -97,33 +95,19 @@ canSizeCl<-function(data,
   #Calculate percent canopy cover for each tree record
   data$TREECC <- pi * (data[[crwidth]]/2)^2 *(data[[expf]]/43560) * 100
 
-  #Calculate TPA
-  tpa <- plotTPA(data,
-                 stand = stand,
-                 dbh = dbh,
-                 expf = expf)
-
-  #Calculate CC corrected for overlap
-  totalCC <- plotCC(data,
-                    stand = stand,
-                    dbh = dbh,
-                    crwidth = crwidth,
-                    expf = expf,
-                    type = 2)
-
   #If plot CC is less than 10% and TPA less than 100, then cansizcl is 0
-  if(totalCC < 10 & tpa < 100)
+  if(CC < 10 & TPA < 100)
   {
     cansizcl = 0
-    if(debug) cat("Total CC:", totalCC, " LT 10 and TPA:", tpa,
+    if(debug) cat("Total CC:", CC, " LT 10 and TPA:", TPA,
                   "LT 100.", "\n")
   }
 
   #If plot CC is less than 10% and TPA GE 100, then cansizcl is 1
-  else if(totalCC < 10 & tpa >= 100)
+  else if(CC < 10 & TPA >= 100)
   {
     cansizcl = 1
-    if(debug) cat("Total CC:", totalCC, " LT 10 and TPA:", tpa,
+    if(debug) cat("Total CC:", CC, " LT 10 and TPA:", TPA,
                   "GE 100.", "\n")
   }
 

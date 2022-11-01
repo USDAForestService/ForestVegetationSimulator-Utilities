@@ -25,8 +25,9 @@
 #expf:    Name of column in data argument corresponding to TPA of tree records.
 #         By default this argument is set to "TPA".
 #
-#crwidth: Name of column in data argument corresponding to crown width of tree
-#         records.By default this argument is set to "TPA".
+#TPA:     Trees per acre of plot/stand.
+#
+#CC:      Percent canopy cover corrected for overlap for plot/stand.
 #
 #min:     Minimum diameter to consider in calculation of qmdTop20. By default
 #         this argument is set to 0.1.
@@ -43,17 +44,18 @@
 qmdTop20 <- function(data,
                      stand = "StandID",
                      dbh = "DBH",
-                     crwidth = "CrWidth",
                      expf = "TPA",
+                     TPA,
+                     CC,
                      debug = F)
 {
   if(debug)
   {
     cat("In function qmdTop20", "\n")
+    cat("Stand:", unique(data[[stand]]), "\n")
     cat("Columns:", "\n",
         "Stand:", stand, "\n",
         "dbh:", dbh, "\n",
-        "crwidth:", crwidth, "\n",
         "expf:", expf, "\n", "\n")
   }
 
@@ -70,23 +72,13 @@ qmdTop20 <- function(data,
   #Sort data from largest to smallest diameter
   data <- data[order(-data[[dbh]]),]
 
-  #Calculate corrected CC, this will determine minDBH value for qmdTop20
-  #calculation.
-  CC <- plotCC(data,
-               stand = stand,
-               dbh = dbh,
-               crwidth = crwidth,
-               expf = expf,
-               type = 2)
 
   #If CC is greater than or equal to 10, set min to 0.2
   if(CC >= 10) minDBH = 0.2
   else minDBH = 0.1
 
   #Calculate TPA
-  PTPA <- plotTPA(data,
-                  stand = stand,
-                  expf = expf)
+  PTPA <- TPA
 
   #Calculate TPA of top 20. This value is PTPA * .20 or 20, depending on which
   #is larger.
@@ -101,7 +93,7 @@ qmdTop20 <- function(data,
   }
 
   #Initialize DBHSQ and TPA
-  TPA = 0
+  TPASUM = 0
   DBHSQ = 0
 
   #Loop across data and sum DBH^2 * TPA and TPA until TPA20 is exceeded or
@@ -111,28 +103,28 @@ qmdTop20 <- function(data,
     #Process record if its DBH is greater than or equal to minDBH
     if(data[[dbh]][i] >= minDBH)
     {
-      #Add TPA value to TPA.
-      TPA = TPA + data[[expf]][i]
+      #Add TPASUM value to TPASUM.
+      TPASUM = TPASUM + data[[expf]][i]
 
-      #TPA has exceeded TPA20
-      if(TPA >= TPA20)
+      #TPASUM has exceeded TPA20
+      if(TPASUM >= TPA20)
       {
         #Do a debug
         if(debug)
         {
           cat("TPA20 exceeded.", "\n",
               "TREE EXP:", data[[expf]][i], "\n",
-              "TPA:", TPA, "\n",
+              "TPASUM:", TPASUM, "\n",
               "TPA20:", TPA20, "\n")
         }
 
-        #If TPA is greater than TPA20 TPA and expansion factor of tree i will
-        #need to be adjusted. The difference between TPA and TPA20 will be
-        #deducted from TPA and expansion factor of tree i.
-        if(TPA > TPA20)
+        #If TPASUM is greater than TPA20 TPA and expansion factor of tree i will
+        #need to be adjusted. The difference between TPASUM and TPA20 will be
+        #deducted from TPASUM and expansion factor of tree i.
+        if(TPASUM > TPA20)
         {
-          tpaDif <- (TPA - TPA20)
-          TPA <- TPA - tpaDif
+          tpaDif <- (TPASUM - TPA20)
+          TPASUM <- TPASUM - tpaDif
 
           #Calculate DBHSQ but deduct tpaDif from expansion factor of tree
           #record.
@@ -141,7 +133,7 @@ qmdTop20 <- function(data,
           if(debug)
           {
             cat("tpaDif:", tpaDif, "\n",
-                "Updated TPA:", TPA, "\n",
+                "Updated TPASUM:", TPASUM, "\n",
                 "TPA20:", TPA20, "\n",
                 "TREE DBH:", data[[dbh]][i], "\n",
                 "EXPF:", data[[expf]][i], "\n",
@@ -149,14 +141,14 @@ qmdTop20 <- function(data,
           }
         }
 
-        #If TPA and TPA20 just happen to be equal, then add new value to DBHSQ
+        #If TPASUM and TPA20 just happen to be equal, then add new value to DBHSQ
         #without adjusting expansion factor
         else
         {
           DBHSQ = DBHSQ + data[[dbh]][i] ^ 2 * data[[expf]][i]
           cat("TREE DBH:", data[[dbh]][i], "\n",
               "EXPF:", data[[expf]][i], "\n",
-              "TPA:", TPA, "\n", "\n")
+              "TPASUM:", TPASUM, "\n", "\n")
         }
 
         if(debug) cat("Breaking out of loop.", "\n")
@@ -175,24 +167,24 @@ qmdTop20 <- function(data,
           cat("TREE DBH:", data[[dbh]][i], "\n",
               "TREE EXP:", data[[expf]][i], "\n",
               "DBHSQ:", DBHSQ, "\n",
-              "TPA:", TPA, "\n", "\n")
+              "TPASUM:", TPASUM, "\n", "\n")
         }
       }
     }
   }
 
-  #If TPA is 0 for any reason set QMD20 to 0, otherwise calculate it from DBHSQ
-  #and TPA.
-  if(TPA <= 0) QMD20 = 0
+  #If TPASUM is 0 for any reason set QMD20 to 0, otherwise calculate it from DBHSQ
+  #and TPASUM.
+  if(TPASUM <= 0) QMD20 = 0
 
   else
   {
-    QMD20 <- sqrt(DBHSQ/TPA)
+    QMD20 <- sqrt(DBHSQ/TPASUM)
     if(debug)
     {
       cat("Calculating QMD20", "\n",
           "DBHSQ:", DBHSQ, "\n",
-          "TPA:", TPA, "\n")
+          "TPASUM:", TPASUM, "\n")
     }
   }
 

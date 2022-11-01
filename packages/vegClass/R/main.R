@@ -78,6 +78,12 @@
 #              then only the variables calculated by the vegClass package will
 #              be returned in output.
 #
+#addPotFire:   Boolean variable used to indicate if information in FVS_PotFire
+#              table should be included in output. By default this argument
+#              is set to TRUE. If the FVS_PotFire table does not exist in input
+#              then only the variables calculated by the vegClass package will
+#              be returned in output.
+#
 #startYear:    Integer value corresponding to the year that data should start
 #              being reported in output argment. Data with years prior to this
 #              value will not be included in the output argument. By default
@@ -93,6 +99,7 @@ main<- function(input,
                 allRuns = F,
                 numToQuery = 50,
                 addCompute = T,
+                addPotFire = T,
                 startYear = 0)
 {
 
@@ -320,10 +327,10 @@ main<- function(input,
 
         for(k in 1:length(years))
         {
-          #If this is the last year to process and addCompute is T, move to
-          #next iteration of loop. This is done, since FVS_Compute table reports
-          #one less cycle than FVS_Treelist.
-          if(k == length(years) & addCompute)
+          #If this is the last year to process and addCompute/addPotFire is T,
+          #move to next iteration of loop. This is done, since FVS_Compute table
+          #reports one less cycle than FVS_Treelist.
+          if(k == length(years) & (addCompute | addPotFire))
           {
             cat("Skipping last year:", years[k], "\n")
             next
@@ -346,75 +353,15 @@ main<- function(input,
 
           #If the initial inventory year (k == 1) has no live trees, set
           #invalidStand to T. Stand will be processed but not sent to output.
-          if(k == 1 & plotTPA(standYrDF) <= 0)
+          if(k == 1 & max(standYrDF$TPA) <= 0)
           {
             invalidStands <- invalidStands + 1
             invalidStand = T
           }
 
-          #Calculate canopy cover uncorrected for overlap (CAN_COV)
-          yrOutput$CAN_COV<-round(plotCC(standYrDF, type = 2),2)
-
-          #Calculate BA, TPA, QMD, and SDI for seedlings + stems
-          yrOutput$BA <- plotBA(standYrDF)
-          yrOutput$TPA <- plotTPA(standYrDF)
-          yrOutput$QMD <- plotQMD(standYrDF)
-          yrOutput$ZSDI <- plotSDI(standYrDF, type = 1)
-          yrOutput$RSDI <- plotSDI(standYrDF, type = 2)
-
-          #Calculate BA, TPA, QMD, and SDI for stems only
-          yrOutput$BA_STM <- plotBA(standYrDF,
-                                    min = 1)
-
-          yrOutput$TPA_STM <- plotTPA(standYrDF,
-                                      min = 1)
-
-          yrOutput$QMD_STM <- plotQMD(standYrDF,
-                                      min = 1)
-
-          yrOutput$ZSDI_STM <- plotSDI(standYrDF,
-                                       type = 1,
-                                       min = 1)
-
-          yrOutput$RSDI_STM <- plotSDI(standYrDF,
-                                       type = 2,
-                                       min = 1)
-
-          #Calculate QMD_TOP20
-          yrOutput$QMD_TOP20 <- qmdTop20(standYrDF)
-
-          #Calculate DomType, dcc1, dcc2, xdcc1, and xdcc2
-          dtResults<-domType(data = standYrDF)
-
-          #Dominance type
-          yrOutput$DOM_TYPE<-dtResults[["DOMTYPE"]]
-
-          #Dominance type 1
-          yrOutput$DCC1<-dtResults[["DCC1"]]
-
-          #Dominance type 1 CC
-          yrOutput$XDCC1<-round(dtResults[["XDCC1"]],2)
-
-          #Dominance type 2
-          yrOutput$DCC2<-dtResults[["DCC2"]]
-
-          #Dominance type 2 CC
-          yrOutput$XDCC2<-round(dtResults[["XDCC2"]],2)
-
-          #Canopy size class - midscale mapping
-          yrOutput$CAN_SIZCL<-canSizeCl(data = standYrDF,
-                                        type = 1)
-
-          #Canopy size class - timberland
-          yrOutput$CAN_SZTMB<-canSizeCl(data = standYrDF,
-                                        type = 2)
-
-          #Canopy size class - woodland
-          yrOutput$CAN_SZWDL<-canSizeCl(data = standYrDF,
-                                        type = 3)
-
-          #BA storiedness
-          yrOutput$BA_STORY<-baStory(standYrDF)
+          #Bind data frome vegOut to yrOutput
+          yrOutput <- cbind(yrOutput,
+                            vegOut(standYrDF))
 
           #Add yrOutput to standYrOutput
           standYrOutput[[k]]<-yrOutput
@@ -447,7 +394,7 @@ main<- function(input,
         if(addCompute)
         {
           #Test if FVS_Compute table exists. Read in information from compute table
-          #along with caseIDs for FVS runs specified in runTitles.
+          #along with caseIDs.
           if(RSQLite::dbExistsTable(con,
                                     "FVS_COMPUTE"))
           {
@@ -470,7 +417,7 @@ main<- function(input,
             if(nrow(computeDF) > 0)
             {
 
-              cat("Merging compute variables to stand:",
+              cat("Merging FVS_Compute variables to stand:",
                   standID,
                   "\n")
 
@@ -486,7 +433,7 @@ main<- function(input,
                                 by = c("CASEID", "YEAR"),
                                 all.x = T)
 
-              cat("Merging of compute variables to stand:",
+              cat("Merging of FVS_Compute variables to stand:",
                   standID,
                   "is complete.",
                   "\n")
@@ -506,6 +453,71 @@ main<- function(input,
           else
           {
             cat("FVS_Compute table not found in input. No information to join.",
+                "\n")
+          }
+        }
+
+        #Join FVS_PotFire variables to output if addPotFire is TRUE and
+        #FVS_PotFire table exists in input.
+        if(addPotFire)
+        {
+          #Test if FVS_PotFire table exists. Read in information from
+          #FVS_PotFire table.
+          if(RSQLite::dbExistsTable(con,
+                                    "FVS_POTFIRE"))
+          {
+            #Generate PotFire query
+            dbQuery <- potFireQuery(caseID)
+
+            #Print FVS_PotFire query message
+            cat("Querying FVS_PotFire...", "\n")
+
+            #Get the data from FVS_PotFire
+            potFireDF <- RSQLite::dbGetQuery(con,
+                                             dbQuery)
+
+            cat("FVS_PotFire query complete.", "\n")
+            cat("Number of rows read from FVS_PotFire query",
+                nrow(potFireDF),
+                "\n")
+
+            #If potFireDF has data, merge it to standOut
+            if(nrow(potFireDF) > 0)
+            {
+
+              cat("Merging FVS_PotFire variables to stand:",
+                  standID,
+                  "\n")
+
+              #Capitalize column names
+              colnames(potFireDF) <- toupper(colnames(potFireDF))
+
+              #Merge to standOut
+              standOut <- merge(standOut,
+                                potFireDF,
+                                by = c("CASEID", "YEAR"),
+                                all.x = T)
+
+              cat("Merging of FVS_PotFire variables to stand:",
+                  standID,
+                  "is complete.",
+                  "\n")
+
+            }
+
+            else
+            {
+              cat("No data found in FVS_PotFire query for stand:",
+                  standID,
+                  "\n")
+            }
+
+          }
+
+          #Report that FVS_PotFire table was not found in input.
+          else
+          {
+            cat("FVS_PotFire table not found in input. No information to join.",
                 "\n")
           }
         }
