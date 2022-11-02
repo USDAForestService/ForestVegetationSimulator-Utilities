@@ -75,15 +75,17 @@ plotAttr <- function(data,
             "UNCC" = 0,
             "CC" = 0,
             "ZSDI" = 0,
-            "RSDI" = 0)
+            "RSDI" = 0,
+            "BA_WT_DIA" = 0)
 
-  #Initialize BA, TPA, CC, DBHSQ ,ZSDI (Zeide SDI), and RSDI
+  #Initialize BA, TPA, CC, DBHSQ , BAWT, ZSDI (Zeide SDI), and RSDI
   BA = 0
   TPA = 0
   DBHSQ = 0
   CC = 0
   ZSDI = 0
   RSDI = 0
+  BAWTD = 0
 
   #Loop across data and calculate CC
   for(i in 1:nrow(data))
@@ -99,6 +101,9 @@ plotAttr <- function(data,
 
       #Calculate trees contribution to QMD
       DBHSQ <- DBHSQ + data[[dbh]][i]^2 * data[[expf]][i]
+
+      #Calculate BAWT
+      BAWTD = BAWTD + data[[dbh]][i] * TREEBA
 
       #Update TPA
       attr["TPA"] <- attr["TPA"] + data[[expf]][i]
@@ -121,6 +126,7 @@ plotAttr <- function(data,
             "TPA:", attr["TPA"], "\n",
             "BA:", attr["BA"], "\n",
             "DBHSQ:", DBHSQ, "\n",
+            "BAWTD:", BAWTD, "\n",
             "UNCC:", attr["CC"], "\n",
             "ZSDI:", attr["ZSDI"], "\n", "\n")
       }
@@ -131,6 +137,12 @@ plotAttr <- function(data,
   if(attr["TPA"] > 0)
   {
     attr["QMD"] = sqrt(DBHSQ/attr["TPA"])
+  }
+
+  #Calculate BA weighted diameter if BA is not 0
+  if(attr["BA"] > 0)
+  {
+    attr["BA_WT_DIA"] <- BAWTD/attr["BA"]
   }
 
   #Calculate RSDI
@@ -149,7 +161,8 @@ plotAttr <- function(data,
     cat("UNCC:", attr["UNCC"], "\n")
     cat("CC:", attr["CC"], "\n")
     cat("ZSDI:", attr["ZSDI"], "\n")
-    cat("ZSDI:", attr["RSDI"], "\n", "\n")
+    cat("RSDI:", attr["RSDI"], "\n")
+    cat("BA_WT_DIA:", attr["BA_WT_DIA"], "\n", "\n")
   }
 
   #Return CC

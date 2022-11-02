@@ -119,6 +119,7 @@ vegOut <- function(data,
 
   #Calculate BA, TPA, QMD, and SDI for seedlings + stems
   vegData$BA <- allAttr["BA"]
+  vegData$BA_WT_DIA <- allAttr["BA_WT_DIA"]
   vegData$TPA <- allAttr["TPA"]
   vegData$QMD <- allAttr["QMD"]
   vegData$ZSDI <- allAttr["ZSDI"]

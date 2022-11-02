@@ -1,12 +1,14 @@
 ################################################################################
 #Function: fvsGaak
 #
-#This function creates a gaak table with the SQL statements for various
-#grouping codes.
+#This function creates a FVS_GroupAddFilesAndKeyword (GAAK) table with the
+#appropriate SQL statements for a variety of grouping codes.
 #
-#Argument
+#Arguments
 #
-#dbName: Name of database used in gaak table.
+#dbName: Character string corresponding to name of database used in GAAK table.
+#        By default this value is set to FVS_Data. A .db extension will be
+#        appended to the value specified in dbName.
 #
 #type:   Variable to determine what grouping codes are included in GAAK table.
 #        1 = Standard FVS grouping codes (All_Stands, All_Plots)
@@ -26,28 +28,50 @@ fvsGaak<-function(dbName="FVS_Data", type = 2)
   if(type < 1 | type > 3) type = 2
 
   #Create dataframe containing FVS_GroupAddfilesAndKeywords table
-  gaak<-data.frame(GROUPS = c("All_Stands","All_Plots","All_FIA_Conditions","All_FIA_Plots", "All_FIA_Subplots"),
+  gaak<-data.frame(GROUPS = c("All_Stands","All_Plots","All_FIA_Conditions",
+                              "All_FIA_Plots", "All_FIA_Subplots"),
                    ADDFILES = c("","","","",""),
-                   FVSKEYWORDS = c(paste("Database", "DSNin", paste0(dbName, ".db"), "StandSQL",
-                                         "SELECT *", "FROM  FVS_StandInit", "WHERE Stand_ID = '%StandID%'",
-                                         "EndSQL","TreeSQL", "SELECT *", "FROM FVS_TreeInit",
-                                         "WHERE Stand_ID ='%StandID%'", "EndSQL", "END", sep = "\n"),
-                                   paste("Database", "DSNin", paste0(dbName, ".db"), "StandSQL",
-                                         "SELECT *", "FROM  FVS_PlotInit", "WHERE StandPlot_ID = '%StandID%'",
-                                         "EndSQL","TreeSQL", "SELECT *", "FROM FVS_TreeInit",
-                                         "WHERE StandPlot_ID ='%StandID%'", "EndSQL", "END", sep = "\n"),
-                                   paste("Database", "DSNin", paste0(dbName, ".db"), "StandSQL",
-                                         "SELECT *", "FROM  FVS_StandInit_Cond", "WHERE Stand_CN = '%Stand_CN%'",
-                                         "EndSQL","TreeSQL", "SELECT *", "FROM FVS_TreeInit_Cond",
-                                         "WHERE Stand_CN ='%Stand_CN%'", "EndSQL", "END", sep = "\n"),
-                                   paste("Database", "DSNin", paste0(dbName, ".db"), "StandSQL",
-                                         "SELECT *", "FROM  FVS_StandInit_Plot", "WHERE Stand_CN = '%Stand_CN%'",
-                                         "EndSQL","TreeSQL", "SELECT *", "FROM FVS_TreeInit_Plot",
-                                         "WHERE Stand_CN ='%Stand_CN%'", "EndSQL", "END", sep = "\n"),
-                                   paste("Database", "DSNin", paste0(dbName, ".db"), "StandSQL",
-                                         "SELECT *", "FROM  FVS_PlotInit_Plot", "WHERE StandPlot_CN = '%Stand_CN%'",
-                                         "EndSQL","TreeSQL", "SELECT *", "FROM FVS_TreeInit_Plot",
-                                         "WHERE StandPlot_CN ='%Stand_CN%'", "EndSQL", "END", sep = "\n")))
+                   FVSKEYWORDS = c(paste("Database", "DSNin",
+                                         paste0(dbName, ".db"), "StandSQL",
+                                         "SELECT *", "FROM  FVS_StandInit",
+                                         "WHERE Stand_ID = '%StandID%'",
+                                         "EndSQL","TreeSQL", "SELECT *",
+                                         "FROM FVS_TreeInit",
+                                         "WHERE Stand_ID ='%StandID%'",
+                                         "EndSQL", "END", sep = "\n"),
+                                   paste("Database", "DSNin",
+                                         paste0(dbName, ".db"), "StandSQL",
+                                         "SELECT *", "FROM  FVS_PlotInit",
+                                         "WHERE StandPlot_ID = '%StandID%'",
+                                         "EndSQL","TreeSQL", "SELECT *",
+                                         "FROM FVS_TreeInit",
+                                         "WHERE StandPlot_ID ='%StandID%'",
+                                         "EndSQL", "END", sep = "\n"),
+                                   paste("Database", "DSNin",
+                                         paste0(dbName, ".db"), "StandSQL",
+                                         "SELECT *", "FROM  FVS_StandInit_Cond",
+                                         "WHERE Stand_CN = '%Stand_CN%'",
+                                         "EndSQL","TreeSQL", "SELECT *",
+                                         "FROM FVS_TreeInit_Cond",
+                                         "WHERE Stand_CN ='%Stand_CN%'",
+                                         "EndSQL", "END", sep = "\n"),
+                                   paste("Database", "DSNin",
+                                         paste0(dbName, ".db"),
+                                         "StandSQL", "SELECT *",
+                                         "FROM  FVS_StandInit_Plot",
+                                         "WHERE Stand_CN = '%Stand_CN%'",
+                                         "EndSQL","TreeSQL", "SELECT *",
+                                         "FROM FVS_TreeInit_Plot",
+                                         "WHERE Stand_CN ='%Stand_CN%'",
+                                         "EndSQL", "END", sep = "\n"),
+                                   paste("Database", "DSNin",
+                                         paste0(dbName, ".db"), "StandSQL",
+                                         "SELECT *", "FROM  FVS_PlotInit_Plot",
+                                         "WHERE StandPlot_CN = '%Stand_CN%'",
+                                         "EndSQL","TreeSQL", "SELECT *",
+                                         "FROM FVS_TreeInit_Plot",
+                                         "WHERE StandPlot_CN ='%Stand_CN%'",
+                                         "EndSQL", "END", sep = "\n")))
 
   #If type is 1, return GAAK with just FVS grouping codes
   if(type == 1)
@@ -64,10 +88,11 @@ fvsGaak<-function(dbName="FVS_Data", type = 2)
   return(gaak)
 }
 
-#############################################################################
+################################################################################
 #Function: pvCodes
 #
-#This function returns a vector of PV Codes (R3 PV Codes)
+#This function returns a vector of USFS Region 3 PV Codes. This function is
+#called in pvConvert to crosswalk PV Codes to ERU.
 #
 #Argument
 #
@@ -76,7 +101,7 @@ fvsGaak<-function(dbName="FVS_Data", type = 2)
 #Return value
 #
 #Vector containing PV Codes
-#############################################################################
+################################################################################
 
 #Region 3 PV codes dimensioned by 7 values per row
 pvCodes<-function(){
@@ -124,7 +149,8 @@ pvCodes<-function(){
 ################################################################################
 #Function: eru
 #
-#This function returns a vector of ERU codes (USFS R3 ERU Codes)
+#This function returns a vector of USFS Region 3 ERU codes. This function is
+#called in pvConvert to crosswalk PV Codes to ERU.
 #
 #Argument
 #
@@ -217,14 +243,21 @@ pvConvert<-function(pv)
 ################################################################################
 #Function: dbCombine
 #
-#Function dbCombine is used to read in database tables from input FVS-ready
-#data sets and write the database tables from each of these to a single output
-#SQLite database.
+#This function is used to read in database tables from input FVS-ready data sets
+#and write the database tables from each of these to a single output SQLite
+#database. SQLite databases (.db) are the only compatible input database type.
+#The primary purpose of this function is to combine input FVS databases into a
+#single file or extract FVS database tables from a larger database such as those
+#on the FIA datamart.
 #
 #Arguments:
 #
 #dbIn:        Character vector of directory paths and file names of FVS-ready
 #             SQLite databases to process.
+#
+#             Examples of valid input formats:
+#             "C:/FIA2FVS_Databases/SQLite_FIADB_AZ/FIADB_AZ.db",
+#             "C:\\FIA2FVS_Databases\\SQLite_FIADB_NM\\FIADB_NM.db")
 #
 #dbOut:       Character string corresponding to SQLite database to write out to.
 #

@@ -32,7 +32,7 @@
 #              as determined by the output argument. If value is T, any
 #              information existing in output will be overwritten with new
 #              information. If value is F, then the new output will be appended
-#              to existing file. The default value of this argument is F.
+#              to existing file. The default value of this argument is T.
 #
 #groupTag:     This is a grouping tag that will be used to extract a grouping
 #              code (such as ERU) from a set of FVS group labels. For instance,
@@ -65,13 +65,6 @@
 #              runTitles will be ignored. By default this argument is set
 #              to FALSE (F).
 #
-#numToQuery:   Integer value corresponding to the number of stands that are
-#              queried from the input argument at a single time. In general,
-#              higher values will lead to more RAM being used in R but faster
-#              processing time. Lower values will lead to less RAM being used
-#              in R but slower processing time. By default this argument is
-#              set to 50.
-#
 #addCompute:   Boolean variable used to indicate if information in FVS_Compute
 #              table should be included in output. By default this argument
 #              is set to TRUE. If the FVS_Compute table does not exist in input
@@ -93,11 +86,10 @@
 #'@export
 main<- function(input,
                 output,
-                overwriteOut = F,
+                overwriteOut = T,
                 groupTag = "---",
                 runTitles = "Run 1",
                 allRuns = F,
-                numToQuery = 50,
                 addCompute = T,
                 addPotFire = T,
                 startYear = 0)
@@ -181,9 +173,9 @@ main<- function(input,
     runTitles<-toupper(runTitles)
   }
 
-  #==============================
-  #Begin loop across runTitles
-  #==============================
+  #===========================================================================
+  #Begin loop across FVS run titles (runTitles)
+  #===========================================================================
 
   for(r in 1:length(runTitles))
   {
@@ -204,10 +196,6 @@ main<- function(input,
     cat("Total number of stands to process for run", paste0(run,":"),
         length(cases[["StandID"]]),"\n")
 
-    #Split stand vector into list containing vectors of stand IDs
-    caseList<-split(cases[["CaseID"]],
-                    ceiling(seq_along(cases[["CaseID"]])/numToQuery))
-
     #Initialize standSum. This will keep track of number of total stands processed.
     standSum<-0
 
@@ -226,355 +214,343 @@ main<- function(input,
     #invalid when the inventory is comprised entirely of dead trees.
     invalidStands <- 0
 
-    #==============================
-    #Begin loop across standList
-    #==============================
+    #===========================================================================
+    #Begin loop across case IDs for run title (cases[["CaseID"]])
+    #===========================================================================
 
-    for(i in 1:length(caseList))
+    for(i in 1:length(cases[["CaseID"]]))
     {
       #Select stands to process
-      caseSelect<-caseList[[i]]
-      cat("Number of stands to query:", length(caseSelect), "\n")
+      caseID<-cases[["CaseID"]][i]
 
       #Generate a query that will be used to read data from FVS tree list
-      dbQuery<-treeQuery(caseSelect)
+      dbQuery<-treeQuery(caseID)
 
       cat("Querying tree list...", "\n")
 
       #Execute SQL query to obtain list of stand data
-      treeData<-RSQLite::dbGetQuery(con,
+      standDF<-RSQLite::dbGetQuery(con,
                                  dbQuery)
 
       cat("Tree list query complete.", "\n")
 
-      #Capitalize column headers of treeData
-      cat("Columns read from tree list:", colnames(treeData), "\n")
-      cat("Number of rows read from tree list:", nrow(treeData), "\n")
+      #Capitalize column headers of standDF
+      cat("Columns read from tree list:", colnames(standDF), "\n")
+      cat("Number of rows read from tree list:", nrow(standDF), "\n")
 
       #If query yields no results, skip to next iteration of loop across
       #standList
-      if(nrow(treeData) <= 0)
+      if(nrow(standDF) <= 0)
       {
         cat("No valid tree records found in tree query.", "\n")
         next
       }
 
-      #==============================
-      #Begin loop across caseSelect
-      #==============================
+      #Locate case j in cases
+      caseIndex <- match(caseID,
+                         cases[["CaseID"]])
 
-      for(j in 1:length(caseSelect))
+      #If caseIndex is NA (shouldn't ever be the case), move to next
+      #iteration of the loop.
+      if(is.na(caseIndex)) next
+
+      #Define groups, and standID for current case ID
+      else
       {
-        #Locate case j in cases
-        caseIndex <- match(caseSelect[j],
-                            cases[["CaseID"]])
+        groups  <- cases$Groups[caseIndex]
+        standID <- cases$StandID[caseIndex]
+      }
 
-        #If caseIndex is NA (shouldn't ever be the case), move to next
-        #iteration of the loop.
-        if(is.na(caseIndex)) next
+      #Display which stand is being processed
+      cat("Processing stand:", standID, "CaseID:", caseID, "\n")
 
-        #Define caseID, groups, and standID for current case
-        else
+      #Initialize invalidStand. This variable is used to determine if a stand
+      #is invalid and should not be written to output argument.
+      invalidStand = F
+
+      #Skip to next stand if standDF has no nrows. This would occur if stand
+      #has no live or dead records associated with it.
+      if(nrow(standDF) <= 0)
+      {
+        noValidRecords <- noValidRecords + 1
+        cat("Stand:", standID, "has no valid tree records.", "\n")
+        next
+      }
+
+      #If stand only contains dead tree records for the duration of the'
+      #simulation timeframe, increment noLiveTrees and move to next iteration
+      #of loop.
+      if(max(standDF$TPA) <= 0)
+      {
+        noLiveTrees <- noLiveTrees + 1
+        cat("Stand:", standID, "has no live tree records.", "\n")
+        next
+      }
+
+      #Determine years that will be evaluated
+      years<-unique(standDF$Year)
+
+      #Sort years
+      years<-sort(years)
+
+      #Extract all years greater than startYear
+      years <- years[years >= startYear]
+
+      #Create list that will store output for stand j for all years
+      standYrOutput<-vector(mode = "list",
+                            length(years))
+
+      #=========================================================================
+      #Begin loop across years in standDF
+      #=========================================================================
+
+      for(j in 1:length(years))
+      {
+        #If this is the last year to process and addCompute/addPotFire is T,
+        #move to next iteration of loop. This is done, since FVS_Compute table
+        #reports one less cycle than FVS_Treelist.
+        if(j == length(years) & (addCompute | addPotFire))
         {
-          caseID  <- cases$CaseID[caseIndex]
-          groups  <- cases$Groups[caseIndex]
-          standID <- cases$StandID[caseIndex]
-        }
-
-        #Extract stand from treeData
-        standDF<-treeData[treeData$CaseID %in% caseSelect[j],]
-        cat("Processing stand:", standID, "CaseID:", caseID, "\n")
-
-        #Initialize invalidStand. This variable is used to determine if a stand
-        #is invalid and should not be written to output argument.
-        invalidStand = F
-
-        #Skip to next stand if standDF has no nrows. This would occur if stand
-        #has no live or dead records associated with it.
-        if(nrow(standDF) <= 0)
-        {
-          noValidRecords <- noValidRecords + 1
-          cat("Stand:", standID, "has no valid tree records.", "\n")
+          cat("Skipping last year:", years[j], "\n")
           next
         }
 
-        #If stand only contains dead tree records for the duration of the'
-        #simualtion timeframe, increment noLiveTrees and move to next iteration
-        #of loop.
-        if(max(standDF$TPA) <= 0)
+        #Extract rows for year j
+        standYrDF<- standDF[standDF$Year == years[j],]
+        cat("Year:", years[j],"\n")
+
+        #Determine group to report in yrOutput
+        group<-getGroup(toupper(groups), groupTag)
+
+        #Create dataframe that will store output for the stand in a given year.
+        yrOutput<-data.frame(RUNTITLE = run,
+                             GROUP = group,
+                             CASEID = caseID,
+                             STANDID = standID,
+                             YEAR = years[j],
+                             CY = j)
+
+        #If the initial inventory year (j == 1) has no live trees, set
+        #invalidStand to T. Stand will be processed but not sent to output.
+        if(j == 1 & max(standYrDF$TPA) <= 0)
         {
-          noLiveTrees <- noLiveTrees + 1
-          cat("Stand:", standID, "has no live tree records.", "\n")
-          next
+          invalidStands <- invalidStands + 1
+          invalidStand = T
         }
 
-        #Determine years that will be evaluated
-        years<-unique(standDF$Year)
+        #Bind data frome vegOut to yrOutput
+        yrOutput <- cbind(yrOutput,
+                          vegOut(standYrDF))
 
-        #Sort years
-        years<-sort(years)
+        #Add yrOutput to standYrOutput
+        standYrOutput[[j]]<-yrOutput
 
-        #Extract all years greater than startYear
-        years <- years[years >= startYear]
+        ### END OF LOOP ACROSS YEARS
+      }
 
-        #Create list that will store output for stand j for all years
-        standYrOutput<-vector(mode = "list",
-                              length(years))
+      #If stand was marked as invalid, move to next iteration of loop and do
+      #not send to output.
+      if(invalidStand)
+      {
+        cat("Stand:",
+            standID,
+            "is invalid and information will not be sent to output.",
+            "\n")
+        next
+      }
 
-        #=====================================
-        #Begin loop across years in standDF
-        #=====================================
+      #Combine all year-by-year information for standID into a single
+      #dataframe.
+      standOut<-do.call("rbind", standYrOutput)
 
-        for(k in 1:length(years))
+      #Add tab to standIDs. This avoids the problems of stand IDs being
+      #converted to scientific notation in csv. There may be a better way to
+      #deal with this but not quite sure what it is.
+      standOut$STANDID<-paste0(standOut$STANDID, "\t")
+
+      #Join compute variables to output if addCompute is TRUE and FVS_Compute
+      #table exists in input
+      if(addCompute)
+      {
+        #Test if FVS_Compute table exists. Read in information from compute table
+        #along with caseIDs.
+        if(RSQLite::dbExistsTable(con,
+                                  "FVS_COMPUTE"))
         {
-          #If this is the last year to process and addCompute/addPotFire is T,
-          #move to next iteration of loop. This is done, since FVS_Compute table
-          #reports one less cycle than FVS_Treelist.
-          if(k == length(years) & (addCompute | addPotFire))
-          {
-            cat("Skipping last year:", years[k], "\n")
-            next
-          }
+          #Generate compute query
+          dbQuery <- computeQuery(caseID)
 
-          #Extract rows for year k
-          standYrDF<- standDF[standDF$Year == years[k],]
-          cat("Year:", years[k],"\n")
+          #Print compute query message
+          cat("Querying FVS_Compute...", "\n")
 
-          #Determine group to report in yrOutput
-          group<-getGroup(toupper(groups), groupTag)
+          #Get the data from FVS_Compute
+          computeDF <- RSQLite::dbGetQuery(con,
+                                           dbQuery)
 
-          #Create dataframe that will store output for the stand in a given year.
-          yrOutput<-data.frame(RUNTITLE = run,
-                               GROUP = group,
-                               CASEID = caseID,
-                               STANDID = standID,
-                               YEAR = years[k],
-                               CY = k)
-
-          #If the initial inventory year (k == 1) has no live trees, set
-          #invalidStand to T. Stand will be processed but not sent to output.
-          if(k == 1 & max(standYrDF$TPA) <= 0)
-          {
-            invalidStands <- invalidStands + 1
-            invalidStand = T
-          }
-
-          #Bind data frome vegOut to yrOutput
-          yrOutput <- cbind(yrOutput,
-                            vegOut(standYrDF))
-
-          #Add yrOutput to standYrOutput
-          standYrOutput[[k]]<-yrOutput
-
-          ### END OF LOOP ACROSS YEARS
-        }
-
-        #If stand was marked as invalid, move to next iteration of loop and do
-        #not send to output.
-        if(invalidStand)
-        {
-          cat("Stand:",
-              standID,
-              "is invalid and information will not be sent to output.",
+          cat("FVS_Compute query complete.", "\n")
+          cat("Number of rows read from compute query",
+              nrow(computeDF),
               "\n")
-          next
-        }
 
-        #Combine all year-by-year information for standID into a single
-        #dataframe.
-        standOut<-do.call("rbind", standYrOutput)
-
-        #Add tab to standIDs. This avoids the problems of stand IDs being
-        #converted to scientific notation in csv. There may be a better way to
-        #deal with this but not quite sure what it is.
-        standOut$STANDID<-paste0(standOut$STANDID, "\t")
-
-        #Join compute variables to output if addCompute is TRUE and FVS_Compute
-        #table exists in input
-        if(addCompute)
-        {
-          #Test if FVS_Compute table exists. Read in information from compute table
-          #along with caseIDs.
-          if(RSQLite::dbExistsTable(con,
-                                    "FVS_COMPUTE"))
+          #If computeDF has data, merge it to standOut
+          if(nrow(computeDF) > 0)
           {
-            #Generate compute query
-            dbQuery <- computeQuery(caseID)
 
-            #Print compute query message
-            cat("Querying FVS_Compute...", "\n")
-
-            #Get the data from FVS_Compute
-            computeDF <- RSQLite::dbGetQuery(con,
-                                             dbQuery)
-
-            cat("FVS_Compute query complete.", "\n")
-            cat("Number of rows read from compute query",
-                nrow(computeDF),
+            cat("Merging FVS_Compute variables to stand:",
+                standID,
                 "\n")
 
-            #If computeDF has data, merge it to standOut
-            if(nrow(computeDF) > 0)
-            {
+            #Capitalize column names
+            colnames(computeDF) <- toupper(colnames(computeDF))
 
-              cat("Merging FVS_Compute variables to stand:",
-                  standID,
-                  "\n")
+            #Remove STANDID from computeDF
+            computeDF$STANDID <- NULL
 
-              #Capitalize column names
-              colnames(computeDF) <- toupper(colnames(computeDF))
+            #Merge to standOut
+            standOut <- merge(standOut,
+                              computeDF,
+                              by = c("CASEID", "YEAR"),
+                              all.x = T)
 
-              #Remove STANDID from computeDF
-              computeDF$STANDID <- NULL
-
-              #Merge to standOut
-              standOut <- merge(standOut,
-                                computeDF,
-                                by = c("CASEID", "YEAR"),
-                                all.x = T)
-
-              cat("Merging of FVS_Compute variables to stand:",
-                  standID,
-                  "is complete.",
-                  "\n")
-
-            }
-
-            else
-            {
-              cat("No data found in FVS_Compute query for stand:",
-                  standID,
-                  "\n")
-            }
+            cat("Merging of FVS_Compute variables to stand:",
+                standID,
+                "is complete.",
+                "\n")
 
           }
 
-          #Report that FVS_Compute table was not found in input.
           else
           {
-            cat("FVS_Compute table not found in input. No information to join.",
+            cat("No data found in FVS_Compute query for stand:",
+                standID,
                 "\n")
           }
+
         }
 
-        #Join FVS_PotFire variables to output if addPotFire is TRUE and
-        #FVS_PotFire table exists in input.
-        if(addPotFire)
-        {
-          #Test if FVS_PotFire table exists. Read in information from
-          #FVS_PotFire table.
-          if(RSQLite::dbExistsTable(con,
-                                    "FVS_POTFIRE"))
-          {
-            #Generate PotFire query
-            dbQuery <- potFireQuery(caseID)
-
-            #Print FVS_PotFire query message
-            cat("Querying FVS_PotFire...", "\n")
-
-            #Get the data from FVS_PotFire
-            potFireDF <- RSQLite::dbGetQuery(con,
-                                             dbQuery)
-
-            cat("FVS_PotFire query complete.", "\n")
-            cat("Number of rows read from FVS_PotFire query",
-                nrow(potFireDF),
-                "\n")
-
-            #If potFireDF has data, merge it to standOut
-            if(nrow(potFireDF) > 0)
-            {
-
-              cat("Merging FVS_PotFire variables to stand:",
-                  standID,
-                  "\n")
-
-              #Capitalize column names
-              colnames(potFireDF) <- toupper(colnames(potFireDF))
-
-              #Merge to standOut
-              standOut <- merge(standOut,
-                                potFireDF,
-                                by = c("CASEID", "YEAR"),
-                                all.x = T)
-
-              cat("Merging of FVS_PotFire variables to stand:",
-                  standID,
-                  "is complete.",
-                  "\n")
-
-            }
-
-            else
-            {
-              cat("No data found in FVS_PotFire query for stand:",
-                  standID,
-                  "\n")
-            }
-
-          }
-
-          #Report that FVS_PotFire table was not found in input.
-          else
-          {
-            cat("FVS_PotFire table not found in input. No information to join.",
-                "\n")
-          }
-        }
-
-        #Rearrange column headers in standOut so RUNTITLE, GROUP, CASEID,
-        #STANDID, YEAR, CY are reported in the correct order
-        leadingCols <- c("RUNTITLE", "GROUP", "CASEID", "STANDID", "YEAR", "CY")
-
-        #ColNames
-        colNames <- colnames(standOut)
-
-        #Remove leading columns from colNames
-        colNames <- colNames[!colNames %in% leadingCols]
-
-        #Append leading columns to cols
-        colNames <- c(leadingCols, colNames)
-
-        #Rearrange the column headers in standOut
-        standOut <- standOut[, c(colNames)]
-
-        cat("Columns in standOut:", "\n", colnames(standOut), "\n", "\n")
-
-        #============================================================
-        #Write stand output to temporary CSV
-        #============================================================
-
-        #If file doesn't exist write to file
-        if(!file.exists(output))
-        {
-          utils::write.table(standOut,
-                             output,
-                             sep = ",",
-                             row.names = F)
-        }
-
-        #Else append standOut to output
+        #Report that FVS_Compute table was not found in input.
         else
         {
-          utils::write.table(standOut,
-                             output,
-                             sep = ",",
-                             append = T,
-                             row.names = F,
-                             col.names = F)
+          cat("FVS_Compute table not found in input. No information to join.",
+              "\n")
+        }
+      }
+
+      #Join FVS_PotFire variables to output if addPotFire is TRUE and
+      #FVS_PotFire table exists in input.
+      if(addPotFire)
+      {
+        #Test if FVS_PotFire table exists. Read in information from
+        #FVS_PotFire table.
+        if(RSQLite::dbExistsTable(con,
+                                  "FVS_POTFIRE"))
+        {
+          #Generate PotFire query
+          dbQuery <- potFireQuery(caseID)
+
+          #Print FVS_PotFire query message
+          cat("Querying FVS_PotFire...", "\n")
+
+          #Get the data from FVS_PotFire
+          potFireDF <- RSQLite::dbGetQuery(con,
+                                           dbQuery)
+
+          cat("FVS_PotFire query complete.", "\n")
+          cat("Number of rows read from FVS_PotFire query",
+              nrow(potFireDF),
+              "\n")
+
+          #If potFireDF has data, merge it to standOut
+          if(nrow(potFireDF) > 0)
+          {
+
+            cat("Merging FVS_PotFire variables to stand:",
+                standID,
+                "\n")
+
+            #Capitalize column names
+            colnames(potFireDF) <- toupper(colnames(potFireDF))
+
+            #Merge to standOut
+            standOut <- merge(standOut,
+                              potFireDF,
+                              by = c("CASEID", "YEAR"),
+                              all.x = T)
+
+            cat("Merging of FVS_PotFire variables to stand:",
+                standID,
+                "is complete.",
+                "\n")
+
+          }
+
+          else
+          {
+            cat("No data found in FVS_PotFire query for stand:",
+                standID,
+                "\n")
+          }
+
         }
 
-        ### END OF LOOP ACROSS SELECTED STANDS
+        #Report that FVS_PotFire table was not found in input.
+        else
+        {
+          cat("FVS_PotFire table not found in input. No information to join.",
+              "\n")
+        }
+      }
+
+      #Rearrange column headers in standOut so RUNTITLE, GROUP, CASEID,
+      #STANDID, YEAR, CY are reported in the correct order
+      leadingCols <- c("RUNTITLE", "GROUP", "CASEID", "STANDID", "YEAR", "CY")
+
+      #ColNames
+      colNames <- colnames(standOut)
+
+      #Remove leading columns from colNames
+      colNames <- colNames[!colNames %in% leadingCols]
+
+      #Append leading columns to cols
+      colNames <- c(leadingCols, colNames)
+
+      #Rearrange the column headers in standOut
+      standOut <- standOut[, c(colNames)]
+
+      cat("Columns in standOut:", "\n", colnames(standOut), "\n", "\n")
+
+      #============================================================
+      #Write stand output to CSV specified in output argument
+      #============================================================
+
+      #If file doesn't exist write to file
+      if(!file.exists(output))
+      {
+        utils::write.table(standOut,
+                           output,
+                           sep = ",",
+                           row.names = F)
+      }
+
+      #Else append standOut to output
+      else
+      {
+        utils::write.table(standOut,
+                           output,
+                           sep = ",",
+                           append = T,
+                           row.names = F,
+                           col.names = F)
       }
 
       #Update standSum and send to console
-      standSum<-standSum + length(caseSelect)
+      standSum<-standSum + 1
       cat(standSum, "stands processed out of", nrow(cases), "\n")
 
-      #Remove treeData
-      rm(treeData)
+      #Remove standDF
+      rm(standDF)
 
-      ### END OF LOOP ACROSS ALL STANDS IN RUN
+      ### END OF LOOP ACROSS ALL CASEIDS IN RUN
     }
 
     #Print number of stands that had no projectable tree records.
