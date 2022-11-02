@@ -9,6 +9,7 @@
 #Percent canopy cover corrected for overlap (CC)
 #Zeide SDI (ZSDI)
 #Reineke SDI (RSDI)
+#Basal area weighted diameter (BA_WT_DIA)
 #
 #Arguments:
 #
@@ -34,7 +35,7 @@
 #
 #Value
 #
-#BA, TPA, QMD, CC, and SDI of inventory plot/stand
+#BA, TPA, QMD, CC, SDI, and BA_WT_DIA of inventory plot/stand
 ################################################################################
 
 #'@export
@@ -87,10 +88,10 @@ plotAttr <- function(data,
   RSDI = 0
   BAWTD = 0
 
-  #Loop across data and calculate CC
+  #Loop across data and calculate attributes
   for(i in 1:nrow(data))
   {
-    #If DBH of record is GE min DBH and less than max add it to CC sum
+    #If DBH of record is GE min DBH and less than max include it in calculations
     if(data[[dbh]][i] >= min & data[[dbh]][i] < max)
     {
       #Calculate BA of tree
@@ -99,10 +100,10 @@ plotAttr <- function(data,
       #Calculate CC of tree
       TREECC <- pi * (data[[crwidth]][i]/2)^2 *(data[[expf]][i]/43560) * 100
 
-      #Calculate trees contribution to QMD
+      #Calculate tree contribution to QMD
       DBHSQ <- DBHSQ + data[[dbh]][i]^2 * data[[expf]][i]
 
-      #Calculate BAWT
+      #Calculate tree contribution to BAWT
       BAWTD = BAWTD + data[[dbh]][i] * TREEBA
 
       #Update TPA
@@ -165,7 +166,7 @@ plotAttr <- function(data,
     cat("BA_WT_DIA:", attr["BA_WT_DIA"], "\n", "\n")
   }
 
-  #Return CC
+  #Return vector of attributes
   return(attr)
 }
 

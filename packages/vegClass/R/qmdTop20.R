@@ -14,7 +14,7 @@
 #
 #Arguments:
 #
-#data:  Tree level dataframe corresponding to trees from a single stand.
+#data:    Tree level dataframe corresponding to trees from a single stand.
 #
 #stand:   Name of column corresponding to stand ID associated with tree records
 #         in data. By default this value is set to "StandID".
@@ -71,7 +71,6 @@ qmdTop20 <- function(data,
 
   #Sort data from largest to smallest diameter
   data <- data[order(-data[[dbh]]),]
-
 
   #If CC is greater than or equal to 10, set min to 0.2
   if(CC >= 10) minDBH = 0.2
@@ -173,8 +172,8 @@ qmdTop20 <- function(data,
     }
   }
 
-  #If TPASUM is 0 for any reason set QMD20 to 0, otherwise calculate it from DBHSQ
-  #and TPASUM.
+  #If TPASUM is 0 for any reason set QMD20 to 0, otherwise calculate it from
+  #DBHSQ and TPASUM.
   if(TPASUM <= 0) QMD20 = 0
 
   else

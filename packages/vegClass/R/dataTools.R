@@ -91,8 +91,8 @@ fvsGaak<-function(dbName="FVS_Data", type = 2)
 ################################################################################
 #Function: pvCodes
 #
-#This function returns a vector of USFS Region 3 PV Codes. This function is
-#called in pvConvert to crosswalk PV Codes to ERU.
+#This function returns a vector of USFS Region 3 Plant Association codes (PV
+#code). This function is called in pvConvert to crosswalk PV Code to ERU.
 #
 #Argument
 #
@@ -207,8 +207,9 @@ eru<-function(){
 ################################################################################
 #Function pvConvert
 #
-#This function converts input PV Code to USFS Region 3 ERU codes. If the input
-#PV Code is not recognized, then a NA value is returned.
+#This function converts input Plant Association code (PV code) to USFS Region
+#3 ERU code. If the input PV Code is not recognized, then a NA value is
+#returned.
 #
 #Arguments
 #
@@ -255,23 +256,27 @@ pvConvert<-function(pv)
 #dbIn:        Character vector of directory paths and file names of FVS-ready
 #             SQLite databases to process.
 #
-#             Examples of valid input formats:
+#             Examples of valid dbIn formats:
 #             "C:/FIA2FVS_Databases/SQLite_FIADB_AZ/FIADB_AZ.db",
-#             "C:\\FIA2FVS_Databases\\SQLite_FIADB_NM\\FIADB_NM.db")
+#             "C:\\FIA2FVS_Databases\\SQLite_FIADB_NM\\FIADB_NM.db"
 #
 #dbOut:       Character string corresponding to SQLite database to write out to.
 #
+#             Examples of valid dbOut formats:
+#             "C:/FIA2FVS_Databases/SQLite_FIADB_AZ/FVS_Data.db",
+#             "C:\\FIA2FVS_Databases\\SQLite_FIADB_NM\\FVS_Data.db"
+#
 #dbTables:    Character vector of database tables to process from argument dbIn.
 #             By default this argument contains the following values:
-#             FVS_STANDINIT
-#             FVS_TREEINIT
-#             FVS_STANDINIT_PLOT
-#             FVS_STANDINIT_COND
-#             FVS_PLOTINIT_PLOT
-#             FVS_TREEINIT_PLOT
-#             FVS_TREEINIT_COND
+#             "FVS_STANDINIT"
+#             "FVS_TREEINIT"
+#             "FVS_STANDINIT_PLOT"
+#             "FVS_STANDINIT_COND"
+#             "FVS_PLOTINIT_PLOT"
+#             "FVS_TREEINIT_PLOT"
+#             "FVS_TREEINIT_COND"
 #
-#buildGaak:   Boolean variable used to determine if FVS_GROUPADDFILESANDKEYWORDS
+#buildGaak:   Logical variable used to determine if FVS_GROUPADDFILESANDKEYWORDS
 #             will be written to dbOut. If TRUE, this table will be written to
 #             dbOut. By default this argument is set to TRUE.
 #
@@ -284,16 +289,18 @@ pvConvert<-function(pv)
 #                All_FIA_Plots, All_FIA_Subplots grouping codes.
 #             For more information refer to fvsGaak function.
 #
-#addEru:      Boolean variable used to determine if ERU should be added as value
-#             to groups field of FVS_STANDINIT, FVS_PLOTINIT,
-#             FVS_STANDINIT_PLOT, FVS_STANDINIT_COND, and FVS_PLOTINIT_PLOT. If
-#             TRUE, ERU as defined by USFS Region 3 will be added to groups
-#             column of above tables. By default this argument is set to TRUE.
+#addEru:      Logical variable used to determine if ERU should be added as a
+#             field in FVS_STANDINIT, FVS_PLOTINIT, FVS_STANDINIT_PLOT,
+#             FVS_STANDINIT_COND, and FVS_PLOTINIT_PLOT tables. In addition,
+#             ERU code will be added as a grouping code in the GROUPS field of
+#             these tables if addERU is TRUE. By default this argument is set to
+#             TRUE.
 #
 #deleteInput: Logical variable used to determine if values in dbIn should be
-#             deleted after processing. By default this argument is set to
-#             FALSE. Be careful with this argument. It is here to reduce the
-#             amount of data on hard drive.
+#             deleted after dbCombine has been called. By default this argument
+#             is set to FALSE. Be careful with this argument. The primary
+#             purpose of this argument is to conserve hard disk space for users
+#             who do not want the input databases specified in dbIn.
 #
 #readChunks:  Logical variable used to determine if data from database table
 #             should be read in chunks. In general, processing time of dbCombine
@@ -327,7 +334,7 @@ dbCombine <- function(dbIn = NULL,
                       rowsToRead = 5000)
 {
 
-  #Create directory where file will be unzipped to
+  #Create directory where file will be unzipped to.
   #If this file exists for any reason, delete it.
   unzipDir <- paste(getwd(),
                     "xxxdbCombineUnzipxxx",
@@ -361,8 +368,8 @@ dbCombine <- function(dbIn = NULL,
     stop(paste("No file was specified for dbOut."))
   }
 
-  #Test if dbTables is null and return if null. Otherwise capitalize the table
-  #names in dbTables.
+  #Test if dbTables is null and return with error message. Otherwise capitalize
+  #the table names in dbTables.
   if(is.null(dbTables))
   {
     stop(paste("No table names were provided for dbTables."))
@@ -397,7 +404,8 @@ dbCombine <- function(dbIn = NULL,
     rowsToRead <- as.integer(rowsToRead)
     if(rowsToRead <= 0)
     {
-      stop(paste("Value for rowsToRead needs to be greater than zero."))
+      stop(paste("Value for rowsToRead needs to be integer value greater than",
+                 "zero."))
     }
   }
 
@@ -405,7 +413,8 @@ dbCombine <- function(dbIn = NULL,
   dbIn <- gsub("\\\\", "/", dbIn)
   dbOut <- gsub("\\\\", "/", dbOut)
 
-  #Loop through dbIn and test if any of the files don't exist
+  #Loop through dbIn and test if any of the files don't exist. If a file does
+  #not exist then error message is reported.
   for(i in 1:length(dbIn))
   {
     if(!file.exists(dbIn[i]))
@@ -427,9 +436,9 @@ dbCombine <- function(dbIn = NULL,
     stop(paste("Only one output file can be specified for dbOut."))
   }
 
-  #Test if dbOut file path is valid
-  #Extract path to dbOut by extract all characters before the last / in output
-  #argument
+  #Test if dbOut file path is valid.
+  #Extract path to dbOut by extracting all characters before the last / in
+  #output argument.
   outPath <- gsub("/[^/]+$", "", dbOut)
 
   #Test existence of output path and if it does not exist report error.
@@ -438,7 +447,8 @@ dbCombine <- function(dbIn = NULL,
                "Make sure directory path to output is spelled correctly."))
   }
 
-  #Test if output file is a SQLite database
+  #Test if output file is a SQLite database. If the file is not a SQLite
+  #database then error message is reported.
   fileExtOut<-sub("(.*)\\.","",dbOut)
   if(!fileExtOut %in% "db")
   {
@@ -480,7 +490,7 @@ dbCombine <- function(dbIn = NULL,
         "\n",
         "\n")
 
-    #If the file extension of db is not .db then stop with error message.
+    #If the file extension of db is not .db or .zip then stop with error message.
     if(!fileExtIn %in% c("db", "zip"))
     {
       stop(paste("File:",
@@ -550,7 +560,7 @@ dbCombine <- function(dbIn = NULL,
     cat("Database", i, dbInUpdate[i], "\n")
   }
 
-  #Begin processing dbIn
+  #Begin processing dbInUpdate
   for(i in 1:length(dbInUpdate))
   {
 
@@ -606,7 +616,7 @@ dbCombine <- function(dbIn = NULL,
       #Disconnect from conIn
       RSQLite::dbDisconnect(conIn)
 
-      #If readChunks is FALSE, call addDbTable, otherwise call addDbChunk
+      #If readChunks is FALSE, call addDbTable, otherwise call addDbRows.
       if(!readChunks)
       {
         addDbTable(db,
@@ -633,7 +643,7 @@ dbCombine <- function(dbIn = NULL,
         "\n")
 
     #Check if db should be deleted
-    #Any files that are unzipped by this program will be deleted.
+    #Any files that are unzipped by dbCombine function will be deleted.
     #All other dbs will be deleted if deleteInput is T
     if(db %in% list.files(unzipDir,
                           pattern = ".db",
@@ -856,7 +866,7 @@ setDataTypes<-function(data,
     colname<-toupper(names(data)[i])
     if(verbose) cat("Column:", colname, "being processed.", "\n")
 
-    #attempt to match column name with variable in fvsvars
+    #Attempt to match column name with variable in fvsvars
     varIndex<-match(colname, cols)
 
     #If varIndex is not NA, extract the data type for the column from colTypes.
@@ -875,7 +885,7 @@ setDataTypes<-function(data,
       #Variable is a character
       if(datatype == "character")
       {
-        #Print message that column will be converted datatype.
+        #Print message that column will be converted to character.
         if(verbose) cat(colname, "being converted to", datatype, "\n")
         data[,i]<-as.character(data[,i])
       }
@@ -883,7 +893,7 @@ setDataTypes<-function(data,
       #Variable is a integer
       if(datatype == "integer")
       {
-        #Print message that column will be converted datatype.
+        #Print message that column will be converted to integer.
         if(verbose) cat(colname, "being converted to", datatype, "\n")
         data[,i]<-as.integer(data[,i])
       }
@@ -891,7 +901,7 @@ setDataTypes<-function(data,
       #Variable is a double
       if(datatype == "double")
       {
-        #Print message that column will be converted datatype.
+        #Print message that column will be converted to double.
         if(verbose) cat(colname, "being converted to", datatype, "\n")
         data[,i]<-as.double(data[,i])
       }
@@ -937,7 +947,7 @@ setDataTypes<-function(data,
 #            function should be ignored. See setDataTypes function for more
 #            details.
 #
-#addERU:     Boolean variable indicating if ERU should be added to GROUPS column
+#addERU:     Logical variable indicating if ERU should be added to GROUPS column
 #            of FVS_STANDINIT tables (FIA or regular FVS versions). See
 #            dbCombine function for more details.
 #
@@ -972,7 +982,7 @@ addDbTable<-function(db,
                                "FVS_PLOTINIT_PLOT"))
   {
     #Determine if PV_CODE and GROUPS fields exist in dbTable. If they don't,
-    #then ERU will not be cross walked and not be included in output database.
+    #then ERU will not be cross walked or included in output database.
     if(! "PV_CODE" %in% colnames(dbTable) | ! "GROUPS" %in% colnames(dbTable))
     {
       cat("PV_CODE and/or GROUPS column not found in",
@@ -1000,7 +1010,7 @@ addDbTable<-function(db,
       #Cross walk PV_CODE to ERU
       dbTable$ERU<-mapply(pvConvert, dbTable$PV_CODE)
 
-      #Paste ERU to GROUPS field with an ERU= tag.
+      #Paste ERU to GROUPS field with an "ERU=" tag.
       dbTable$GROUPS<-paste(dbTable$GROUPS,
                             paste0("ERU=",
                                    dbTable$ERU))
@@ -1279,7 +1289,7 @@ addDbRows<-function(db,
                                  "FVS_PLOTINIT_PLOT"))
     {
       #Determine if PV_CODE and GROUPS fields exist in dbTable. If they don't,
-      #then ERU will not be cross walked and not be included in output database.
+      #then ERU will not be cross walked or be included in output database.
       if(! "PV_CODE" %in% colnames(dbTable) | ! "GROUPS" %in% colnames(dbTable))
       {
         cat("PV_CODE and/or GROUPS column not found in",
