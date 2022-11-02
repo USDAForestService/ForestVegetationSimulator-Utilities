@@ -13,7 +13,7 @@
 #              name must be surrounded with double quotes "" and double
 #              back slashes or single forward slashes need to be used for
 #              specifying paths. Database defined in input must contain the
-#              following tables: FVS_Summary2, FVS_TreeList, and FVS_Cases.
+#              following tables: FVS_TreeList, and FVS_Cases.
 #
 #              Examples of valid input formats:
 #              "C:/FVS/R3_Work/FVSOut.db"
@@ -27,12 +27,13 @@
 #              "C:/FVS/R3_Work/FVSOut.csv"
 #              "C:\\FVS\\R3_Work\\FVSOut.csv"
 #
-#overwriteOut: Boolean variable used to determine if output file should have
+#overwriteOut: Logical variable used to determine if output file should have
 #              data overwritten or have new data appended to an existing file
-#              as determined by the output argument. If value is T, any
+#              as determined by the output argument. If value is TRUE, any
 #              information existing in output will be overwritten with new
-#              information. If value is F, then the new output will be appended
-#              to existing file. The default value of this argument is T.
+#              information. If value is FALSE, then the new output will be
+#              appended to existing file. The default value of this argument
+#              is TRUE.
 #
 #groupTag:     This is a grouping tag that will be used to extract a grouping
 #              code (such as ERU) from a set of FVS group labels. For instance,
@@ -44,13 +45,13 @@
 #              Example group tag:
 #              "ERU="
 #
-#runTitles:    Vector of FVS runTitles that will be processed. If
-#              runTitles is left as NULL, execution of main function will
-#              terminate. Each run title in runTitles must be surrounded by
-#              double quotes. The values specified for runTitles argument need
-#              to be spelled correctly. If any of the values in runTitles are
-#              spelled incorrectly, the execution of main function will
-#              terminate.
+#runTitles:    Vector of character strings corresponding to FVS runTitles that
+#              will be processed. If runTitles is left as NULL, execution of
+#              main function will terminate. Each run title in runTitles must be
+#              surrounded by double quotes. The values specified for runTitles
+#              argument need to be spelled correctly. If any of the values in
+#              runTitles are spelled incorrectly, the execution of main function
+#              will terminate.
 #
 #              Example of how to specify single run title:
 #              runTitles = "Run 1"
@@ -78,7 +79,7 @@
 #              be returned in output.
 #
 #startYear:    Integer value corresponding to the year that data should start
-#              being reported in output argment. Data with years prior to this
+#              being reported in output argument. Data with years prior to this
 #              value will not be included in the output argument. By default
 #              this value is set to 0 (all data will be included in output).
 ################################################################################
@@ -196,7 +197,8 @@ main<- function(input,
     cat("Total number of stands to process for run", paste0(run,":"),
         length(cases[["StandID"]]),"\n")
 
-    #Initialize standSum. This will keep track of number of total stands processed.
+    #Initialize standSum. This will keep track of number of total stands
+    #processed.
     standSum<-0
 
     #Initialize noLiveTrees. This variable keeps track of number of stands that
@@ -211,7 +213,8 @@ main<- function(input,
 
     #Initialize invalidStands. This variable is used to keep track of number of
     #stands that are flagged as invalid during processing. Stands are considered
-    #invalid when the inventory is comprised entirely of dead trees.
+    #invalid when the inventory is comprised entirely of dead trees in first
+    #cycle.
     invalidStands <- 0
 
     #===========================================================================
@@ -246,7 +249,7 @@ main<- function(input,
         next
       }
 
-      #Locate case j in cases
+      #Find location of caseID in cases
       caseIndex <- match(caseID,
                          cases[["CaseID"]])
 
@@ -254,7 +257,7 @@ main<- function(input,
       #iteration of the loop.
       if(is.na(caseIndex)) next
 
-      #Define groups, and standID for current case ID
+      #Define groups and standID for current case ID
       else
       {
         groups  <- cases$Groups[caseIndex]
@@ -307,8 +310,8 @@ main<- function(input,
       for(j in 1:length(years))
       {
         #If this is the last year to process and addCompute/addPotFire is T,
-        #move to next iteration of loop. This is done, since FVS_Compute table
-        #reports one less cycle than FVS_Treelist.
+        #move to next iteration of loop. This is done, since FVS_Compute and
+        #FVS_PotFilre table report one less cycle than FVS_Treelist.
         if(j == length(years) & (addCompute | addPotFire))
         {
           cat("Skipping last year:", years[j], "\n")
@@ -338,7 +341,7 @@ main<- function(input,
           invalidStand = T
         }
 
-        #Bind data frome vegOut to yrOutput
+        #Bind data from vegOut to yrOutput
         yrOutput <- cbind(yrOutput,
                           vegOut(standYrDF))
 
@@ -505,7 +508,7 @@ main<- function(input,
       #STANDID, YEAR, CY are reported in the correct order
       leadingCols <- c("RUNTITLE", "GROUP", "CASEID", "STANDID", "YEAR", "CY")
 
-      #ColNames
+      #Get column names from standOut
       colNames <- colnames(standOut)
 
       #Remove leading columns from colNames

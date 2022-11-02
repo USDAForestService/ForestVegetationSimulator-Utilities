@@ -63,7 +63,8 @@ domType<-function(data,
   #Check of missing columns in data
   missing <- c(stand, species, dbh, expf, crwidth) %in% colnames(data)
 
-  #If there is a FALSE value in missing report message and return NA value
+  #If there is a FALSE value in missing report message and return results (all
+  #NA values at this point)
   if(F %in% missing)
   {
     cat("One or more input arguments not found in data. Check spelling.", "\n")

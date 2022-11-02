@@ -1,8 +1,9 @@
 ################################################################################
-#Function: calcCanSizCl
+#Function: canSizeCl
 #
-#This function takes in a tree-level dataframe and returns a canopy size
-#class for the inventory plot that the tree records reside on.
+#This function calculates canopy size class for stand/plot in accordance with
+#NFS Regional Vegetation Classification Algorithms Vandendriesche (2013 pg.
+#R3-3 - R3-4).
 #
 #Argument
 #
@@ -27,7 +28,7 @@
 #type:    Indicator variable used to determine which type of diameter class to
 #         return
 #         1 - Midscale mapping (default and will be used if any value other than
-#         2 or 3 is entered for type argument.)
+#             2 or 3 is entered for type argument.)
 #         2 - Timberland dominance type
 #         3 - Woodland dominance type
 #
@@ -117,7 +118,7 @@ canSizeCl<-function(data,
     #Determine diameter class for each tree record
     data$DC<-getCanSizeDC(data[[dbh]], type, debug)
 
-    #Loop across dat and sum canopy cover values for each class in ccVec
+    #Loop across data and sum canopy cover values for each class in ccVec
     for(i in 1:nrow(data))
     {
       #obtain DC for tree i

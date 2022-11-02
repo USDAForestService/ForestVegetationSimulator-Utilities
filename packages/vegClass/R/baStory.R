@@ -1,8 +1,8 @@
 ################################################################################
 #Function: baStory
 #
-#Calculates storiedness in accordance with NFS Regional Vegetation
-#Classification Algorithms Vandendriesche (2013 pg. R3-4 - R3-5).
+#Calculates storiedness for a stand/plot in accordance with NFS Regional
+#Vegetation Classification Algorithms Vandendriesche (2013 pg. R3-4 - R3-5).
 #
 #Arguments
 #

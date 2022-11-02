@@ -25,6 +25,7 @@
 # - Canopy size class timberland (CAN_SZTMB)
 # - Canopy size class woodland (CAN_SZWDL)
 # - QMD of top 20% (QMD_TOP20)
+# - Basal area weighted diameter (BA_WT_DIA)
 #
 #Arguments
 #
@@ -44,7 +45,7 @@
 #crwidth: Name of column corresponding crown width values of tree records in
 #         data. By default this argument is set to "CrWidth".
 #
-#debug:	  Boolean variable used to specify if debug output should be printed to
+#debug:	  Logical variable used to specify if debug output should be printed to
 #         R console. If value is TRUE, then debug output will printed to R
 #         console.
 #
@@ -87,7 +88,8 @@ vegOut <- function(data,
   #Check of missing columns in data
   missing <- c(stand, species, dbh, expf, crwidth) %in% colnames(data)
 
-  #If there is a FALSE value in missing report message and return NA value
+  #If there is a FALSE value in missing report message and return vegData (all
+  #NA values at this point)
   if(F %in% missing)
   {
     cat("One or more input arguments not found in data. Check spelling.", "\n")
@@ -176,7 +178,7 @@ vegOut <- function(data,
   #Dominance type 2 CC
   vegData$XDCC2<-round(dtResults[["XDCC2"]],2)
 
-  #Canopy size class - midscale mapping
+  #Canopy size class - R3 midscale mapping
   vegData$CAN_SIZCL<-canSizeCl(data = data,
                                stand = stand,
                                dbh = dbh,
