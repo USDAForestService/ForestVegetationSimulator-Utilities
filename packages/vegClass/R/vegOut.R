@@ -36,6 +36,10 @@
 #stand:   Name of column corresponding to stand associated with tree records
 #         in data. By default this value is set to "StandID".
 #
+#species: Character string corresponding to name of column pertaining to USDA
+#         plant symbols of tree records in data argument. By default, this
+#         argument is set to "SpeciesPLANTS".
+#
 #dbh:     Name of column in data argument corresponding to DBH of tree records.
 #         By default this argument is set to "DBH".
 #

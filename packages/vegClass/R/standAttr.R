@@ -24,11 +24,11 @@
 #expf:  Name of column in data argument corresponding to TPA of tree records.
 #       By default this argument is set to "TPA".
 #
-#min:   Minimum diameter to consider in calculation of BA. By default this
-#       argument is set to 0.
+#min:   Minimum diameter to consider in calculation of plot attributes. By
+#       default this argument is set to 0.
 #
-#min:   Maximum diameter to consider in calculation of BA. By default this
-#       argument is set to 999.
+#max:   Maximum diameter to consider in calculation of plot attributes. By
+#       default this argument is set to 999.
 #
 #debug: logical variable indicating if debug statements should be printed. By
 #       default this value is set to FALSE.

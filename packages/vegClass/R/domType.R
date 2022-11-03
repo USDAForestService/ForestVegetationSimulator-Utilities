@@ -11,8 +11,9 @@
 #stand:   Name of column corresponding to stand associated with tree records
 #         in data. By default this value is set to "StandID".
 #
-#species: Name of column corresponding to USDA plant symbols associated with
-#         tree records in data.
+#species: Character string corresponding to name of column pertaining to USDA
+#         plant symbols of tree records in data argument. By default, this
+#         argument is set to "SpeciesPLANTS".
 #
 #dbh:     Name of column in data argument corresponding to DBH of tree records.
 #         By default this argument is set to "DBH".
@@ -53,7 +54,7 @@ domType<-function(data,
                   CC,
                   debug = F){
 
-  #Intialize results vector to NA
+  #Initialize results vector to NA
   results=list("DOMTYPE" = NA,
                "DCC1" = NA,
                "XDCC1" = NA,
@@ -212,20 +213,16 @@ domType<-function(data,
     leafRetenCC<-rep(0, 2)
     names(leafRetenCC)<-c("EVERGREEN", "DECIDUOUS")
 
-    #Define genusSp. This vector keeps track of each genus for each species
-    #in data.
-    genusSp<-vector(length = length(spStand))
-
     #==========================================================================
-    #Loop across sppValues and populate sppCC, genusCC, ShadeTolCC, and
+    #Loop across across data and populate sppCC, genusCC, ShadeTolCC, and
     #leafRetenCC.
     #==========================================================================
 
-    #Loop across all unique species found in stand
-    for(k in 1:length(spStand))
+    #Loop across data
+    for(k in 1:nrow(data))
     {
       #Extract species being processed
-      spp = spStand[k]
+      spp = data[[species]][k]
 
       #Extract genus for spp k
       genus<- genusStand[spp]
@@ -236,28 +233,21 @@ domType<-function(data,
       #Extract leaf retention for spp k
       leafReten<-leafRetStand[spp]
 
-      #Obtain sum of CC for species k
-      SPPC<- sum(data$TREECC[data[[species]] == spp])
-
       #Add SPPC to sppCC
-      sppCC[spp]<-sppCC[spp] + SPPC
+      sppCC[spp]<-sppCC[spp] + data$TREECC[k]
 
       #Add SPPC to genusCC
-      genusCC[genus]<-genusCC[genus] + SPPC
+      genusCC[genus]<-genusCC[genus] + data$TREECC[k]
 
       #Bypass addition of SPPC to shadeTolCC if shadeTol for species k is NA.
       if(!is.na(shadeTol))
       {
         #Add SPPC to shadeTolCC
-        shadeTolCC[shadeTol]<-shadeTolCC[shadeTol] + SPPC
+        shadeTolCC[shadeTol]<-shadeTolCC[shadeTol] + data$TREECC[k]
       }
 
       #Add SPPC to leafRetenCC
-      leafRetenCC[leafReten]<-leafRetenCC[leafReten] + SPPC
-
-      #Add genus to genusSp
-      genusSp[k]<-genus
-      names(genusSp)[k]<-spp
+      leafRetenCC[leafReten]<-leafRetenCC[leafReten] + data$TREECC[k]
     }
 
     #Sort sppCC, genusCC, leafRetenCC, and shadeTolCC by descending order
@@ -377,7 +367,7 @@ domType<-function(data,
     if(!domTypeFound)
     {
       #Find index where species and genus are mutually exclusive
-      genIndex<-excGenusSp(names(sppCC)[1], names(genusCC), genusSp)
+      genIndex<-excGenusSp(names(sppCC)[1], names(genusCC), genusStand)
 
       if(genusCC[genIndex] >= (CC * 0.20) &&
          sppCC[1] >= (CC * 0.20) &&

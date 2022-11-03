@@ -29,9 +29,6 @@
 #
 #CC:      Percent canopy cover corrected for overlap for plot/stand.
 #
-#min:     Minimum diameter to consider in calculation of qmdTop20. By default
-#         this argument is set to 0.1.
-#
 #debug:   logical variable indicating if debug statements should be printed. By
 #         default this value is set to FALSE.
 #
