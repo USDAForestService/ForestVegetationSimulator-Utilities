@@ -16,14 +16,17 @@
 #
 #data:    Tree level dataframe corresponding to trees from a single stand.
 #
-#stand:   Name of column corresponding to stand ID associated with tree records
-#         in data. By default this value is set to "StandID".
+#stand:   Character string corresponding to name of column pertaining to stand
+#         or plot ID associated with tree records in data argument. By default,
+#         this value is set to "StandID".
 #
-#dbh:     Name of column in data argument corresponding to DBH of tree records.
-#         By default this argument is set to "DBH".
+#dbh:     Character string corresponding to name of column pertaining to DBH of
+#         tree records in data argument. By default, this argument is set to
+#         "DBH".
 #
-#expf:    Name of column in data argument corresponding to TPA of tree records.
-#         By default this argument is set to "TPA".
+#expf:    Character string corresponding to name of column pertaining to TPA of
+#         tree records in data argument. By default, this argument is set to
+#         "TPA".
 #
 #TPA:     Trees per acre of plot/stand.
 #
@@ -137,8 +140,8 @@ qmdTop20 <- function(data,
           }
         }
 
-        #If TPASUM and TPA20 just happen to be equal, then add new value to DBHSQ
-        #without adjusting expansion factor
+        #If TPASUM and TPA20 just happen to be equal, then add next DBH^2 * TPA
+        #value to DBHSQ without adjusting expansion factor
         else
         {
           DBHSQ = DBHSQ + data[[dbh]][i] ^ 2 * data[[expf]][i]
@@ -153,7 +156,7 @@ qmdTop20 <- function(data,
         break
       }
 
-      #TPA20 has not been exceeded. Added next value to DBHSQ
+      #TPA20 has not been exceeded. Added next DBH^2 * TPA value to DBHSQ
       else
       {
         DBHSQ = DBHSQ + data[[dbh]][i] ^ 2 * data[[expf]][i]

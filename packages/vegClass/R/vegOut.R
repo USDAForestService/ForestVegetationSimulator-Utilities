@@ -29,22 +29,25 @@
 #
 #Arguments
 #
-#data:    Tree level dataframe corresponding to trees from a single stand. When
-#         called from main.R, this corresponds to a dataframe of trees from a
-#         single stand and year combination.
+#data:    Data frame containing tree records from a single stand or plot. Data
+#         frame must contain a column corresponding to stand/plot ID, DBH, and
+#         expansion factor for each tree record.
 #
-#stand:   Name of column corresponding to stand associated with tree records
-#         in data. By default this value is set to "StandID".
+#stand:   Character string corresponding to name of column pertaining to stand
+#         or plot ID associated with tree records in data argument. By default,
+#         this value is set to "StandID".
 #
 #species: Character string corresponding to name of column pertaining to USDA
 #         plant symbols of tree records in data argument. By default, this
 #         argument is set to "SpeciesPLANTS".
 #
-#dbh:     Name of column in data argument corresponding to DBH of tree records.
-#         By default this argument is set to "DBH".
+#dbh:     Character string corresponding to name of column pertaining to DBH of
+#         tree records in data argument. By default, this argument is set to
+#         "DBH".
 #
-#expf:    Name of column in data argument corresponding to TPA of tree records.
-#         By default this argument is set to "TPA".
+#expf:    Character string corresponding to name of column pertaining to TPA of
+#         tree records in data argument. By default, this argument is set to
+#         "TPA".
 #
 #crwidth: Name of column corresponding crown width values of tree records in
 #         data. By default this argument is set to "CrWidth".

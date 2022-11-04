@@ -9,6 +9,7 @@
 #Function : main.R
 #
 #Arguments:
+#
 #input:        Directory path and file name to a SQLite database (.db). Path
 #              name must be surrounded with double quotes "" and double
 #              back slashes or single forward slashes need to be used for
@@ -35,14 +36,14 @@
 #              appended to existing file. The default value of this argument
 #              is TRUE.
 #
-#groupTag:     This is a grouping tag that will be used to extract a grouping
-#              code (such as ERU) from a set of FVS group labels. For instance,
-#              if you have a group label such as ERU=MCD, then the groupTag
-#              would be ERU= and you would have a value of MCD returned in
-#              the output. The default value of this argument is ---. The value
-#              for groupTag must be surrounded in double quotes.
+#removeTag:    This is a tag that will be removed from a grouping code (such as
+#              ERU) from a set of FVS grouping codes. For instance, if you have
+#              a grouping code such as ERU=MCD, then the removeTag would be ERU=
+#              and you would have a value of MCD returned in the output. The
+#              default value of this argument is ---. The value for removeTag
+#              must be surrounded in double quotes.
 #
-#              Example group tag:
+#              Example removal tag:
 #              "ERU="
 #
 #runTitles:    Vector of character strings corresponding to FVS runTitles that
@@ -66,17 +67,17 @@
 #              runTitles will be ignored. By default this argument is set
 #              to FALSE (F).
 #
-#addCompute:   Boolean variable used to indicate if information in FVS_Compute
-#              table should be included in output. By default this argument
-#              is set to TRUE. If the FVS_Compute table does not exist in input
-#              then only the variables calculated by the vegClass package will
-#              be returned in output.
+#addCompute:   Logical variable used to indicate if information in FVS_Compute
+#              table should be included in output. If the FVS_Compute table does
+#              not exist in input, then only the variables calculated by the
+#              vegClass package will be returned in output. By default, this
+#              argument is set to TRUE.
 #
-#addPotFire:   Boolean variable used to indicate if information in FVS_PotFire
-#              table should be included in output. By default this argument
-#              is set to TRUE. If the FVS_PotFire table does not exist in input
-#              then only the variables calculated by the vegClass package will
-#              be returned in output.
+#addPotFire:   Logical variable used to indicate if information in FVS_PotFire
+#              table should be included in output. If the FVS_PotFire table does
+#              not exist in input, then only the variables calculated by the
+#              vegClass package will be returned in output. By default, this
+#              argument is set to TRUE.
 #
 #startYear:    Integer value corresponding to the year that data should start
 #              being reported in output argument. Data with years prior to this
@@ -88,7 +89,7 @@
 main<- function(input,
                 output,
                 overwriteOut = T,
-                groupTag = "---",
+                removeTag = "---",
                 runTitles = "Run 1",
                 allRuns = F,
                 addCompute = T,
@@ -138,9 +139,9 @@ main<- function(input,
          .csv.")
   }
 
-  #Capitalize runTitles and groupTag
+  #Capitalize runTitles and removeTag
   runTitles<-toupper(runTitles)
-  groupTag<-toupper(groupTag)
+  removeTag<-toupper(removeTag)
 
   #Connect to input database
   con<-RSQLite::dbConnect(RSQLite::SQLite(), input)
@@ -167,7 +168,7 @@ main<- function(input,
   #If the output file exists and overWriteOut is true, unlink the file
   if(file.exists(output) & overwriteOut) unlink(output)
 
-  #If all runs is in effect, extract all unique runTitles from input (con).
+  #If allRuns is TRUE, extract all unique runTitles from input (con).
   if(allRuns)
   {
     runTitles<-unique(RSQLite::dbGetQuery(con, "SELECT RunTitle FROM FVS_Cases")[,1])
@@ -237,7 +238,7 @@ main<- function(input,
 
       cat("Tree list query complete.", "\n")
 
-      #Capitalize column headers of standDF
+      #Display column names and number of rows in standDF
       cat("Columns read from tree list:", colnames(standDF), "\n")
       cat("Number of rows read from tree list:", nrow(standDF), "\n")
 
@@ -264,7 +265,7 @@ main<- function(input,
         standID <- cases$StandID[caseIndex]
       }
 
-      #Display which stand is being processed
+      #Display which stand and case ID is being processed
       cat("Processing stand:", standID, "CaseID:", caseID, "\n")
 
       #Initialize invalidStand. This variable is used to determine if a stand
@@ -296,9 +297,6 @@ main<- function(input,
       #Sort years
       years<-sort(years)
 
-      #Extract all years greater than startYear
-      years <- years[years >= startYear]
-
       #Create list that will store output for stand j for all years
       standYrOutput<-vector(mode = "list",
                             length(years))
@@ -309,6 +307,7 @@ main<- function(input,
 
       for(j in 1:length(years))
       {
+
         #If this is the last year to process and addCompute/addPotFire is T,
         #move to next iteration of loop. This is done, since FVS_Compute and
         #FVS_PotFilre table report one less cycle than FVS_Treelist.
@@ -322,24 +321,32 @@ main<- function(input,
         standYrDF<- standDF[standDF$Year == years[j],]
         cat("Year:", years[j],"\n")
 
+        #If the initial inventory year (j == 1) has no live trees, set
+        #invalidStand to T and break out of loop.
+        if(j == 1 & max(standYrDF$TPA) <= 0)
+        {
+          invalidStands <- invalidStands + 1
+          invalidStand = T
+          break
+        }
+
+        #If year j is less than startYear, skip to next iteration of loop
+        if(years[j] < startYear)
+        {
+          cat("Year:", years[j], "is before start year:", startYear,
+              "and will not be processed.", "\n")
+          next
+        }
+
         #Determine group to report in yrOutput
-        group<-getGroup(toupper(groups), groupTag)
+        group<-getGroup(toupper(groups), removeTag)
 
         #Create dataframe that will store output for the stand in a given year.
         yrOutput<-data.frame(RUNTITLE = run,
                              GROUP = group,
                              CASEID = caseID,
                              STANDID = standID,
-                             YEAR = years[j],
-                             CY = j)
-
-        #If the initial inventory year (j == 1) has no live trees, set
-        #invalidStand to T. Stand will be processed but not sent to output.
-        if(j == 1 & max(standYrDF$TPA) <= 0)
-        {
-          invalidStands <- invalidStands + 1
-          invalidStand = T
-        }
+                             YEAR = years[j])
 
         #Bind data from vegOut to yrOutput
         yrOutput <- cbind(yrOutput,
@@ -365,6 +372,9 @@ main<- function(input,
       #Combine all year-by-year information for standID into a single
       #dataframe.
       standOut<-do.call("rbind", standYrOutput)
+
+      #Create cycle field now
+      standOut$CY <- seq(from = 1, to = nrow(standOut), by = 1)
 
       #Add tab to standIDs. This avoids the problems of stand IDs being
       #converted to scientific notation in csv. There may be a better way to

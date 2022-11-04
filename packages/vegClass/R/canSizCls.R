@@ -2,24 +2,30 @@
 #Function: canSizeCl
 #
 #This function calculates canopy size class for stand/plot in accordance with
-#NFS Regional Vegetation Classification Algorithms Vandendriesche (2013 pg.
-#R3-3 - R3-4).
+#Region 3 rulesets from Vandendriesche, D., 2013. A Compendium of NFS
+#Regional Vegetation Classification Algorithms. USDA Forest Service. Fort
+#Collins, CO. (2013 pg.R3-3 - R3-4).
 #
 #Argument
 #
-#data:    Tree level dataframe corresponding to trees from a single stand.
+#data:    Data frame containing tree records from a single stand or plot. Data
+#         frame must contain a column corresponding to stand/plot ID, DBH,
+#         expansion factor, and crown width for each tree record.
 #
-#stand:   Name of column corresponding to stand associated with tree records
-#         in data. By default this value is set to "StandID".
+#stand:   Character string corresponding to name of column pertaining to stand
+#         or plot ID associated with tree records in data argument. By default,
+#         this value is set to "StandID".
 #
-#dbh:     Name of column corresponding DBH values of tree records in data. By
-#         default this argument is set to "DBH".
+#dbh:     Character string corresponding to name of column pertaining to TPA of
+#         tree records in data argument. By default, this argument is set to
+#         "TPA".
 #
 #expf:    Name of column in data argument corresponding to expansion factor of
 #         tree records By default this argument is set to "TPA".
 #
-#crwidth: Name of column corresponding crown width values of tree records in
-#         data. By default this argument is set to "CrWidth".
+#crwidth: Character string corresponding to name of column pertaining to crown
+#         width values of tree records in data argument. By default, this
+#         argument is set to "CrWidth".
 #
 #TPA:     Trees per acre of stand/plot.
 #
@@ -77,17 +83,18 @@ canSizeCl<-function(data,
         "expf:", expf, "\n", "\n")
   }
 
-  #Check of missing columns in data
+  #Check for missing columns in data
   missing <- c(stand, dbh, expf, crwidth) %in% colnames(data)
 
-  #If there is a FALSE value in missing report message and return NA value
+  #If name of columns provided in stand, dbh, expf, and crwidth are not found in
+  #data warning message is issued and NA value is returned.
   if(F %in% missing)
   {
     cat("One or more input arguments not found in data. Check spelling.", "\n")
     return(NA)
   }
 
-  #Initialize named vector for storing CC by diameter class
+  #Initialize named vector for storing CC by diameter class (1 - 5)
   ccVec<-c("1" = 0, "2" = 0, "3" = 0, "4" = 0, "5" = 0)
 
   #Statement used to avoid NOTE when stateTrans package is built.
@@ -115,7 +122,7 @@ canSizeCl<-function(data,
   #Else calculate cansizcl
   else
   {
-    #Determine diameter class for each tree record
+    #Determine diameter class for each tree record using getCanSizeDC function.
     data$DC<-getCanSizeDC(data[[dbh]], type, debug)
 
     #Loop across data and sum canopy cover values for each class in ccVec
@@ -124,7 +131,8 @@ canSizeCl<-function(data,
       #obtain DC for tree i
       dcIndex<-data$DC[i]
 
-      #Sum CC for DC in ccVec
+      #Add percent canopy cover of tree i to appropriate diameter class index
+      #in ccVec.
       ccVec[dcIndex]<- ccVec[dcIndex] + data$TREECC[i]
     }
 
@@ -137,15 +145,23 @@ canSizeCl<-function(data,
                   "CC:", ccVec, "\n",
                   "cansizcl:", cansizcl, "\n")
 
-    #Timber canopy size class adjustments
+    #Timberland canopy size class adjustments
     if(type == 2)
     {
+      #If canopy size class is 2 and the amount of canopy cover in classes 3 - 5
+      #is greater than the canopy cover in class 2, then a canopy size class
+      #selection is made from classes 3 - 5 (whichever has the most canopy
+      #cover).
       if(cansizcl == "2" & sum(ccVec[3:5]) >= ccVec[2])
       {
         ccVec[1:2]<-0
         cansizcl<-names(ccVec)[which.max(ccVec)]
       }
 
+      #If canopy size class is 1 and the amount of canopy cover in classes 2 - 5
+      #is greater than the canopy cover in class 1, then a canopy size class
+      #selection is made from classes 2 - 5 (whichever has the most canopy
+      #cover).
       if(cansizcl == "1" & sum(ccVec[2:5]) >= ccVec[1])
       {
         ccVec[1]<-0
@@ -153,9 +169,13 @@ canSizeCl<-function(data,
       }
     }
 
-    #Woodland size class adjustments
+    #Woodland canopy size class adjustments
     if(type == 3)
     {
+      #If canopy size class is 1 and the amount of canopy cover in classes 2 - 5
+      #is greater than the canopy cover in class 1, then a canopy size class
+      #selection is made from classes 2 - 5 (whichever has the most canopy
+      #cover).
       if(cansizcl == "1" & sum(ccVec[2:5]) >= ccVec[1])
       {
         ccVec[1]<-0
@@ -181,7 +201,9 @@ canSizeCl<-function(data,
 #This function takes in a type argument and returns a list containing a vector
 #of diameters and a vector of diameter class values based on R3 midscale
 #mapping, timber dominance type, or woodland  dominance types criteria. These
-#different diameter classes are described in NFS_Reg_Veg_Class.pdf.
+#different diameter classes are described in Vandendriesche, D., 2013. A
+#Compendium of NFS Regional Vegetation Classification Algorithms. USDA Forest
+#Service. Fort Collins, CO. (2013 pg.R3-3 - R3-4).
 #
 #Arguments
 #
@@ -281,13 +303,14 @@ getDiaValues<-function(type = 1, debug = F)
 #3) If x is greater than last value in inputValues, the last item in
 #   validOutputs is returned.
 #
-#4) When 1 - 3 are not true, then x is compared against all i-th and i-th+1
+#4) When 1 - 3 are not true, then x is compared against all ith and ith+1
 #   values in inputValues. If x is a value GE to ith value and LT i-th + 1
 #   value in inputValues, then ith value in outputValues is returned.
 #
 #Arguments
 #
-#x:             Incoming value to evaluate. Must be numeric and not NA.
+#x:             Incoming value to evaluate. Must be numeric and not be an NA
+#               value.
 #
 #inputValues:   Values to compare x against. This argument has to be the same
 #               length as outputValues.
@@ -313,20 +336,20 @@ findCategory<-function(x, inputValues = 0, outputValues = 0, invalidReturn = 0,
   #Initialize return category (cat) to invalidReturn
   cat = invalidReturn
 
-  #If x is character or NA, return.
+  #If x is character or NA, return cat.
   if(is.character(x) | is.na(x))
   {
     return(cat)
   }
 
   #If InputValues is less than length 1, a character vector, or contains any NA
-  #values, then return.
+  #values, then return cat.
   if(length(inputValues) < 1 | is.character(inputValues) | NA %in% inputValues)
   {
     return(cat)
   }
 
-  #If inputValues and outputValues are not the same length, then return.
+  #If inputValues and outputValues are not the same length, then return cat.
   if(length(inputValues) != length(outputValues))
   {
     return(cat)
@@ -336,15 +359,17 @@ findCategory<-function(x, inputValues = 0, outputValues = 0, invalidReturn = 0,
   #Look for category
   #===========================
 
-  #If x is less than first item in inputValues then cat is assigned invalidReturn
-  #If useLowerBound == T then cat is assigned the first item in outputValues.
+  #If x is less than first item in inputValues then cat is assigned
+  #invalidReturn.If useLowerBound == T then cat is assigned the first item in
+  #outputValues.
   if(x < inputValues[1])
   {
     cat = invalidReturn
     if(useLowerBound == T) cat = outputValues[1]
   }
 
-  #Test if x is greater than last value in outputValues
+  #Test if x is greater than last value in outputValues. If it is, then assign
+  #x the last value in outputValues.
   else if (x >= inputValues[length(inputValues)])
   {
     cat = outputValues[length(outputValues)]
@@ -404,9 +429,8 @@ findCategory<-function(x, inputValues = 0, outputValues = 0, invalidReturn = 0,
 #       2 - Timberland dominance type
 #       3 - Woodland dominance type
 #
-#debug:	Boolean variable used to specify if debug output should be
-#       printed to R console. If value is TRUE, then debug output will
-#       printed to R console.
+#debug:	Boolean variable used to specify if debug output should be printed to R
+#       console. If value is TRUE, then debug output will printed to R console.
 #
 #Possible return values when type = 1
 #
@@ -432,15 +456,15 @@ findCategory<-function(x, inputValues = 0, outputValues = 0, invalidReturn = 0,
 
 getCanSizeDC<-function(DBH, type = 1, debug = F)
 {
-  #Get diameters and DC values
+  #Get diameters and diameter class values
   values<-getDiaValues(type, debug)
 
-  #Initialize vector the same size as DBH for storing DC values
+  #Initialize vector the same size as DBH for storing diameter class values
   DC<-vector(length = length(DBH))
 
   if(debug) cat("In getCanSizeDC function", "\n")
 
-  #Loop across DBH vector and determine diameter class
+  #Loop across DBH vector and determine diameter class for each DBH value
   for(i in 1:length(DBH))
   {
     dcls<-findCategory(DBH[i], values[[1]], values[[2]])

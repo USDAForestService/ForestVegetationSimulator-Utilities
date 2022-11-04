@@ -13,16 +13,21 @@
 #
 #Arguments:
 #
-#data:  Tree level dataframe corresponding to trees from a single stand.
+#data:  Data frame containing tree records from a single stand or plot. Data
+#       frame must contain a column corresponding to stand/plot ID, DBH, and
+#       expansion factor for each tree record.
 #
-#stand: Name of column corresponding to stand ID associated with tree records
-#       in data. By default this value is set to "StandID".
+#stand: Character string corresponding to name of column pertaining to stand or
+#       plot ID associated with tree records in data argument. By default, this
+#       value is set to "StandID".
 #
-#dbh:   Name of column in data argument corresponding to DBH of tree records. By
-#       default this argument is set to "DBH".
+#dbh:   Character string corresponding to name of column pertaining to DBH of
+#       tree records in data argument. By default, this argument is set to
+#       "DBH".
 #
-#expf:  Name of column in data argument corresponding to TPA of tree records.
-#       By default this argument is set to "TPA".
+#expf:  Character string corresponding to name of column pertaining to TPA of
+#       tree records in data argument. By default, this argument is set to
+#       "TPA".
 #
 #min:   Minimum diameter to consider in calculation of plot attributes. By
 #       default this argument is set to 0.
@@ -59,10 +64,11 @@ plotAttr <- function(data,
         "expf:", expf, "\n", "\n")
   }
 
-  #Check of missing columns in data
+  #Check for missing columns in data
   missing <- c(dbh, crwidth, expf, stand) %in% colnames(data)
 
-  #If there is a FALSE value in missing report message and return NA value
+  #If name of columns provided in stand, dbh, expf, crwidth are not found in
+  #data warning message is issued and NA value is returned.
   if(F %in% missing)
   {
     cat("One or more input arguments not found in data. Check spelling.", "\n")
@@ -79,7 +85,7 @@ plotAttr <- function(data,
             "RSDI" = 0,
             "BA_WT_DIA" = 0)
 
-  #Initialize BA, TPA, CC, DBHSQ , BAWT, ZSDI (Zeide SDI), and RSDI
+  #Initialize values for BA, TPA, CC, DBHSQ , BAWT, ZSDI (Zeide SDI), and RSDI
   BA = 0
   TPA = 0
   DBHSQ = 0
