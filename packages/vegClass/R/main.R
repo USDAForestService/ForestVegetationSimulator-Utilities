@@ -278,6 +278,7 @@ main<- function(input,
       {
         noValidRecords <- noValidRecords + 1
         cat("Stand:", standID, "has no valid tree records.", "\n")
+        standSum<-standSum + 1
         next
       }
 
@@ -288,6 +289,7 @@ main<- function(input,
       {
         noLiveTrees <- noLiveTrees + 1
         cat("Stand:", standID, "has no live tree records.", "\n")
+        standSum<-standSum + 1
         next
       }
 
@@ -335,6 +337,7 @@ main<- function(input,
         {
           cat("Year:", years[j], "is before start year:", startYear,
               "and will not be processed.", "\n")
+          rm(standYrDF)
           next
         }
 
@@ -355,6 +358,9 @@ main<- function(input,
         #Add yrOutput to standYrOutput
         standYrOutput[[j]]<-yrOutput
 
+        #remove standYrDF and yrOutput
+        rm(standYrDF, yrOutput)
+
         ### END OF LOOP ACROSS YEARS
       }
 
@@ -366,12 +372,16 @@ main<- function(input,
             standID,
             "is invalid and information will not be sent to output.",
             "\n")
+        standSum<-standSum + 1
         next
       }
 
       #Combine all year-by-year information for standID into a single
       #dataframe.
       standOut<-do.call("rbind", standYrOutput)
+
+      #Remove standYrOutput
+      rm(standYrOutput)
 
       #Create cycle field now
       standOut$CY <- seq(from = 1, to = nrow(standOut), by = 1)
@@ -429,6 +439,9 @@ main<- function(input,
                 standID,
                 "is complete.",
                 "\n")
+
+            #Remove computeDF
+            rm(computeDF)
 
           }
 
@@ -495,6 +508,9 @@ main<- function(input,
                 "is complete.",
                 "\n")
 
+            #Remove potFireDF
+            rm(potFireDF)
+
           }
 
           else
@@ -560,8 +576,8 @@ main<- function(input,
       standSum<-standSum + 1
       cat(standSum, "stands processed out of", nrow(cases), "\n")
 
-      #Remove standDF
-      rm(standDF)
+      #Remove standDF and standOut
+      rm(standDF, standOut)
 
       ### END OF LOOP ACROSS ALL CASEIDS IN RUN
     }
