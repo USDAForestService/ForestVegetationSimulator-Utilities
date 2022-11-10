@@ -193,10 +193,11 @@ main<- function(input,
     dbQuery<- caseQuery(run)
     cases<-RSQLite::dbGetQuery(con, dbQuery)
 
+    cat("\n")
     cat("Columns read from cases table:", colnames(cases), "\n")
 
     cat("Total number of stands to process for run", paste0(run,":"),
-        length(cases[["StandID"]]),"\n")
+        length(cases[["StandID"]]),"\n", "\n")
 
     #Initialize standSum. This will keep track of number of total stands
     #processed.
@@ -227,6 +228,24 @@ main<- function(input,
       #Select stands to process
       caseID<-cases[["CaseID"]][i]
 
+      #Find location of caseID in cases
+      caseIndex <- match(caseID,
+                         cases[["CaseID"]])
+
+      #If caseIndex is NA (shouldn't ever be the case), move to next
+      #iteration of the loop.
+      if(is.na(caseIndex)) next
+
+      #Define groups and standID for current case ID
+      else
+      {
+        groups  <- cases$Groups[caseIndex]
+        standID <- cases$StandID[caseIndex]
+      }
+
+      #Display which stand and case ID is being processed
+      cat("Processing stand:", standID, "CaseID:", caseID, "\n")
+
       #Generate a query that will be used to read data from FVS tree list
       dbQuery<-treeQuery(caseID)
 
@@ -250,24 +269,6 @@ main<- function(input,
         next
       }
 
-      #Find location of caseID in cases
-      caseIndex <- match(caseID,
-                         cases[["CaseID"]])
-
-      #If caseIndex is NA (shouldn't ever be the case), move to next
-      #iteration of the loop.
-      if(is.na(caseIndex)) next
-
-      #Define groups and standID for current case ID
-      else
-      {
-        groups  <- cases$Groups[caseIndex]
-        standID <- cases$StandID[caseIndex]
-      }
-
-      #Display which stand and case ID is being processed
-      cat("Processing stand:", standID, "CaseID:", caseID, "\n")
-
       #Initialize invalidStand. This variable is used to determine if a stand
       #is invalid and should not be written to output argument.
       invalidStand = F
@@ -282,7 +283,7 @@ main<- function(input,
         next
       }
 
-      #If stand only contains dead tree records for the duration of the'
+      #If stand only contains dead tree records for the duration of the
       #simulation timeframe, increment noLiveTrees and move to next iteration
       #of loop.
       if(max(standDF$TPA) <= 0)
@@ -303,6 +304,12 @@ main<- function(input,
       standYrOutput<-vector(mode = "list",
                             length(years))
 
+      #Print message indicating that vegClass attributes are being calculated
+      #for stand
+      cat("\n")
+      cat("Vegetation classification attributes being calculated for stand:",
+          standID, "\n")
+
       #=========================================================================
       #Begin loop across years in standDF
       #=========================================================================
@@ -312,7 +319,7 @@ main<- function(input,
 
         #If this is the last year to process and addCompute/addPotFire is T,
         #move to next iteration of loop. This is done, since FVS_Compute and
-        #FVS_PotFilre table report one less cycle than FVS_Treelist.
+        #FVS_PotFire table report one less cycle than FVS_Treelist.
         if(j == length(years) & (addCompute | addPotFire))
         {
           cat("Skipping last year:", years[j], "\n")
@@ -404,6 +411,7 @@ main<- function(input,
           dbQuery <- computeQuery(caseID)
 
           #Print compute query message
+          cat("\n")
           cat("Querying FVS_Compute...", "\n")
 
           #Get the data from FVS_Compute
@@ -457,6 +465,7 @@ main<- function(input,
         #Report that FVS_Compute table was not found in input.
         else
         {
+          cat("\n")
           cat("FVS_Compute table not found in input. No information to join.",
               "\n")
         }
@@ -475,6 +484,7 @@ main<- function(input,
           dbQuery <- potFireQuery(caseID)
 
           #Print FVS_PotFire query message
+          cat("\n")
           cat("Querying FVS_PotFire...", "\n")
 
           #Get the data from FVS_PotFire
@@ -525,6 +535,7 @@ main<- function(input,
         #Report that FVS_PotFire table was not found in input.
         else
         {
+          cat("\n")
           cat("FVS_PotFire table not found in input. No information to join.",
               "\n")
         }
@@ -546,6 +557,7 @@ main<- function(input,
       #Rearrange the column headers in standOut
       standOut <- standOut[, c(colNames)]
 
+      cat("\n")
       cat("Columns in standOut:", "\n", colnames(standOut), "\n", "\n")
 
       #============================================================
@@ -574,13 +586,18 @@ main<- function(input,
 
       #Update standSum and send to console
       standSum<-standSum + 1
-      cat(standSum, "stands processed out of", nrow(cases), "\n")
+      cat(standSum, "stands processed out of", nrow(cases), "\n", "\n")
 
       #Remove standDF and standOut
       rm(standDF, standOut)
 
       ### END OF LOOP ACROSS ALL CASEIDS IN RUN
     }
+
+    #Print run that has finished being processed
+    cat(paste0(rep("*", 75), collapse = ""), "\n")
+    cat("*", "Finished processing run:", run, "\n")
+    cat(paste0(rep("*", 75), collapse = ""), "\n", "\n")
 
     #Print number of stands that had no projectable tree records.
     cat(noLiveTrees,
@@ -595,12 +612,7 @@ main<- function(input,
     #Print number of stands that were flagged as invalid during processing.
     cat(invalidStands,
         "stands were found to be invalid for processing.",
-        "\n")
-
-    #Print run that has finished being processed
-    cat(paste0(rep("*", 75), collapse = ""), "\n")
-    cat("*", "Finished processing run:", run, "\n")
-    cat(paste0(rep("*", 75), collapse = ""), "\n")
+        "\n", "\n")
   }
 
   ### END OF LOOP ACROSS RUNS

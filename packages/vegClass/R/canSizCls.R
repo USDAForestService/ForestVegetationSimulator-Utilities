@@ -16,9 +16,9 @@
 #         or plot ID associated with tree records in data argument. By default,
 #         this value is set to "StandID".
 #
-#dbh:     Character string corresponding to name of column pertaining to TPA of
+#dbh:     Character string corresponding to name of column pertaining to DBH of
 #         tree records in data argument. By default, this argument is set to
-#         "TPA".
+#         "DBH".
 #
 #expf:    Name of column in data argument corresponding to expansion factor of
 #         tree records By default this argument is set to "TPA".
@@ -196,13 +196,12 @@ canSizeCl<-function(data,
 ################################################################################
 #Function: getCanSizDC
 #
-#This function takes in a vector of DBH values and a type argument and returns
-#a vector of diameter classes that are used to calculate canopy size class
-#in the canSizeCls function.
+#This function takes in a DBH value and a type argument and returns a diameter
+#class that is used to calculate canopy size class in the canSizeCls function.
 #
 #Arguments
 #
-#DBH:   Vector containing DBH values.
+#DBH:   DBH value
 #
 #type:  Indicator variable used to determine which type of diameter class to
 #       return
@@ -300,40 +299,3 @@ getCanSizeDC<-function(DBH, type = 1, debug = F)
   #Return DC
   return(DC)
 }
-
-################################################################################
-#Function: roundCC
-#
-#This function takes in an uncorrected percent canopy cover value and returns
-#a rounded value using the criteria described on page R3-3 of NFS Regional
-#Vegetation Classification Algorithms.
-#
-#Argument
-#
-#CC:          Uncorrected CC value
-#
-#ccThreshold: Percent canopy cover value that determines how argument CC is
-#             rounded. By Default this argument is set to 10.
-#
-#Return value
-#
-#Rounded CC value.
-################################################################################
-
-roundCC<-function(CC, ccThreshold = 10)
-{
-  #Round to nearest 5
-  if(CC > 10)
-  {
-    ccRound = round(CC / 5) * 5
-  }
-
-  #Round to nearest 1
-  else
-  {
-    ccRound = round(CC / 1) * 1
-  }
-
-  return(ccRound)
-}
-

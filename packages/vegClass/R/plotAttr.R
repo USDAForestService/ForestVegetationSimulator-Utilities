@@ -13,30 +13,34 @@
 #
 #Arguments:
 #
-#data:  Data frame containing tree records from a single stand or plot. Data
-#       frame must contain a column corresponding to stand/plot ID, DBH, and
-#       expansion factor for each tree record.
+#data:    Data frame containing tree records from a single stand or plot. Data
+#         frame must contain a column corresponding to stand/plot ID, DBH,
+#         expansion factor, and crown width for each tree record.
 #
-#stand: Character string corresponding to name of column pertaining to stand or
-#       plot ID associated with tree records in data argument. By default, this
-#       value is set to "StandID".
+#stand:   Character string corresponding to name of column pertaining to stand
+#         or plot ID associated with tree records in data argument. By default,
+#         this value is set to "StandID".
 #
-#dbh:   Character string corresponding to name of column pertaining to DBH of
-#       tree records in data argument. By default, this argument is set to
-#       "DBH".
+#dbh:     Character string corresponding to name of column pertaining to DBH of
+#         tree records in data argument. By default, this argument is set to
+#         "DBH".
 #
-#expf:  Character string corresponding to name of column pertaining to TPA of
-#       tree records in data argument. By default, this argument is set to
-#       "TPA".
+#expf:    Character string corresponding to name of column pertaining to TPA of
+#         tree records in data argument. By default, this argument is set to
+#         "TPA".
 #
-#min:   Minimum diameter to consider in calculation of plot attributes. By
-#       default this argument is set to 0.
+#crwidth: Character string corresponding to name of column pertaining to crown
+#         width values of tree records in data argument. By default, this
+#         argument is set to "CrWidth".
 #
-#max:   Maximum diameter to consider in calculation of plot attributes. By
-#       default this argument is set to 999.
+#min:     Minimum diameter to consider in calculation of plot attributes. By
+#         default this argument is set to 0.1.
 #
-#debug: logical variable indicating if debug statements should be printed. By
-#       default this value is set to FALSE.
+#max:     Maximum diameter to consider in calculation of plot attributes. By
+#         default this argument is set to 999.
+#
+#debug:   logical variable indicating if debug statements should be printed. By
+#         default this value is set to FALSE.
 #
 #Value
 #

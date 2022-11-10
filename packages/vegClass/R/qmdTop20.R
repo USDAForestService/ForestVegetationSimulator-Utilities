@@ -7,14 +7,16 @@
 #a tree list sorted from largest to smallest DBH and sum (DBH^2 * expansion
 #factor) and expansion factors of the tree records until 20 TPA or 20% of
 #plot/stand TPA (whichever is larger) is exceeded. QMD will then be calculated
-#from the squared diameter and TPA values. If the input tree list has less than
-#20 TPA, then QMD is calculated from the entirety of the tree list. If percent
+#from the squared diameter and TPA values. If the input tree list has 20 TPA or
+#less, then QMD is calculated from the entirety of the tree list. If percent
 #canopy cover of the stand is less than 10, then seedlings  (DBH == 0.1) are
 #included, otherwise they are ignored.
 #
 #Arguments:
 #
-#data:    Tree level dataframe corresponding to trees from a single stand.
+#data:    Data frame containing tree records from a single stand or plot. Data
+#         frame must contain a column corresponding to stand/plot ID, DBH,
+#         and expansion factor for each tree record.
 #
 #stand:   Character string corresponding to name of column pertaining to stand
 #         or plot ID associated with tree records in data argument. By default,

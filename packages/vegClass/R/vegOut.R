@@ -30,8 +30,9 @@
 #Arguments
 #
 #data:    Data frame containing tree records from a single stand or plot. Data
-#         frame must contain a column corresponding to stand/plot ID, DBH, and
-#         expansion factor for each tree record.
+#         frame must contain a column corresponding to stand/plot ID, species
+#         (USDA Plant Symbol only), DBH, expansion factor, and crown width for
+#         each tree record.
 #
 #stand:   Character string corresponding to name of column pertaining to stand
 #         or plot ID associated with tree records in data argument. By default,
@@ -126,7 +127,7 @@ vegOut <- function(data,
   #Calculate canopy cover uncorrected for overlap (CAN_COV)
   vegData$CAN_COV <- allAttr["CC"]
 
-  #Calculate BA, TPA, QMD, and SDI for seedlings + stems
+  #Calculate BA, BA_WT_DIA, TPA, QMD, and SDI for seedlings + stems
   vegData$BA <- allAttr["BA"]
   vegData$BA_WT_DIA <- allAttr["BA_WT_DIA"]
   vegData$TPA <- allAttr["TPA"]
@@ -134,7 +135,7 @@ vegOut <- function(data,
   vegData$ZSDI <- allAttr["ZSDI"]
   vegData$RSDI <- allAttr["RSDI"]
 
-  #Calculate plot attributes for stems (DBH >= 1")
+  #Calculate BA, BA_WT_DIA, TPA, QMD, and SDI for stems (DBH >= 1")
   stemAttr <- plotAttr(data,
                        stand = stand,
                        dbh = dbh,
@@ -143,13 +144,9 @@ vegOut <- function(data,
                        min = 1)
 
   vegData$BA_STM <- stemAttr["BA"]
-
   vegData$TPA_STM <- stemAttr["TPA"]
-
   vegData$QMD_STM <- stemAttr["QMD"]
-
   vegData$ZSDI_STM <- stemAttr["ZSDI"]
-
   vegData$RSDI_STM <- stemAttr["RSDI"]
 
   #Calculate QMD_TOP20
@@ -173,16 +170,16 @@ vegOut <- function(data,
   #Dominance type
   vegData$DOM_TYPE<-dtResults[["DOMTYPE"]]
 
-  #Dominance type 1
+  #Primary attribute of dominance type
   vegData$DCC1<-dtResults[["DCC1"]]
 
-  #Dominance type 1 CC
+  #CC of primary attribute
   vegData$XDCC1<-round(dtResults[["XDCC1"]],2)
 
-  #Dominance type 2
+  #Secondary attribute of dominance type
   vegData$DCC2<-dtResults[["DCC2"]]
 
-  #Dominance type 2 CC
+  #CC of secondary attribute
   vegData$XDCC2<-round(dtResults[["XDCC2"]],2)
 
   #Canopy size class - R3 midscale mapping
