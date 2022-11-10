@@ -13,6 +13,10 @@
 #runTitle:  Name of FVS run title(s) that will be searched for in FVS_Cases
 #           table.
 #
+#allRuns:   Logical variable used to signify that all runs from FVS output
+#           database are being processed. See main function in main.R for
+#           further details.
+#
 #Value
 #
 #Character string containing message.
@@ -88,10 +92,12 @@ validateDBInputs<-function(con, runTitle, allRuns)
 ################################################################################
 #Function: treeQuery
 #
-#This function builds and returns a string of SQL statements that can be used
-#to read in data from the FVS_TreeList, The treeQuery function can be invoked
-#outside of main.R for testing purposes and can be used in the dbGetQuery
-#function of the RSQLite R package.
+#This function builds and returns a string of SQL statements that can be used to
+#read in data from the FVS_TreeList. The query will read in CaseID, StandID,
+#Year, SpeciesPLANTS, TPA, DBH, and CrWidth data from the FVS_TreeList for the
+#tree records associated with Case ID values specified in the treeQuery function
+#arguments. The treeQuery function can be invoked outside of main function for
+#testing purposes with the dbGetQuery function of the RSQLite R package.
 #
 #Arguments
 #
@@ -123,7 +129,7 @@ treeQuery<-function(cases)
     #Remove last comma from cases
     cases<-substr(cases,1, nchar(cases)-1)
 
-    #Add parantheses around cases
+    #Add parentheses around cases
     cases<-paste0("(", cases, ")")
 
     #Create WHERE clause with cases
@@ -140,9 +146,9 @@ treeQuery<-function(cases)
 #Function: caseQuery
 #
 #This function builds and returns a string of SQL statements that is used to
-#read CaseID, StandID, and Groups from the FVS_Cases table for a FVS run title.
-#The caseQuery function can be invoked outside of main.R for testing purposes
-#and can be used in the dbGetQuery function of the RSQLite R package.
+#read CaseID, StandID, and Groups from the FVS_Cases table for a FVS run title
+#specified in the caseQuery function arguments. The caseQuery function can be
+#invoked outside of main.R with the dbGetQuery function of the RSQLite R package.
 #
 #Arguments
 #
@@ -166,9 +172,10 @@ caseQuery <- function(runTitle)
 #Function: computeQuery
 #
 #This function builds and returns a string of SQL statements that can be used
-#to read in data from the FVS_Compute table. The computeQuery function can be
-#invoked outside of main.R for testing purposes and can be used in the
-#dbGetQuery function of the RSQLite R package.
+#to read in data from the FVS_Compute table. The query will read in all fields
+#from the FVS_Compute table. The computeQuery function can be invoked outside of
+#main.R for testing purposes and can be used in the dbGetQuery function of the
+#RSQLite R package.
 #
 #Arguments
 #
@@ -199,7 +206,7 @@ computeQuery<-function(cases)
     #Remove last comma from cases
     cases<-substr(cases,1, nchar(cases)-1)
 
-    #Add parantheses around cases
+    #Add parentheses around cases
     cases<-paste0("(", cases, ")")
 
     #Create WHERE clause with cases
@@ -216,9 +223,11 @@ computeQuery<-function(cases)
 #Function: potFireQuery
 #
 #This function builds and returns a string of SQL statements that can be used
-#to read in data from the FVS_Potfire table. The potFireQuery function can be
-#invoked outside of main.R for testing purposes and can be used in the
-#dbGetQuery function of the RSQLite R package.
+#to read in data from the FVS_Potfire table. This query will read in CaseID,
+#Year, PTorch_Sev, Ptorch_Mod, Torch_Index, Crown_Index, Canopy_Ht, and
+#Canopy_Density. The potFireQuery function can be invoked outside of main.R for
+#testing purposes and can be used in the dbGetQuery function of the RSQLite R
+#package.
 #
 #Arguments
 #
@@ -251,7 +260,7 @@ potFireQuery<-function(cases)
     #Remove last comma from cases
     cases<-substr(cases,1, nchar(cases)-1)
 
-    #Add parantheses around cases
+    #Add parentheses around cases
     cases<-paste0("(", cases, ")")
 
     #Create WHERE clause with cases

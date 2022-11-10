@@ -7,30 +7,32 @@
 #a tree list sorted from largest to smallest DBH and sum (DBH^2 * expansion
 #factor) and expansion factors of the tree records until 20 TPA or 20% of
 #plot/stand TPA (whichever is larger) is exceeded. QMD will then be calculated
-#from the squared diameter and TPA values. If the input tree list has less than
-#20 TPA, then QMD is calculated from the entirety of the tree list. If percent
+#from the squared diameter and TPA values. If the input tree list has 20 TPA or
+#less, then QMD is calculated from the entirety of the tree list. If percent
 #canopy cover of the stand is less than 10, then seedlings  (DBH == 0.1) are
 #included, otherwise they are ignored.
 #
 #Arguments:
 #
-#data:    Tree level dataframe corresponding to trees from a single stand.
+#data:    Data frame containing tree records from a single stand or plot. Data
+#         frame must contain a column corresponding to stand/plot ID, DBH,
+#         and expansion factor for each tree record.
 #
-#stand:   Name of column corresponding to stand ID associated with tree records
-#         in data. By default this value is set to "StandID".
+#stand:   Character string corresponding to name of column pertaining to stand
+#         or plot ID associated with tree records in data argument. By default,
+#         this value is set to "StandID".
 #
-#dbh:     Name of column in data argument corresponding to DBH of tree records.
-#         By default this argument is set to "DBH".
+#dbh:     Character string corresponding to name of column pertaining to DBH of
+#         tree records in data argument. By default, this argument is set to
+#         "DBH".
 #
-#expf:    Name of column in data argument corresponding to TPA of tree records.
-#         By default this argument is set to "TPA".
+#expf:    Character string corresponding to name of column pertaining to TPA of
+#         tree records in data argument. By default, this argument is set to
+#         "TPA".
 #
 #TPA:     Trees per acre of plot/stand.
 #
 #CC:      Percent canopy cover corrected for overlap for plot/stand.
-#
-#min:     Minimum diameter to consider in calculation of qmdTop20. By default
-#         this argument is set to 0.1.
 #
 #debug:   logical variable indicating if debug statements should be printed. By
 #         default this value is set to FALSE.
@@ -140,8 +142,8 @@ qmdTop20 <- function(data,
           }
         }
 
-        #If TPASUM and TPA20 just happen to be equal, then add new value to DBHSQ
-        #without adjusting expansion factor
+        #If TPASUM and TPA20 just happen to be equal, then add next DBH^2 * TPA
+        #value to DBHSQ without adjusting expansion factor
         else
         {
           DBHSQ = DBHSQ + data[[dbh]][i] ^ 2 * data[[expf]][i]
@@ -156,7 +158,7 @@ qmdTop20 <- function(data,
         break
       }
 
-      #TPA20 has not been exceeded. Added next value to DBHSQ
+      #TPA20 has not been exceeded. Added next DBH^2 * TPA value to DBHSQ
       else
       {
         DBHSQ = DBHSQ + data[[dbh]][i] ^ 2 * data[[expf]][i]

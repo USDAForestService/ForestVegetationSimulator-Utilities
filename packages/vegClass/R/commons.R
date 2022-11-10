@@ -15,7 +15,7 @@ SEQ<-seq(from = 1, to = MAX, by = 1)
 
 ################################################################################
 #Vector of recognized FIA species codes less than 1000.
-#Vector contains 460 values and is arranged in rows of 4 entries.
+#Vector contains 460 values and is arranged in rows of 4 species codes.
 ################################################################################
 
 FIA=c(
@@ -137,7 +137,7 @@ FIA=c(
 
 ################################################################################
 #Vector of USDA plant symbols.
-#Vector contains 460 values and is arranged in rows of 4 entries.
+#Vector contains 460 values and is arranged in rows of 4 species codes.
 ################################################################################
 
 PLANT=c(
@@ -259,7 +259,7 @@ PLANT=c(
 
 #############################################################################
 #Vector of GENUS values.
-#Vector contains 460 values and is arranged in rows of 4 entries.
+#Vector contains 460 values and is arranged in rows of 4 genus values.
 #############################################################################
 
 GENUS=c(
@@ -381,7 +381,7 @@ GENUS=c(
 
 ################################################################################
 #Vector of leaf retention values from USFS R3.
-#Vector contains 460 values and is arranged in rows of 4 entries.
+#Vector contains 460 values and is arranged in rows of 4 leaf retention values.
 ################################################################################
 
 LEAF_RETEN<-c("EVERGREEN", "EVERGREEN", "EVERGREEN", "EVERGREEN",
@@ -502,7 +502,7 @@ LEAF_RETEN<-c("EVERGREEN", "EVERGREEN", "EVERGREEN", "EVERGREEN",
 
 ################################################################################
 #USFS R3 Shade Tolerance Values
-#Vector contains 460 values and is arranged in rows of 4 entries.
+#Vector contains 460 values and is arranged in rows of 4 shade tolerance values.
 ################################################################################
 
 R3_SHADE_TOL <- c(NA,    NA,    NA,    NA,

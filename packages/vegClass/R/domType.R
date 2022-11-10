@@ -1,45 +1,54 @@
 ################################################################################
 #Function: domType
 #
-#Calculate stand dominance type in accordance with NFS Regional Vegetation
-#Classification Algorithms Vandendriesche (2013 pg. R3-1 - R3-3).
+#Calculates stand dominance type using USFS Region 3 rule sets in accordance with
+#Vandendriesche, D., 2013. A Compendium of NFS Regional Vegetation
+#Classification Algorithms. USDA Forest Service. Fort Collins, CO (R3-1 - R3-3).
 #
 #Arguments
 #
-#data:    Tree level dataframe corresponding to trees from a single stand.
+#data:    Data frame containing tree records from a single stand or plot. Data
+#         frame must contain a column corresponding to stand/plot ID, DBH,
+#         species code (USDA plant symbol), expansion factor, and crown width
+#         for each tree record.
 #
-#stand:   Name of column corresponding to stand associated with tree records
-#         in data. By default this value is set to "StandID".
+#stand:   Character string corresponding to name of column pertaining to stand
+#         or plot ID associated with tree records in data argument. By default,
+#         this value is set to "StandID".
 #
-#species: Name of column corresponding to USDA plant symbols associated with
-#         tree records in data.
+#species: Character string corresponding to name of column pertaining to USDA
+#         plant symbols of tree records in data argument. By default, this
+#         argument is set to "SpeciesPLANTS".
 #
-#dbh:     Name of column in data argument corresponding to DBH of tree records.
-#         By default this argument is set to "DBH".
+#dbh:     Character string corresponding to name of column pertaining to DBH of
+#         tree records in data argument. By default, this argument is set to
+#         "DBH".
 #
-#expf:    Name of column in data argument corresponding to expansion factor of
-#         tree records By default this argument is set to "TPA".
+#expf:    Character string corresponding to name of column pertaining to TPA of
+#         tree records in data argument. By default, this argument is set to
+#         "TPA".
 #
-#crwidth: Name of column corresponding crown width values of tree records in
-#         data. By default this argument is set to "CrWidth".
+#crwidth: Character string corresponding to name of column pertaining to crown
+#         width values of tree records in data argument. By default, this
+#         argument is set to "CrWidth".
 #
 #TPA:     TPA of stand/plot.
 #
 #CC:      Canopy cover uncorrected for overlap of stand/plot.
 #
-#debug:	  Boolean variable used to specify if debug output should be printed to
+#debug:	  Logical variable used to specify if debug output should be printed to
 #         R console. If value is TRUE, then debug output will printed to R
 #         console.
 #
 #Return value
 #
-#List containing:
-# - dominance type (DOMTYPE),
-# - dominant species/genus/category or species/genus/category occurring before
+#Named list containing:
+# - Dominance type (DOMTYPE),
+# - Dominant species/genus/category or species/genus/category occurring before
 #   underscore in dominance type (DCC1)
-# - percent canopy cover represented by DCC1 (XDCC1),
-# - species/genus/category occurring after underscore in dominance type (DCC2),
-# - percent canopy cover represented by DCC2 (XDCC2).
+# - Percent canopy cover corrected for overlap represented by DCC1 (XDCC1),
+# - Species/genus/category occurring after underscore in dominance type (DCC2),
+# - Percent canopy cover corrected for overlap represented by DCC2 (XDCC2).
 ################################################################################
 
 #'@export
@@ -53,18 +62,18 @@ domType<-function(data,
                   CC,
                   debug = F){
 
-  #Intialize results vector to NA
+  #Initialize results vector to NA
   results=list("DOMTYPE" = NA,
                "DCC1" = NA,
                "XDCC1" = NA,
                "DCC2" = NA,
                "XDCC2" = NA)
 
-  #Check of missing columns in data
+  #Check for missing columns in data
   missing <- c(stand, species, dbh, expf, crwidth) %in% colnames(data)
 
-  #If there is a FALSE value in missing report message and return results (all
-  #NA values at this point)
+  #If name of columns provided in stand, dbh, expf, species, and crwidth are not
+  #found in data warning message is issued and NA values are returned.
   if(F %in% missing)
   {
     cat("One or more input arguments not found in data. Check spelling.", "\n")
@@ -99,11 +108,11 @@ domType<-function(data,
   dcc2<-"NA"
 
   #Initialize xdcc1 and xdcc2 variables. These are used to store percent
-  #canopy cover for dcc1 and dcc2 respectively.
+  #canopy cover corrected for overlap for dcc1 and dcc2 respectively.
   xdcc1<-0
   xdcc2<-0
 
-  #Calculate TREECC
+  #Calculate percent canopy cover for each tree record
   data$TREECC <- pi * (data[[crwidth]]/2)^2 *(data[[expf]]/43560) * 100
 
   #Print CC and TPA if debug is TRUE
@@ -119,11 +128,11 @@ domType<-function(data,
   #Initialize vector that will store shade tolerance value for each species
   shadeTolStand <- vector("character", length(spStand))
 
-  #Initialize vector that will store shade leaf reten value for each species
+  #Initialize vector that will store shade leaf retention value for each species
   leafRetStand <- vector("character", length(spStand))
 
-  #Populate vectors
-  #GENUS, R3_SHADE_TOL, and LEAF_RETEN exist in commons.R
+  #Populate genusStand, shadeTolStand, and leadRetStand vectors.
+  #GENUS, R3_SHADE_TOL, and LEAF_RETEN vectors exist in commons.R
   for(i in 1:length(spStand))
   {
     sp <- spStand[i]
@@ -212,20 +221,16 @@ domType<-function(data,
     leafRetenCC<-rep(0, 2)
     names(leafRetenCC)<-c("EVERGREEN", "DECIDUOUS")
 
-    #Define genusSp. This vector keeps track of each genus for each species
-    #in data.
-    genusSp<-vector(length = length(spStand))
-
     #==========================================================================
-    #Loop across sppValues and populate sppCC, genusCC, ShadeTolCC, and
+    #Loop across across data and populate sppCC, genusCC, ShadeTolCC, and
     #leafRetenCC.
     #==========================================================================
 
-    #Loop across all unique species found in stand
-    for(k in 1:length(spStand))
+    #Loop across data
+    for(k in 1:nrow(data))
     {
       #Extract species being processed
-      spp = spStand[k]
+      spp = data[[species]][k]
 
       #Extract genus for spp k
       genus<- genusStand[spp]
@@ -236,28 +241,21 @@ domType<-function(data,
       #Extract leaf retention for spp k
       leafReten<-leafRetStand[spp]
 
-      #Obtain sum of CC for species k
-      SPPC<- sum(data$TREECC[data[[species]] == spp])
-
       #Add SPPC to sppCC
-      sppCC[spp]<-sppCC[spp] + SPPC
+      sppCC[spp]<-sppCC[spp] + data$TREECC[k]
 
       #Add SPPC to genusCC
-      genusCC[genus]<-genusCC[genus] + SPPC
+      genusCC[genus]<-genusCC[genus] + data$TREECC[k]
 
       #Bypass addition of SPPC to shadeTolCC if shadeTol for species k is NA.
       if(!is.na(shadeTol))
       {
         #Add SPPC to shadeTolCC
-        shadeTolCC[shadeTol]<-shadeTolCC[shadeTol] + SPPC
+        shadeTolCC[shadeTol]<-shadeTolCC[shadeTol] + data$TREECC[k]
       }
 
       #Add SPPC to leafRetenCC
-      leafRetenCC[leafReten]<-leafRetenCC[leafReten] + SPPC
-
-      #Add genus to genusSp
-      genusSp[k]<-genus
-      names(genusSp)[k]<-spp
+      leafRetenCC[leafReten]<-leafRetenCC[leafReten] + data$TREECC[k]
     }
 
     #Sort sppCC, genusCC, leafRetenCC, and shadeTolCC by descending order
@@ -283,8 +281,8 @@ domType<-function(data,
     #LEAD 11: Canopy cover of single most abundant tree species > 60% of
     #         total tree canopy cover.
     #LEAD 12: Canopy cover of two most abundant tree species > 80% of total
-    #         tree canopy cover, each individually > 20% of total tree canopy
-    #         cover.
+    #         tree canopy cover and each species individually > 20% of total
+    #         tree canopy cover.
     #========================================================================
 
     #Test if most abundant species is the dominance type
@@ -296,7 +294,7 @@ domType<-function(data,
       #Set dcc1
       dcc1 = names(sppCC[1])
 
-      #Calculate value for dcc1Per
+      #Extract value for xdcc1
       xdcc1 = sppCC[1]
 
       #Set domTypeFound to T
@@ -311,7 +309,8 @@ domType<-function(data,
     if(!domTypeFound)
     {
       #Test if Canopy cover of two most abundant tree species > 80% of total
-      #tree canopy cover, each individually > 20% of total tree canopy cover
+      #tree canopy cover and each species individually > 20% of total tree
+      #canopy cover
       if(sppCC[1] >= (CC * 0.20) &&
          sppCC[2] >= (CC * 0.20) &&
          sppCC[1] + sppCC[2] >= (CC * 0.80)){
@@ -348,8 +347,8 @@ domType<-function(data,
     #LEAD 14: Canopy cover of the single most abundant tree species and
     #         single most abundant tree genus collectively > 80% of total
     #         tree canopy cover, each individually > 20% of total tree canopy
-    #         cover (most abundant species and most abundant genus mutually
-    #         exclusive).
+    #         cover. The most abundant genus must be mutually exclusive from
+    #         the genus of the most abundant species.
     #========================================================================
 
     #Check if most abundant genus is the dominance type
@@ -377,7 +376,7 @@ domType<-function(data,
     if(!domTypeFound)
     {
       #Find index where species and genus are mutually exclusive
-      genIndex<-excGenusSp(names(sppCC)[1], names(genusCC), genusSp)
+      genIndex<-excGenusSp(names(sppCC)[1], names(genusCC), genusStand)
 
       if(genusCC[genIndex] >= (CC * 0.20) &&
          sppCC[1] >= (CC * 0.20) &&
@@ -447,7 +446,7 @@ domType<-function(data,
     #LEAD 6-7, 16 - 18
     #
     #LEAD 6:  Evergreen trees > 75% of total tree canopy cover.
-    #LEAD 7:  Deciduous trees > 75% of total tree canopy cover or Deciduous
+    #LEAD 7:  Deciduous trees > 75% of total tree canopy cover or deciduous
     #         trees < 75% of total tree canopy cover.
     #LEAD 16: Deciduous tree" subclass (TD).
     #LEAD 17: Mixed evergreen-deciduous tree subclass (TX)
@@ -584,8 +583,9 @@ domType<-function(data,
 #This function is used to determine a genus that is mutually exclusive from
 #the genus of the most abundant species by percent canopy cover in lead 14 of
 #R3 dominance type algorithm. This function takes the name of the most
-#abundant species, the names of each genus (sorted by percent canopy cover
-#in descending order), and a named list of genera (unsorted).
+#abundant species, a vector with names of each genus (sorted by genera with most
+#to least canopy cover), and a named vector of genera (not sorted by percent
+#canopy cover).
 #
 #Arguments
 #
