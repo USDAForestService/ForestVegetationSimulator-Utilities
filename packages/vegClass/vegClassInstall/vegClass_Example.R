@@ -25,3 +25,7 @@ main(input = "C:/Veg_Classification/vegClassInstall/FVSOut.db",
      addPotFire = T,
      startYear = 2022)
 
+#You can call function main as many times as you want in an R script or R
+#project. You can simply copy and paste the code above and change the arguments
+#as needed.
+

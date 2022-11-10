@@ -246,19 +246,28 @@ pvConvert<-function(pv)
 #
 #This function is used to read in database tables from input FVS-ready data sets
 #and write the database tables from each of these to a single output SQLite
-#database. SQLite databases (.db) are the only compatible input database type.
-#The primary purpose of this function is to combine input FVS databases into a
-#single file or extract FVS database tables from a larger database such as those
-#on the FIA datamart.
+#database. SQLite databases (.db) are the only compatible input database type
+#that can be processed in this function. The primary purpose of this function is
+#to combine input FVS databases into a single database or extract FVS database
+#tables from a larger database such as those on the FIA datamart.
 #
 #Arguments:
 #
-#dbIn:        Character vector of directory paths and file names of FVS-ready
-#             SQLite databases to process.
+#dbIn:         Character vector of directory paths and file names for SQLite
+#              databases to process. Files can either be a SQLite database (.db)
+#              or zipped folder (.zip) which contains a SQLite database(s).
+
+#              NOTE: .zip files will be unzipped to a temporary folder called
+#              xxxvegClassdbCombineUnzipxxx in current working directory.
+#              Temporary folder will be deleted after dbCombine has finished
+#              writing data to output database.
 #
-#             Examples of valid dbIn formats:
+#              Examples of valid dbIn formats:
 #             "C:/FIA2FVS_Databases/SQLite_FIADB_AZ/FIADB_AZ.db",
-#             "C:\\FIA2FVS_Databases\\SQLite_FIADB_NM\\FIADB_NM.db"
+#             "C:\\FIA2FVS_Databases\\SQLite_FIADB_AZ\\FIADB_AZ.db"
+#
+#             "C:/FIA2FVS_Databases/SQLite_FIADB_AZ/ FIADB_AZ.zip",
+#             "C:\\FIA2FVS_Databases\\SQLite_FIADB_AZ\\ FIADB_AZ.zip "
 #
 #dbOut:       Character string corresponding to SQLite database to write out to.
 #
@@ -337,7 +346,7 @@ dbCombine <- function(dbIn = NULL,
   #Create directory where file will be unzipped to.
   #If this file exists for any reason, delete it.
   unzipDir <- paste(getwd(),
-                    "xxxdbCombineUnzipxxx",
+                    "xxxvegClassdbCombineUnzipxxx",
                     sep = "/")
 
   if(file.exists(unzipDir))
@@ -463,7 +472,6 @@ dbCombine <- function(dbIn = NULL,
   {
     cat(paste0("\n","Deleting preexisting dbOut"), "\n")
     unlink(dbOut,
-           recursive = T,
            force = T)
   }
 
@@ -504,7 +512,7 @@ dbCombine <- function(dbIn = NULL,
     {
       #Create directory where file will be unzipped to
       unzipDir <- paste(getwd(),
-                        "xxxdbCombineUnzipxxx",
+                        "xxxvegClassdbCombineUnzipxxx",
                         sep = "/")
 
       cat("Unzipping:", db, "through", unzipDir, "\n")
@@ -683,9 +691,14 @@ dbCombine <- function(dbIn = NULL,
   #Before returning, delete unzipDir if it exists.
   if(file.exists(unzipDir))
   {
-    unlink(unzipDir,
-           recursive = T,
-           force = T)
+    retCode <- unlink(unzipDir,
+                      recursive = T,
+                      force = T)
+
+    if(retCode != 0)
+    {
+      cat("Failed to delete temporary unzip directory:", unzipDir, "\n")
+    }
   }
 
   return(cat("Data created!"))
