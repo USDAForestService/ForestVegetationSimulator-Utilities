@@ -58,15 +58,23 @@
 #
 #addCompute:   Logical variable used to indicate if information in FVS_Compute
 #              table should be included in output. If the FVS_Compute table does
-#              not exist in input, then only the variables calculated by the
-#              vegClass package will be returned in output. By default, this
-#              argument is set to TRUE.
+#              not exist in input, then no variables from this table will be
+#              included in output. By default, this argument is set to TRUE.
 #
 #addPotFire:   Logical variable used to indicate if information in FVS_PotFire
 #              table should be included in output. If the FVS_PotFire table does
-#              not exist in input, then only the variables calculated by the
-#              vegClass package will be returned in output. By default, this
-#              argument is set to TRUE.
+#              not exist in input, then no variables from this table will be
+#              included in output. By default, this argument is set to TRUE.
+#
+#addFuels:     Logical variable used to indicate if information in FVS_Fuels
+#              table should be included in output. If the FVS_Fuels table does
+#              not exist in input, then no variables from this table will be
+#              included in output. By default, this argument is set to TRUE.
+#
+#addCarbon:    Logical variable used to indicate if information in FVS_Carbon
+#              table should be included in output. If the FVS_Carbon table does
+#              not exist in input, then no variables from this table will be
+#              included in output. By default, this argument is set to TRUE.
 #
 #addVolume:    Logical variable used to indicate if 3 measures of volume should
 #              be calculated and reported. If the value of this argument is
@@ -103,9 +111,11 @@ main<- function(input,
                 output,
                 runTitles = NULL,
                 allRuns = F,
-                overwriteOut = T,
+                overwriteOut = F,
                 addCompute = T,
                 addPotFire = T,
+                addFuels = T,
+                addCarbon = T,
                 addVolume = T,
                 vol1DBH = 0.1,
                 vol2DBH = 5,
@@ -349,7 +359,8 @@ main<- function(input,
         #If this is the last year to process and addCompute/addPotFire is T,
         #move to next iteration of loop. This is done, since FVS_Compute and
         #FVS_PotFire table report one less cycle than FVS_Treelist.
-        if(j == length(years) & (addCompute | addPotFire))
+        if(j == length(years) & (addCompute | addPotFire | addCarbon |
+                                 addFuels))
         {
           cat("Skipping last year:", years[j], "\n")
           next
@@ -588,6 +599,152 @@ main<- function(input,
         {
           cat("\n")
           cat("FVS_PotFire table not found in input. No information to join.",
+              "\n")
+        }
+      }
+
+      #Join FVS_Fuels variables to output if addFuels is TRUE and
+      #FVS_Fuels table exists in input.
+      if(addFuels)
+      {
+        #Test if FVS_Fuels table exists. Read in information from
+        #FVS_Fuels table.
+        if(RSQLite::dbExistsTable(con,
+                                  "FVS_FUELS"))
+        {
+          #Generate fuels query
+          dbQuery <- fuelsQuery(caseID)
+
+          #Print FVS_Fuels query message
+          cat("\n")
+          cat("Querying FVS_Fuels...", "\n")
+
+          #Get the data from FVS_Fuels
+          fuelsDF <- RSQLite::dbGetQuery(con,
+                                           dbQuery)
+
+          cat("FVS_Fuels query complete.", "\n")
+          cat("Number of rows read from FVS_Fuels query",
+              nrow(fuelsDF),
+              "\n")
+
+          #If fuelsDF has data, merge it to standOut
+          if(nrow(fuelsDF) > 0)
+          {
+
+            cat("Merging FVS_Fuels variables to stand:",
+                standID,
+                "\n")
+
+            #Capitalize column names
+            colnames(fuelsDF) <- toupper(colnames(fuelsDF))
+
+            #Remove STANDID from fuelsDF
+            fuelsDF$STANDID <- NULL
+
+            #Merge to standOut
+            standOut <- merge(standOut,
+                              fuelsDF,
+                              by = c("CASEID", "YEAR"),
+                              all.x = T)
+
+            cat("Merging of FVS_Fuels variables to stand:",
+                standID,
+                "is complete.",
+                "\n")
+
+            #Remove fuelsDF
+            rm(fuelsDF)
+
+          }
+
+          else
+          {
+            cat("No data found in FVS_Fuels query for stand:",
+                standID,
+                "\n")
+          }
+
+        }
+
+        #Report that FVS_Fuels table was not found in input.
+        else
+        {
+          cat("\n")
+          cat("FVS_Fuels table not found in input. No information to join.",
+              "\n")
+        }
+      }
+
+      #Join FVS_Carbon variables to output if addCarbon is TRUE and FVS_Carbon
+      #table exists in input.
+      if(addCarbon)
+      {
+        #Test if FVS_Carbon table exists. Read in information from FVS_Carbon
+        #table.
+        if(RSQLite::dbExistsTable(con,
+                                  "FVS_CARBON"))
+        {
+          #Generate carbon query
+          dbQuery <- carbonQuery(caseID)
+
+          #Print FVS_Carbon query message
+          cat("\n")
+          cat("Querying FVS_Carbon...", "\n")
+
+          #Get the data from FVS_Carbon
+          carbonDF <- RSQLite::dbGetQuery(con,
+                                         dbQuery)
+
+          cat("FVS_Carbon query complete.", "\n")
+          cat("Number of rows read from FVS_Carbon query",
+              nrow(carbonDF),
+              "\n")
+
+          #If carbonDF has data, merge it to standOut
+          if(nrow(carbonDF) > 0)
+          {
+
+            cat("Merging FVS_Carbon variables to stand:",
+                standID,
+                "\n")
+
+            #Capitalize column names
+            colnames(carbonDF) <- toupper(colnames(carbonDF))
+
+            #Remove STANDID from carbonDF
+            carbonDF$STANDID <- NULL
+
+            #Merge to standOut
+            standOut <- merge(standOut,
+                              carbonDF,
+                              by = c("CASEID", "YEAR"),
+                              all.x = T)
+
+            cat("Merging of FVS_Carbon variables to stand:",
+                standID,
+                "is complete.",
+                "\n")
+
+            #Remove carbonDF
+            rm(carbonDF)
+
+          }
+
+          else
+          {
+            cat("No data found in FVS_Carbon query for stand:",
+                standID,
+                "\n")
+          }
+
+        }
+
+        #Report that FVS_Carbon table was not found in input.
+        else
+        {
+          cat("\n")
+          cat("FVS_Carbon table not found in input. No information to join.",
               "\n")
         }
       }
