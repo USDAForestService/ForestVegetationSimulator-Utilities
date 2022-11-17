@@ -80,14 +80,17 @@
 #              DEADVOL2: Merchantable cubic foot volume that died in that cycle
 #              DEADVOL3: Board foot volume that died in that cycle
 #
-#vol1DBH:      Minimum DBH of tree records included in calculation of VOL1. By
-#              default this argument is set to 5.
+#vol1DBH:	     Minimum DBH of tree records included in calculation of VOL1 and
+#              DEADVOL1 when addVolume is TRUE. By default, this argument is set
+#              to 0.1.
 #
-#vol2DBH:      Minimum DBH of tree records included in calculation of VOL2. By
-#              default this argument is set to 5.
+#vol2DBH:      Minimum DBH of tree records included in calculation of VOL2 and
+#              DEADVOL2 when addVolume is TRUE. By default, this argument is set
+#              to 5.
 #
-#vol3DBH:      Minimum DBH of tree records included in calculation of VOL3. By
-#              default this argument is set to 9.
+#vol3DBH:	     Minimum DBH of tree records included in calculation of VOL3 and
+#              DEADVOL3 when addVolume is TRUE. By default, this argument is set
+#              to 9.
 #
 #startYear:    Integer value corresponding to the year that data should start
 #              being reported in output argument. Data with years prior to this
@@ -104,7 +107,7 @@ main<- function(input,
                 addCompute = T,
                 addPotFire = T,
                 addVolume = T,
-                vol1DBH = 5,
+                vol1DBH = 0.1,
                 vol2DBH = 5,
                 vol3DBH = 9,
                 startYear = 0)
