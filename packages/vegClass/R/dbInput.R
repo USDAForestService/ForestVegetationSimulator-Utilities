@@ -94,10 +94,11 @@ validateDBInputs<-function(con, runTitle, allRuns)
 #
 #This function builds and returns a string of SQL statements that can be used to
 #read in data from the FVS_TreeList. The query will read in CaseID, StandID,
-#Year, SpeciesPLANTS, TPA, DBH, and CrWidth data from the FVS_TreeList for the
-#tree records associated with Case ID values specified in the treeQuery function
-#arguments. The treeQuery function can be invoked outside of main function for
-#testing purposes with the dbGetQuery function of the RSQLite R package.
+#Year, SpeciesPLANTS, MortPA, TPA, DBH, CrWidth, TcuFT, mcuFT, Bdft, data from
+#the FVS_TreeList for the tree records associated with Case ID values specified
+#in the treeQuery function arguments. The treeQuery function can be invoked
+#outside of main function for testing purposes with the dbGetQuery function of
+#the RSQLite R package.
 #
 #Arguments
 #
@@ -114,7 +115,7 @@ treeQuery<-function(cases)
   #Define portion of query that will always be used.
   query<-
     paste("SELECT TL.CaseID, TL.StandID, TL.Year, TL.SpeciesPLANTS, TL.TPA,",
-          "TL.DBH, TL.CrWidth",
+          "TL.MortPA, TL.DBH, TL.CrWidth, TL.TcuFT, TL.McuFT, TL.Bdft",
           "FROM FVS_TreeList TL")
 
   #Add stand query as long as length of cases is at least 1.
@@ -223,11 +224,10 @@ computeQuery<-function(cases)
 #Function: potFireQuery
 #
 #This function builds and returns a string of SQL statements that can be used
-#to read in data from the FVS_Potfire table. This query will read in CaseID,
-#Year, PTorch_Sev, Ptorch_Mod, Torch_Index, Crown_Index, Canopy_Ht, and
-#Canopy_Density. The potFireQuery function can be invoked outside of main.R for
-#testing purposes and can be used in the dbGetQuery function of the RSQLite R
-#package.
+#to read in data from the FVS_Potfire table. This query will read in all fields.
+#from the FVS_PotFire table. The potFireQuery function can be invoked outside
+#of main.R for testing purposes and can be used in the dbGetQuery function of
+#the RSQLite R package.
 #
 #Arguments
 #
@@ -243,10 +243,8 @@ potFireQuery<-function(cases)
 {
   #Define portion of query that will always be used.
   query<-
-    paste("SELECT PFire.Year, PFire.CaseID, PFire.PTorch_Sev,",
-          "PFire.PTorch_Mod, PFire.Torch_Index, PFire.Crown_Index,",
-          "PFire.Canopy_Ht, PFire.Canopy_Density",
-          "FROM FVS_PotFire PFire")
+    paste("SELECT *
+          FROM FVS_Potfire")
 
   #Add stand query as long as length of cases is at least 1.
   if(length(cases) >= 1)
@@ -264,7 +262,109 @@ potFireQuery<-function(cases)
     cases<-paste0("(", cases, ")")
 
     #Create WHERE clause with cases
-    caseQuery<-paste0("WHERE PFire.CaseID IN", cases)
+    caseQuery<-paste0("WHERE FVS_Potfire.CaseID IN", cases)
+
+    #Add standQuery to query
+    query<-paste(query, caseQuery)
+  }
+
+  return(query)
+}
+
+################################################################################
+#Function: fuelsQuery
+#
+#This function builds and returns a string of SQL statements that can be used
+#to read in data from the FVS_Fuels table. This query will read in all fields.
+#from the FVS_Fuels table. The fuelsQuery function can be invoked outside
+#of main.R for testing purposes and can be used in the dbGetQuery function of
+#the RSQLite R package.
+#
+#Arguments
+#
+#cases:	 Character vector of cases IDs.
+#
+#Value
+#
+#Character string of SQL statements.
+################################################################################
+
+#'@export
+fuelsQuery<-function(cases)
+{
+  #Define portion of query that will always be used.
+  query<-
+    paste("SELECT *
+          FROM FVS_Fuels")
+
+  #Add stand query as long as length of cases is at least 1.
+  if(length(cases) >= 1)
+  {
+    #Add quotes to stand and commas to cases
+    cases<-paste0("'",cases,"'", ",")
+
+    #Collapse cases into a single string
+    cases<-paste(cases, collapse = "")
+
+    #Remove last comma from cases
+    cases<-substr(cases,1, nchar(cases)-1)
+
+    #Add parentheses around cases
+    cases<-paste0("(", cases, ")")
+
+    #Create WHERE clause with cases
+    caseQuery<-paste0("WHERE FVS_Fuels.CaseID IN", cases)
+
+    #Add standQuery to query
+    query<-paste(query, caseQuery)
+  }
+
+  return(query)
+}
+
+################################################################################
+#Function: carbonQuery
+#
+#This function builds and returns a string of SQL statements that can be used
+#to read in data from the FVS_Carbon table. This query will read in all fields.
+#from the FVS_Carbon table. The carbonQuery function can be invoked outside
+#of main.R for testing purposes and can be used in the dbGetQuery function of
+#the RSQLite R package.
+#
+#Arguments
+#
+#cases:	 Character vector of cases IDs.
+#
+#Value
+#
+#Character string of SQL statements.
+################################################################################
+
+#'@export
+carbonQuery<-function(cases)
+{
+  #Define portion of query that will always be used.
+  query<-
+    paste("SELECT *
+          FROM FVS_Carbon")
+
+  #Add stand query as long as length of cases is at least 1.
+  if(length(cases) >= 1)
+  {
+    #Add quotes to stand and commas to cases
+    cases<-paste0("'",cases,"'", ",")
+
+    #Collapse cases into a single string
+    cases<-paste(cases, collapse = "")
+
+    #Remove last comma from cases
+    cases<-substr(cases,1, nchar(cases)-1)
+
+    #Add parentheses around cases
+    cases<-paste0("(", cases, ")")
+
+    #Create WHERE clause with cases
+    caseQuery<-paste0("WHERE FVS_Carbon.CaseID IN", cases)
 
     #Add standQuery to query
     query<-paste(query, caseQuery)

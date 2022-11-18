@@ -28,23 +28,12 @@
 #              "C:/FVS/R3_Work/FVSOut.csv"
 #              "C:\\FVS\\R3_Work\\FVSOut.csv"
 #
-#overwriteOut: Logical variable used to determine if output file should have
-#              data overwritten or have new data appended to an existing file
-#              as determined by the output argument. If value is TRUE, any
-#              information existing in output will be overwritten with new
-#              information. If value is FALSE, then the new output will be
-#              appended to existing file. The default value of this argument
-#              is TRUE.
-#
-#removeTag:    This is a tag that will be removed from a grouping code (such as
-#              ERU) from a set of FVS grouping codes. For instance, if you have
-#              a grouping code such as ERU=MCD, then the removeTag would be ERU=
-#              and you would have a value of MCD returned in the output. The
-#              default value of this argument is ---. The value for removeTag
-#              must be surrounded in double quotes.
-#
-#              Example removal tag:
-#              "ERU="
+#overwriteOut: Logical variable used to determine if output file should be
+#              overwritten. If value is TRUE, any information existing in output
+#              will be overwritten with new information. If value is FALSE and
+#              the file in output argument exists, then main function will stop
+#              with an error message. The default value of this argument is
+#              FALSE.
 #
 #runTitles:    Vector of character strings corresponding to FVS runTitles that
 #              will be processed. If runTitles is left as NULL, execution of
@@ -69,15 +58,47 @@
 #
 #addCompute:   Logical variable used to indicate if information in FVS_Compute
 #              table should be included in output. If the FVS_Compute table does
-#              not exist in input, then only the variables calculated by the
-#              vegClass package will be returned in output. By default, this
-#              argument is set to TRUE.
+#              not exist in input, then no variables from this table will be
+#              included in output. By default, this argument is set to TRUE.
 #
 #addPotFire:   Logical variable used to indicate if information in FVS_PotFire
 #              table should be included in output. If the FVS_PotFire table does
-#              not exist in input, then only the variables calculated by the
-#              vegClass package will be returned in output. By default, this
-#              argument is set to TRUE.
+#              not exist in input, then no variables from this table will be
+#              included in output. By default, this argument is set to TRUE.
+#
+#addFuels:     Logical variable used to indicate if information in FVS_Fuels
+#              table should be included in output. If the FVS_Fuels table does
+#              not exist in input, then no variables from this table will be
+#              included in output. By default, this argument is set to TRUE.
+#
+#addCarbon:    Logical variable used to indicate if information in FVS_Carbon
+#              table should be included in output. If the FVS_Carbon table does
+#              not exist in input, then no variables from this table will be
+#              included in output. By default, this argument is set to TRUE.
+#
+#addVolume:    Logical variable used to indicate if 3 measures of volume should
+#              be calculated and reported. If the value of this argument is
+#              is set to TRUE, then the following measures of volume will be
+#              calculated:
+#
+#              VOL1: Total cubic foot volume
+#              VOL2: Merchantable cubic foot volume
+#              VOL3: Board foot volume
+#              DEADVOL1: Total cubic foot volume that died in that cycle
+#              DEADVOL2: Merchantable cubic foot volume that died in that cycle
+#              DEADVOL3: Board foot volume that died in that cycle
+#
+#vol1DBH:	     Minimum DBH of tree records included in calculation of VOL1 and
+#              DEADVOL1 when addVolume is TRUE. By default, this argument is set
+#              to 0.1.
+#
+#vol2DBH:      Minimum DBH of tree records included in calculation of VOL2 and
+#              DEADVOL2 when addVolume is TRUE. By default, this argument is set
+#              to 5.
+#
+#vol3DBH:	     Minimum DBH of tree records included in calculation of VOL3 and
+#              DEADVOL3 when addVolume is TRUE. By default, this argument is set
+#              to 9.
 #
 #startYear:    Integer value corresponding to the year that data should start
 #              being reported in output argument. Data with years prior to this
@@ -88,12 +109,17 @@
 #'@export
 main<- function(input,
                 output,
-                overwriteOut = T,
-                removeTag = "---",
-                runTitles = "Run 1",
+                runTitles = NULL,
                 allRuns = F,
+                overwriteOut = F,
                 addCompute = T,
                 addPotFire = T,
+                addFuels = T,
+                addCarbon = T,
+                addVolume = T,
+                vol1DBH = 0.1,
+                vol2DBH = 5,
+                vol3DBH = 9,
                 startYear = 0)
 {
 
@@ -139,9 +165,14 @@ main<- function(input,
          .csv.")
   }
 
-  #Capitalize runTitles and removeTag
+  #If runTitles is NULL and allRuns not TRUE, then stop with error message.
+  if(is.null(runTitles) & !allRuns)
+  {
+    stop("No runs specified in runTitles argument and allRuns is not TRUE.")
+  }
+
+  #Capitalize runTitles
   runTitles<-toupper(runTitles)
-  removeTag<-toupper(removeTag)
 
   #Connect to input database
   con<-RSQLite::dbConnect(RSQLite::SQLite(), input)
@@ -165,7 +196,15 @@ main<- function(input,
     stop(message)
   }
 
-  #If the output file exists and overWriteOut is true, unlink the file
+  #Stop with error message if output file exists and overwriteOut is not FALSE.
+  if(file.exists(output) & !overwriteOut)
+  {
+    stop(paste(output,
+               "file exists and overwriteOut is FALSE. Change name of",
+               "output file or set overwriteOut to TRUE.", "\n"))
+  }
+
+  #If file exists and overwriteOut is TRUE, unlink the output file.
   if(file.exists(output) & overwriteOut) unlink(output)
 
   #If allRuns is TRUE, extract all unique runTitles from input (con).
@@ -320,7 +359,8 @@ main<- function(input,
         #If this is the last year to process and addCompute/addPotFire is T,
         #move to next iteration of loop. This is done, since FVS_Compute and
         #FVS_PotFire table report one less cycle than FVS_Treelist.
-        if(j == length(years) & (addCompute | addPotFire))
+        if(j == length(years) & (addCompute | addPotFire | addCarbon |
+                                 addFuels))
         {
           cat("Skipping last year:", years[j], "\n")
           next
@@ -348,12 +388,8 @@ main<- function(input,
           next
         }
 
-        #Determine group to report in yrOutput
-        group<-getGroup(toupper(groups), removeTag)
-
         #Create dataframe that will store output for the stand in a given year.
         yrOutput<-data.frame(RUNTITLE = run,
-                             GROUP = group,
                              CASEID = caseID,
                              STANDID = standID,
                              YEAR = years[j])
@@ -361,6 +397,29 @@ main<- function(input,
         #Bind data from vegOut to yrOutput
         yrOutput <- cbind(yrOutput,
                           vegOut(standYrDF))
+
+        #If addVolume is TRUE, calculate volumes and add to yrOutput
+        if(addVolume)
+        {
+          volume <- volumeCalc(standYrDF,
+                               vol1DBH = vol1DBH,
+                               vol2DBH = vol2DBH,
+                               vol3DBH = vol3DBH)
+
+          yrOutput$VOL1 <- volume["VOL1"]
+          yrOutput$VOL2 <- volume["VOL2"]
+          yrOutput$VOL3 <- volume["VOL3"]
+
+          deadVolume <- volumeCalc(standYrDF,
+                                   expf = "MortPA",
+                                   vol1DBH = vol1DBH,
+                                   vol2DBH = vol2DBH,
+                                   vol3DBH = vol3DBH)
+
+          yrOutput$DEADVOL1 <- deadVolume["VOL1"]
+          yrOutput$DEADVOL2 <- deadVolume["VOL2"]
+          yrOutput$DEADVOL3 <- deadVolume["VOL3"]
+        }
 
         #Add yrOutput to standYrOutput
         standYrOutput[[j]]<-yrOutput
@@ -507,6 +566,9 @@ main<- function(input,
             #Capitalize column names
             colnames(potFireDF) <- toupper(colnames(potFireDF))
 
+            #Remove STANDID from computeDF
+            potFireDF$STANDID <- NULL
+
             #Merge to standOut
             standOut <- merge(standOut,
                               potFireDF,
@@ -541,9 +603,155 @@ main<- function(input,
         }
       }
 
+      #Join FVS_Fuels variables to output if addFuels is TRUE and
+      #FVS_Fuels table exists in input.
+      if(addFuels)
+      {
+        #Test if FVS_Fuels table exists. Read in information from
+        #FVS_Fuels table.
+        if(RSQLite::dbExistsTable(con,
+                                  "FVS_FUELS"))
+        {
+          #Generate fuels query
+          dbQuery <- fuelsQuery(caseID)
+
+          #Print FVS_Fuels query message
+          cat("\n")
+          cat("Querying FVS_Fuels...", "\n")
+
+          #Get the data from FVS_Fuels
+          fuelsDF <- RSQLite::dbGetQuery(con,
+                                           dbQuery)
+
+          cat("FVS_Fuels query complete.", "\n")
+          cat("Number of rows read from FVS_Fuels query",
+              nrow(fuelsDF),
+              "\n")
+
+          #If fuelsDF has data, merge it to standOut
+          if(nrow(fuelsDF) > 0)
+          {
+
+            cat("Merging FVS_Fuels variables to stand:",
+                standID,
+                "\n")
+
+            #Capitalize column names
+            colnames(fuelsDF) <- toupper(colnames(fuelsDF))
+
+            #Remove STANDID from fuelsDF
+            fuelsDF$STANDID <- NULL
+
+            #Merge to standOut
+            standOut <- merge(standOut,
+                              fuelsDF,
+                              by = c("CASEID", "YEAR"),
+                              all.x = T)
+
+            cat("Merging of FVS_Fuels variables to stand:",
+                standID,
+                "is complete.",
+                "\n")
+
+            #Remove fuelsDF
+            rm(fuelsDF)
+
+          }
+
+          else
+          {
+            cat("No data found in FVS_Fuels query for stand:",
+                standID,
+                "\n")
+          }
+
+        }
+
+        #Report that FVS_Fuels table was not found in input.
+        else
+        {
+          cat("\n")
+          cat("FVS_Fuels table not found in input. No information to join.",
+              "\n")
+        }
+      }
+
+      #Join FVS_Carbon variables to output if addCarbon is TRUE and FVS_Carbon
+      #table exists in input.
+      if(addCarbon)
+      {
+        #Test if FVS_Carbon table exists. Read in information from FVS_Carbon
+        #table.
+        if(RSQLite::dbExistsTable(con,
+                                  "FVS_CARBON"))
+        {
+          #Generate carbon query
+          dbQuery <- carbonQuery(caseID)
+
+          #Print FVS_Carbon query message
+          cat("\n")
+          cat("Querying FVS_Carbon...", "\n")
+
+          #Get the data from FVS_Carbon
+          carbonDF <- RSQLite::dbGetQuery(con,
+                                         dbQuery)
+
+          cat("FVS_Carbon query complete.", "\n")
+          cat("Number of rows read from FVS_Carbon query",
+              nrow(carbonDF),
+              "\n")
+
+          #If carbonDF has data, merge it to standOut
+          if(nrow(carbonDF) > 0)
+          {
+
+            cat("Merging FVS_Carbon variables to stand:",
+                standID,
+                "\n")
+
+            #Capitalize column names
+            colnames(carbonDF) <- toupper(colnames(carbonDF))
+
+            #Remove STANDID from carbonDF
+            carbonDF$STANDID <- NULL
+
+            #Merge to standOut
+            standOut <- merge(standOut,
+                              carbonDF,
+                              by = c("CASEID", "YEAR"),
+                              all.x = T)
+
+            cat("Merging of FVS_Carbon variables to stand:",
+                standID,
+                "is complete.",
+                "\n")
+
+            #Remove carbonDF
+            rm(carbonDF)
+
+          }
+
+          else
+          {
+            cat("No data found in FVS_Carbon query for stand:",
+                standID,
+                "\n")
+          }
+
+        }
+
+        #Report that FVS_Carbon table was not found in input.
+        else
+        {
+          cat("\n")
+          cat("FVS_Carbon table not found in input. No information to join.",
+              "\n")
+        }
+      }
+
       #Rearrange column headers in standOut so RUNTITLE, GROUP, CASEID,
       #STANDID, YEAR, CY are reported in the correct order
-      leadingCols <- c("RUNTITLE", "GROUP", "CASEID", "STANDID", "YEAR", "CY")
+      leadingCols <- c("RUNTITLE", "CASEID", "STANDID", "YEAR", "CY")
 
       #Get column names from standOut
       colNames <- colnames(standOut)
