@@ -3,6 +3,7 @@
 export(baStory)
 export(buildQuery)
 export(canSizeCl)
+export(dbCombine)
 export(domType)
 export(fvsGaak)
 export(main)

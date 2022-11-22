@@ -13,6 +13,10 @@
 #runTitle:  Name of FVS run title(s) that will be searched for in FVS_Cases
 #           table.
 #
+#allRuns:   Logical variable used to signify that all runs from FVS output
+#           database are being processed. See main function in main.R for
+#           further details.
+#
 #Value
 #
 #Character string containing message.
@@ -34,11 +38,11 @@ validateDBInputs<-function(con, runTitle, allRuns)
 
   if(validDB)
   {
-    if(is.element(F, c("FVS_TreeList", "FVS_Cases", "FVS_Summary2") %in%
+    if(is.element(F, c("FVS_TreeList", "FVS_Cases") %in%
                   RSQLite::dbListTables(con)))
     {
-      message<-paste("One of the following tables was not found in incoming database:",
-    "FVS_TreeList, FVS_Cases, and FVS_Summary2.")
+      message<-paste("One of the following tables was not found in input",
+                     "database: FVS_TreeList, FVS_Cases.")
 
       #Assign value of F to validDB. Database (con) is not ready for prcoessing.
       validDB = F
@@ -56,8 +60,8 @@ validateDBInputs<-function(con, runTitle, allRuns)
     if(!allRuns)
     {
       #Check if runs from runTitle are found in FVS_Cases table
-      runsFound<- runTitle %in% toupper(unique(RSQLite::dbGetQuery(con, "SELECT RunTitle FROM
-                                                FVS_Cases")[,1]))
+      runsFound<- runTitle %in% toupper(unique(RSQLite::dbGetQuery(con,
+      "SELECT RunTitle FROM FVS_Cases")[,1]))
 
       #If any runs are not found, then report them in error message
       if(F %in% runsFound)
@@ -68,8 +72,9 @@ validateDBInputs<-function(con, runTitle, allRuns)
         #Paste missing runs together separated by comma and space
         missingRuns<-paste(missingRuns, collapse = ", ")
 
-        message<-(paste("Run titles:",paste0("'",missingRuns,"'", collapse = ""),"not found in",
-                        "input database. Please ensure all run titles are spelled correctly."))
+        message<-(paste("Run titles:",paste0("'",missingRuns,"'", collapse = ""),
+                        "not found in input database. Please ensure all run",
+                         "titles are spelled correctly."))
 
         #Assign value of F to validDB. Database (con) is not ready for prcoessing.
         validDB = F
@@ -84,76 +89,291 @@ validateDBInputs<-function(con, runTitle, allRuns)
   return(message)
 }
 
-#############################################################################
-#Function: buildQuery
+################################################################################
+#Function: treeQuery
 #
-#This function builds and returns a string of SQL statements that can be used
-#to read in data from the FVS_TreeList, FVS_Summary2, and FVS_Cases tables of
-#an FVS output database in main function (main.R). The buildQuery function
-#can be invoked outside of main.R for testing purposes and can be used in the
-#dbGetQuery function of the RSQLite R package.
+#This function builds and returns a string of SQL statements that can be used to
+#read in data from the FVS_TreeList. The query will read in CaseID, StandID,
+#Year, SpeciesPLANTS, MortPA, TPA, DBH, CrWidth, TcuFT, mcuFT, Bdft, data from
+#the FVS_TreeList for the tree records associated with Case ID values specified
+#in the treeQuery function arguments. The treeQuery function can be invoked
+#outside of main function for testing purposes with the dbGetQuery function of
+#the RSQLite R package.
 #
 #Arguments
 #
-#stands:	 Character vector of stand IDs.
+#cases:	 Character vector of case IDs.
+#
+#Value
+#
+#Character string of SQL statements.
+################################################################################
+
+#'@export
+treeQuery<-function(cases)
+{
+  #Define portion of query that will always be used.
+  query<-
+    paste("SELECT TL.CaseID, TL.StandID, TL.Year, TL.SpeciesPLANTS, TL.TPA,",
+          "TL.MortPA, TL.DBH, TL.CrWidth, TL.TcuFT, TL.McuFT, TL.Bdft",
+          "FROM FVS_TreeList TL")
+
+  #Add stand query as long as length of cases is at least 1.
+  if(length(cases) >= 1)
+  {
+    #Add quotes to stand and commas to cases
+    cases<-paste0("'",cases,"'", ",")
+
+    #Collapse cases into a single string
+    cases<-paste(cases, collapse = "")
+
+    #Remove last comma from cases
+    cases<-substr(cases,1, nchar(cases)-1)
+
+    #Add parentheses around cases
+    cases<-paste0("(", cases, ")")
+
+    #Create WHERE clause with cases
+    standQuery<-paste0("WHERE TL.CaseID IN", cases)
+
+    #Add standQuery to query
+    query<-paste(query, standQuery)
+  }
+
+  return(query)
+}
+
+################################################################################
+#Function: caseQuery
+#
+#This function builds and returns a string of SQL statements that is used to
+#read CaseID, StandID, and Groups from the FVS_Cases table for a FVS run title
+#specified in the caseQuery function arguments. The caseQuery function can be
+#invoked outside of main.R with the dbGetQuery function of the RSQLite R package.
+#
+#Arguments
 #
 #runTitle: Character string pertaining to FVS run title.
 #
 #Value
 #
 #Character string of SQL statements.
-#############################################################################
+################################################################################
 
 #'@export
-buildQuery<-function(stands, runTitle)
+caseQuery <- function(runTitle)
+{
+  query<- paste("SELECT FVS_Cases.StandID, FVS_Cases.CaseID, FVS_Cases.Groups",
+                "FROM FVS_Cases",
+                "WHERE RunTitle LIKE", paste0("'%",runTitle,"%'"))
+  return(query)
+}
+
+################################################################################
+#Function: computeQuery
+#
+#This function builds and returns a string of SQL statements that can be used
+#to read in data from the FVS_Compute table. The query will read in all fields
+#from the FVS_Compute table. The computeQuery function can be invoked outside of
+#main.R for testing purposes and can be used in the dbGetQuery function of the
+#RSQLite R package.
+#
+#Arguments
+#
+#cases:	 Character vector of cases IDs.
+#
+#Value
+#
+#Character string of SQL statements.
+################################################################################
+
+#'@export
+computeQuery<-function(cases)
 {
   #Define portion of query that will always be used.
   query<-
-    paste("SELECT TL.CaseID, TL.StandID, TL.Year,
-          TL.SpeciesPLANTS, TL.TPA, TL.DBH, TL.CrWidth,
-          FVS_Cases.RunTitle, FVS_Cases.Groups,
-          FVS_Summary2.Age
-          FROM FVS_TreeList TL
-          INNER JOIN FVS_Cases
-          ON TL.CaseID = FVS_Cases.CaseID
-          INNER JOIN FVS_Summary2
-          ON TL.CaseID = FVS_Summary2.CaseID AND
-          TL.Year = FVS_Summary2.Year")
+    paste("SELECT *
+          FROM FVS_Compute")
 
-  #Add stand query as long as length of stands is at least 1.
-  if(length(stands) >= 1)
+  #Add stand query as long as length of cases is at least 1.
+  if(length(cases) >= 1)
   {
-    #Add quotes to stand and commas to stands
-    stands<-paste0("'",stands,"'", ",")
+    #Add quotes to stand and commas to cases
+    cases<-paste0("'",cases,"'", ",")
 
-    #Collapse stands into a single string
-    stands<-paste(stands, collapse = "")
+    #Collapse cases into a single string
+    cases<-paste(cases, collapse = "")
 
-    #Remove last comma from stands
-    stands<-substr(stands,1, nchar(stands)-1)
+    #Remove last comma from cases
+    cases<-substr(cases,1, nchar(cases)-1)
 
-    #Add parantheses around stands
-    stands<-paste0("(", stands, ")")
+    #Add parentheses around cases
+    cases<-paste0("(", cases, ")")
 
-    #Create WHERE clause with stands
-    standQuery<-paste0("WHERE TL.StandID IN", stands)
+    #Create WHERE clause with cases
+    caseQuery<-paste0("WHERE FVS_Compute.CaseID IN", cases)
 
     #Add standQuery to query
-    query<-paste(query, standQuery)
-  }
-
-  #If runtitle is not NA, then a WHERE clause with runTitle will be added to
-  #query
-  if(!is.na(runTitle))
-  {
-    runTitleString<-paste0("'%",runTitle,"%'")
-    query<-paste(query, paste("AND RunTitle LIKE", runTitleString))
+    query<-paste(query, caseQuery)
   }
 
   return(query)
 }
 
-#############################################################################
+################################################################################
+#Function: potFireQuery
+#
+#This function builds and returns a string of SQL statements that can be used
+#to read in data from the FVS_Potfire table. This query will read in all fields.
+#from the FVS_PotFire table. The potFireQuery function can be invoked outside
+#of main.R for testing purposes and can be used in the dbGetQuery function of
+#the RSQLite R package.
+#
+#Arguments
+#
+#cases:	 Character vector of cases IDs.
+#
+#Value
+#
+#Character string of SQL statements.
+################################################################################
+
+#'@export
+potFireQuery<-function(cases)
+{
+  #Define portion of query that will always be used.
+  query<-
+    paste("SELECT *
+          FROM FVS_Potfire")
+
+  #Add stand query as long as length of cases is at least 1.
+  if(length(cases) >= 1)
+  {
+    #Add quotes to stand and commas to cases
+    cases<-paste0("'",cases,"'", ",")
+
+    #Collapse cases into a single string
+    cases<-paste(cases, collapse = "")
+
+    #Remove last comma from cases
+    cases<-substr(cases,1, nchar(cases)-1)
+
+    #Add parentheses around cases
+    cases<-paste0("(", cases, ")")
+
+    #Create WHERE clause with cases
+    caseQuery<-paste0("WHERE FVS_Potfire.CaseID IN", cases)
+
+    #Add standQuery to query
+    query<-paste(query, caseQuery)
+  }
+
+  return(query)
+}
+
+################################################################################
+#Function: fuelsQuery
+#
+#This function builds and returns a string of SQL statements that can be used
+#to read in data from the FVS_Fuels table. This query will read in all fields.
+#from the FVS_Fuels table. The fuelsQuery function can be invoked outside
+#of main.R for testing purposes and can be used in the dbGetQuery function of
+#the RSQLite R package.
+#
+#Arguments
+#
+#cases:	 Character vector of cases IDs.
+#
+#Value
+#
+#Character string of SQL statements.
+################################################################################
+
+#'@export
+fuelsQuery<-function(cases)
+{
+  #Define portion of query that will always be used.
+  query<-
+    paste("SELECT *
+          FROM FVS_Fuels")
+
+  #Add stand query as long as length of cases is at least 1.
+  if(length(cases) >= 1)
+  {
+    #Add quotes to stand and commas to cases
+    cases<-paste0("'",cases,"'", ",")
+
+    #Collapse cases into a single string
+    cases<-paste(cases, collapse = "")
+
+    #Remove last comma from cases
+    cases<-substr(cases,1, nchar(cases)-1)
+
+    #Add parentheses around cases
+    cases<-paste0("(", cases, ")")
+
+    #Create WHERE clause with cases
+    caseQuery<-paste0("WHERE FVS_Fuels.CaseID IN", cases)
+
+    #Add standQuery to query
+    query<-paste(query, caseQuery)
+  }
+
+  return(query)
+}
+
+################################################################################
+#Function: carbonQuery
+#
+#This function builds and returns a string of SQL statements that can be used
+#to read in data from the FVS_Carbon table. This query will read in all fields.
+#from the FVS_Carbon table. The carbonQuery function can be invoked outside
+#of main.R for testing purposes and can be used in the dbGetQuery function of
+#the RSQLite R package.
+#
+#Arguments
+#
+#cases:	 Character vector of cases IDs.
+#
+#Value
+#
+#Character string of SQL statements.
+################################################################################
+
+#'@export
+carbonQuery<-function(cases)
+{
+  #Define portion of query that will always be used.
+  query<-
+    paste("SELECT *
+          FROM FVS_Carbon")
+
+  #Add stand query as long as length of cases is at least 1.
+  if(length(cases) >= 1)
+  {
+    #Add quotes to stand and commas to cases
+    cases<-paste0("'",cases,"'", ",")
+
+    #Collapse cases into a single string
+    cases<-paste(cases, collapse = "")
+
+    #Remove last comma from cases
+    cases<-substr(cases,1, nchar(cases)-1)
+
+    #Add parentheses around cases
+    cases<-paste0("(", cases, ")")
+
+    #Create WHERE clause with cases
+    caseQuery<-paste0("WHERE FVS_Carbon.CaseID IN", cases)
+
+    #Add standQuery to query
+    query<-paste(query, caseQuery)
+  }
+
+  return(query)
+}
+
+################################################################################
 #Function: getGroup
 #
 #This function takes in a string of FVS group labels and returns the group
@@ -167,7 +387,7 @@ buildQuery<-function(stands, runTitle)
 #        the label "ERU=" would be used to extract "MCW" from the group
 #        code, ERU=MCW. If label is not found in group, then first group in
 #        groups argument is returned.
-#############################################################################
+################################################################################
 
 getGroup<-function(groups, label)
 {
