@@ -13,10 +13,11 @@
 #input:        Directory path and file name to a SQLite database (.db). Path
 #              name must be surrounded with double quotes "" and double
 #              back slashes or single forward slashes need to be used for
-#              specifying paths.
+#              specifying paths. By default, this argument is set to NULL.
 #
 #              Database defined in input should contain FVS_Treelist (western
-#              variants) or FVS_Treelist_East (eastern variants).
+#              variants) or FVS_Treelist_East (eastern variants) and FVS_Cases
+#              table.
 #
 #              Examples of valid input formats:
 #              "C:/FVS/R3_Work/FVSOut.db"
@@ -24,7 +25,8 @@
 #
 #output:       Directory path and filename to a .csv file. Path name must be
 #              surrounded with double quotes "" and double back slashes or
-#              single forward slashes need to be used for specifying paths.
+#              single forward slashes need to be used for specifying paths. By
+#              default, this argument is set to NULL.
 #
 #              Examples of valid output formats:
 #              "C:/FVS/R3_Work/FVSOut.csv"
@@ -52,7 +54,7 @@
 #              function.
 #
 #runTitles:    Vector of character strings corresponding to FVS runTitles that
-#              will be processed. If runTitles is left as NA and allRuns is
+#              will be processed. If runTitles is left as NULL and allRuns is
 #              FALSE (F), execution of main function will terminate. Each run
 #              title in runTitles must be surrounded by double quotes. The
 #              values specified for runTitles argument need to be spelled
@@ -136,9 +138,9 @@
 ################################################################################
 
 #'@export
-main<- function(input = NA,
-                output = NA,
-                runTitles = NA,
+main<- function(input = NULL,
+                output = NULL,
+                runTitles = NULL,
                 allRuns = F,
                 overwriteOut = F,
                 region = NA,
@@ -152,20 +154,31 @@ main<- function(input = NA,
                 vol3DBH = 9,
                 startYear = 0)
 {
+  ###########################################################################
+  #Check function arguments
+  ###########################################################################
 
-  #Change \\ to / in input and output arguments
+  #Test if value in input argument is null.
+  if (is.null(input)){
+    stop(paste("No database specified in input argument."))
+  }
+
+  #Change \\ to / in input argument
   input <- gsub("\\\\", "/", input)
-  output <- gsub("\\\\", "/", output)
-
-  ###########################################################################
-  #Check input arguments
-  ###########################################################################
 
   #Test existence of input database.
   if (!(file.exists(input))){
     stop(paste("Input database not found. Make sure directory path and file",
                "name in input are spelled correctly."))
   }
+
+  #Test if value in output argument is null.
+  if (is.null(output)){
+    stop(paste("No file specified in output argument."))
+  }
+
+  #Change \\ to / in output argument
+  output <- gsub("\\\\", "/", output)
 
   #Extract file extension for input argument.
   fileExtIn<-sub("(.*)\\.","",input)
@@ -196,7 +209,7 @@ main<- function(input = NA,
   }
 
   #If runTitles is NULL and allRuns not TRUE, then stop with error message.
-  if(is.na(runTitles) & !allRuns)
+  if(is.null(runTitles) & !allRuns)
   {
     stop("No runs specified in runTitles argument and allRuns is not TRUE.")
   }
