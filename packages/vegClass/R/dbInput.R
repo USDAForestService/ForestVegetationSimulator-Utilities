@@ -1,4 +1,4 @@
-#############################################################################
+################################################################################
 #Function: validateDBInputs
 #
 #This function performs a series of checks to see if incoming FVS output
@@ -8,21 +8,23 @@
 #
 #Arguments
 #
-#con:       Connection to input .db
+#con:      Connection to input .db
 #
-#runTitle:  Name of FVS run title(s) that will be searched for in FVS_Cases
-#           table.
+#runTitle: Name of FVS run title(s) that will be searched for in FVS_Cases
+#          table.
 #
-#allRuns:   Logical variable used to signify that all runs from FVS output
-#           database are being processed. See main function in main.R for
-#           further details.
+#allRuns:  Logical variable used to signify that all runs from FVS output
+#          database are being processed. See main function in main.R for
+#          further details.
 #
 #Value
 #
 #Character string containing message.
-#############################################################################
+################################################################################
 
-validateDBInputs<-function(con, runTitle, allRuns)
+validateDBInputs<-function(con,
+                           runTitle,
+                           allRuns)
 {
   #Flag variable used to determine if further checks should be made on incoming
   #database con.
@@ -31,29 +33,27 @@ validateDBInputs<-function(con, runTitle, allRuns)
   #Assign value of PASS to message
   message<-"PASS"
 
-  #==========================================================================
-  #If FVS_TreeList, FVS_Cases, or FVS_Summary 2 is missing then message is
-  #changed and validDB is set to F.
-  #==========================================================================
+  #=============================================================================
+  #If FVS_Cases is missing then message is changed and validDB is set to F.
+  #=============================================================================
 
   if(validDB)
   {
-    if(is.element(F, c("FVS_TreeList", "FVS_Cases") %in%
-                  RSQLite::dbListTables(con)))
-    {
-      message<-paste("One of the following tables was not found in input",
-                     "database: FVS_TreeList, FVS_Cases.")
+      if(is.element(F, c("FVS_Cases") %in%
+                    RSQLite::dbListTables(con)))
+      {
+        message<-paste("FVS_Cases table not found in input database.")
 
-      #Assign value of F to validDB. Database (con) is not ready for prcoessing.
-      validDB = F
-    }
+        #Assign value of F to validDB. Database (con) is not ready for
+        #processing.
+        validDB = F
+      }
   }
 
-  #==========================================================================
-  #If runTitle is not NA then make sure the input run title is found in
-  #FVS_Cases table. If it is not found, message is changed and validDB is set
-  #to F.
-  #==========================================================================
+  #=============================================================================
+  #Test if run titles are in FVS_Cases table. If any are not found, message is
+  #changed and validDB is set to F.
+  #=============================================================================
 
   if(validDB)
   {
@@ -76,7 +76,8 @@ validateDBInputs<-function(con, runTitle, allRuns)
                         "not found in input database. Please ensure all run",
                          "titles are spelled correctly."))
 
-        #Assign value of F to validDB. Database (con) is not ready for prcoessing.
+        #Assign value of F to validDB. Database (con) is not ready for
+        #processing.
         validDB = F
       }
     }
@@ -93,16 +94,22 @@ validateDBInputs<-function(con, runTitle, allRuns)
 #Function: treeQuery
 #
 #This function builds and returns a string of SQL statements that can be used to
-#read in data from the FVS_TreeList. The query will read in CaseID, StandID,
-#Year, SpeciesPLANTS, MortPA, TPA, DBH, CrWidth, TcuFT, mcuFT, Bdft, data from
-#the FVS_TreeList for the tree records associated with Case ID values specified
-#in the treeQuery function arguments. The treeQuery function can be invoked
-#outside of main function for testing purposes with the dbGetQuery function of
-#the RSQLite R package.
+#read in data from the FVS_TreeList or FVS_TreeList_East table. The query will
+#read in CaseID, StandID, Year, SpeciesPLANTS, MortPA, TPA, DBH, Ht, CrWidth,
+#and volume variables from the FVS_TreeList for the tree records associated with
+#Case ID values specified in the treeQuery function arguments. The treeQuery
+#function can be invoked outside of main function for testing purposes with the
+#dbGetQuery function of the RSQLite R package.
 #
 #Arguments
 #
-#cases:	 Character vector of case IDs.
+#cases:	  Character vector of case IDs.
+#
+#variant: Two character variant code. This code is used to determine what tree
+#         list databaes table data should be read from (FVS_TreeList or
+#         FVS_TreeList_East).Valid variant codes: "AK", "BM", "CA", "CI", "CR",
+#         "CS", "EC", "EM",  "IE", "KT", "LS", "NC", "NE", "PN", "SN", "SO",
+#         "TT", "UT", "WC", "WS", "OC", "OP"
 #
 #Value
 #
@@ -110,13 +117,30 @@ validateDBInputs<-function(con, runTitle, allRuns)
 ################################################################################
 
 #'@export
-treeQuery<-function(cases)
+treeQuery<-function(cases, variant)
 {
-  #Define portion of query that will always be used.
-  query<-
-    paste("SELECT TL.CaseID, TL.StandID, TL.Year, TL.SpeciesPLANTS, TL.TPA,",
-          "TL.MortPA, TL.DBH, TL.CrWidth, TL.TcuFT, TL.McuFT, TL.Bdft",
-          "FROM FVS_TreeList TL")
+  variant <- toupper(variant)
+
+  #Define SELECT portion of tree list query
+
+  #Eastern variants
+  if(variant %in% c("CS", "NE", "LS", "SN"))
+  {
+    query<-
+      paste("SELECT TL.CaseID, TL.StandID, TL.Year, TL.SpeciesPLANTS, TL.TPA,",
+            "TL.MortPA, TL.DBH, TL.Ht, TL.CrWidth, TL.MCuFt, TL.SCuFt,
+             TL.SBdFt",
+            "FROM FVS_TreeList_East TL")
+  }
+
+  #All other variants
+  else
+  {
+    query<-
+      paste("SELECT TL.CaseID, TL.StandID, TL.Year, TL.SpeciesPLANTS, TL.TPA,",
+            "TL.MortPA, TL.DBH, TL.Ht, TL.CrWidth, TL.TCuFt, TL.MCuFt, TL.BdFt",
+            "FROM FVS_TreeList TL")
+  }
 
   #Add stand query as long as length of cases is at least 1.
   if(length(cases) >= 1)
@@ -163,7 +187,8 @@ treeQuery<-function(cases)
 #'@export
 caseQuery <- function(runTitle)
 {
-  query<- paste("SELECT FVS_Cases.StandID, FVS_Cases.CaseID, FVS_Cases.Groups",
+  query<- paste("SELECT FVS_Cases.StandID, FVS_Cases.CaseID, FVS_Cases.Groups,",
+                "FVS_Cases.Variant",
                 "FROM FVS_Cases",
                 "WHERE RunTitle LIKE", paste0("'%",runTitle,"%'"))
   return(query)
@@ -190,7 +215,7 @@ caseQuery <- function(runTitle)
 #'@export
 computeQuery<-function(cases)
 {
-  #Define portion of query that will always be used.
+  #Define SELECT portion of tree list query
   query<-
     paste("SELECT *
           FROM FVS_Compute")
@@ -224,14 +249,20 @@ computeQuery<-function(cases)
 #Function: potFireQuery
 #
 #This function builds and returns a string of SQL statements that can be used
-#to read in data from the FVS_Potfire table. This query will read in all fields.
-#from the FVS_PotFire table. The potFireQuery function can be invoked outside
-#of main.R for testing purposes and can be used in the dbGetQuery function of
-#the RSQLite R package.
+#to read in data from the FVS_Potfire or FVS_PotFire_East table. This query will
+#read in all fields. from the FVS_PotFire or FVS_PotFire_East table. The
+#potFireQuery function can be invoked outside of main.R for testing purposes and
+#can be used in the dbGetQuery function of the RSQLite R package.
 #
 #Arguments
 #
-#cases:	 Character vector of cases IDs.
+#cases:	  Character vector of cases IDs.
+#
+#variant: Two character variant code. This code is used to determine what
+#         potential fire database table data should be read from (FVS_Potfire
+#         or FVS_Potfire_East). Valid variant codes: "AK", "BM", "CA", "CI",
+#         "CR", "CS", "EC", "EM",  "IE", "KT", "LS", "NC", "NE", "PN", "SN",
+#         "SO", "TT", "UT", "WC", "WS", "OC", "OP"
 #
 #Value
 #
@@ -239,12 +270,27 @@ computeQuery<-function(cases)
 ################################################################################
 
 #'@export
-potFireQuery<-function(cases)
+potFireQuery<-function(cases, variant)
 {
-  #Define portion of query that will always be used.
-  query<-
-    paste("SELECT *
-          FROM FVS_Potfire")
+  variant <- toupper(variant)
+
+  #Define SELECT portion of potfire query
+
+  #CS and SN variants
+  if(variant == "CS" | variant == "SN")
+  {
+    query<-
+      paste("SELECT *
+          FROM FVS_Potfire_East PF")
+  }
+
+  #All other variants
+  else
+  {
+    query<-
+      paste("SELECT *
+          FROM FVS_Potfire PF")
+  }
 
   #Add stand query as long as length of cases is at least 1.
   if(length(cases) >= 1)
@@ -262,7 +308,7 @@ potFireQuery<-function(cases)
     cases<-paste0("(", cases, ")")
 
     #Create WHERE clause with cases
-    caseQuery<-paste0("WHERE FVS_Potfire.CaseID IN", cases)
+    caseQuery<-paste0("WHERE PF.CaseID IN", cases)
 
     #Add standQuery to query
     query<-paste(query, caseQuery)
@@ -292,7 +338,7 @@ potFireQuery<-function(cases)
 #'@export
 fuelsQuery<-function(cases)
 {
-  #Define portion of query that will always be used.
+  #Define SELECT portion of fuels query
   query<-
     paste("SELECT *
           FROM FVS_Fuels")
@@ -343,7 +389,7 @@ fuelsQuery<-function(cases)
 #'@export
 carbonQuery<-function(cases)
 {
-  #Define portion of query that will always be used.
+  #Define SELECT portion of carbon query
   query<-
     paste("SELECT *
           FROM FVS_Carbon")

@@ -13,8 +13,10 @@
 #input:        Directory path and file name to a SQLite database (.db). Path
 #              name must be surrounded with double quotes "" and double
 #              back slashes or single forward slashes need to be used for
-#              specifying paths. Database defined in input must contain the
-#              following tables: FVS_TreeList, and FVS_Cases.
+#              specifying paths.
+#
+#              Database defined in input should contain FVS_Treelist (western
+#              variants) or FVS_Treelist_East (eastern variants).
 #
 #              Examples of valid input formats:
 #              "C:/FVS/R3_Work/FVSOut.db"
@@ -30,18 +32,33 @@
 #
 #overwriteOut: Logical variable used to determine if output file should be
 #              overwritten. If value is TRUE, any information existing in output
-#              will be overwritten with new information. If value is FALSE and
-#              the file in output argument exists, then main function will stop
-#              with an error message. The default value of this argument is
-#              FALSE.
+#              will be overwritten with new information. If value is FALSE (F)
+#              and the file in output argument exists, then main function will
+#              stop with an error message. The default value of this argument is
+#              FALSE (F).
+#
+#region:       Integer variable corresponding to USFS region number. Valid
+#              values are 1, 2, 3, 4, 5, 6, 8, 9, or 10. This argument is
+#              currently a dummy variable and has no effect on underlying logic.
+#              In the future this variable will be likely used to determine rule
+#              sets for calculating vegetation classifications and other
+#              attributes. The value specified in this argument will be included
+#              in the file specified in the output argument.
+#
+#              WARNING: the value specified in the region argument will apply
+#              to all runs specified in runTitles argument or all runs if the
+#              allRuns argument is set to TRUE (T). As such, users should
+#              process run(s) from only one region at a time when using the main
+#              function.
 #
 #runTitles:    Vector of character strings corresponding to FVS runTitles that
-#              will be processed. If runTitles is left as NULL, execution of
-#              main function will terminate. Each run title in runTitles must be
-#              surrounded by double quotes. The values specified for runTitles
-#              argument need to be spelled correctly. If any of the values in
-#              runTitles are spelled incorrectly, the execution of main function
-#              will terminate.
+#              will be processed. If runTitles is left as NA and allRuns is
+#              FALSE (F), execution of main function will terminate. Each run
+#              title in runTitles must be surrounded by double quotes. The
+#              values specified for runTitles argument need to be spelled
+#              correctly. If any of the values in runTitles are spelled
+#              incorrectly, the execution of main function will terminate with
+#              an error message.
 #
 #              Example of how to specify single run title:
 #              runTitles = "Run 1"
@@ -50,7 +67,7 @@
 #              runTitles = c("Run 1", "Run 2",...)
 #              Note the use of the c(...) when processing multiple runs.
 #
-#allRuns:      Boolean variable that is used to determine if all runs in
+#allRuns:      Logical variable that is used to determine if all runs in
 #              argument input should be processed. If value is TRUE (T), then
 #              all runs will be processed and any runs specified in argument
 #              runTitles will be ignored. By default this argument is set
@@ -59,28 +76,40 @@
 #addCompute:   Logical variable used to indicate if information in FVS_Compute
 #              table should be included in output. If the FVS_Compute table does
 #              not exist in input, then no variables from this table will be
-#              included in output. By default, this argument is set to TRUE.
+#              included in output. By default, this argument is set to FALSE (F).
 #
-#addPotFire:   Logical variable used to indicate if information in FVS_PotFire
-#              table should be included in output. If the FVS_PotFire table does
+#addPotFire:   Logical variable used to indicate if information in FVS_Potfire
+#              table should be included in output. If the FVS_Potfire table does
 #              not exist in input, then no variables from this table will be
-#              included in output. By default, this argument is set to TRUE.
+#              included in output. By default, this argument is set to
+#              FALSE (F).
 #
 #addFuels:     Logical variable used to indicate if information in FVS_Fuels
 #              table should be included in output. If the FVS_Fuels table does
 #              not exist in input, then no variables from this table will be
-#              included in output. By default, this argument is set to TRUE.
+#              included in output. By default, this argument is set to FALSE
+#              (F).
 #
 #addCarbon:    Logical variable used to indicate if information in FVS_Carbon
 #              table should be included in output. If the FVS_Carbon table does
 #              not exist in input, then no variables from this table will be
-#              included in output. By default, this argument is set to TRUE.
+#              included in output. By default, this argument is set to FALSE
+#              (F).
 #
 #addVolume:    Logical variable used to indicate if 3 measures of volume should
 #              be calculated and reported. If the value of this argument is
-#              is set to TRUE, then the following measures of volume will be
+#              is set to TRUE (T), then the following measures of volume will be
 #              calculated:
 #
+#              Eastern variants: CS, LS, NE and SN
+#              VOL1: Merchantable cubic foot volume
+#              VOL2: Sawlog cubic foot volume
+#              VOL3: Sawlog Board foot volume
+#              DEADVOL1: Merchantable cubic foot volume that died in that cycle
+#              DEADVOL2: Sawlog cubic foot volume that died in that cycle
+#              DEADVOL3: Sawlog Board foot volume that died in that cycle
+#
+#              Western variants
 #              VOL1: Total cubic foot volume
 #              VOL2: Merchantable cubic foot volume
 #              VOL3: Board foot volume
@@ -102,21 +131,22 @@
 #
 #startYear:    Integer value corresponding to the year that data should start
 #              being reported in output argument. Data with years prior to this
-#              value will not be included in the output argument. By default
+#              value will not be included in the output argument. By default,
 #              this value is set to 0 (all data will be included in output).
 ################################################################################
 
 #'@export
-main<- function(input,
-                output,
-                runTitles = NULL,
+main<- function(input = NA,
+                output = NA,
+                runTitles = NA,
                 allRuns = F,
                 overwriteOut = F,
-                addCompute = T,
-                addPotFire = T,
-                addFuels = T,
-                addCarbon = T,
-                addVolume = T,
+                region = NA,
+                addCompute = F,
+                addPotFire = F,
+                addFuels = F,
+                addCarbon = F,
+                addVolume = F,
                 vol1DBH = 0.1,
                 vol2DBH = 5,
                 vol3DBH = 9,
@@ -133,8 +163,8 @@ main<- function(input,
 
   #Test existence of input database.
   if (!(file.exists(input))){
-    stop(paste("Input database not found. Make sure directory path and file name",
-               "in input are spelled correctly."))
+    stop(paste("Input database not found. Make sure directory path and file",
+               "name in input are spelled correctly."))
   }
 
   #Extract file extension for input argument.
@@ -166,9 +196,16 @@ main<- function(input,
   }
 
   #If runTitles is NULL and allRuns not TRUE, then stop with error message.
-  if(is.null(runTitles) & !allRuns)
+  if(is.na(runTitles) & !allRuns)
   {
     stop("No runs specified in runTitles argument and allRuns is not TRUE.")
+  }
+
+  #If region is not a valid value, then stop with error message
+  if(! region %in% c(1, 2, 3, 4, 5, 6, 8, 9, 10))
+  {
+    stop(paste("Invalid region number was specified in region argument.",
+               "Please enter a value of 1, 2, 3, 4, 5, 6, 8, 9, or 10"))
   }
 
   #Capitalize runTitles
@@ -183,7 +220,9 @@ main<- function(input,
   ###########################################################################
 
   #Perform database validation
-  message<-validateDBInputs(con, runTitles, allRuns)
+  message<-validateDBInputs(con,
+                            runTitle = runTitles,
+                            allRuns = allRuns)
 
   #If validateDBInput function returns a message that is not 'PASS' then
   #disconnect from con and send error message to console.
@@ -280,33 +319,63 @@ main<- function(input,
       {
         groups  <- cases$Groups[caseIndex]
         standID <- cases$StandID[caseIndex]
+        variant <- cases$Variant[caseIndex]
       }
 
       #Display which stand and case ID is being processed
       cat("Processing stand:", standID, "CaseID:", caseID, "\n")
 
+      #If this is the first case ID in the run, test if treelist table exists.
+      #If it does not, then set noValidRecords to number of cases
+      #(length(cases[["CaseID"]])) and break out of loop.
+      if(i == 1)
+      {
+        #Set name of treelist for eastern variants
+        if(variant %in% c("CS", "LS", "NE", "SN"))
+        {
+          treelist <- "FVS_TREELIST_EAST"
+        }
+
+        #Set name of treelist for western variants
+        else
+        {
+          treelist <- "FVS_TREELIST"
+        }
+
+        #Print what treelist table is used for run
+        cat("\n", treelist, "table being used for run:", run, "\n", "\n")
+
+        if(!RSQLite::dbExistsTable(con,
+                                   treelist))
+        {
+          cat(paste(treelist,
+                    "not found in input database.",
+                    "Processing stopped for run:", run,
+                    "\n",
+                    "\n"))
+
+          #Set noValidRecords to number of case IDs for run
+          noValidRecords <- length(cases[["CaseID"]])
+
+          #Break out of loop
+          break
+        }
+      }
+
       #Generate a query that will be used to read data from FVS tree list
-      dbQuery<-treeQuery(caseID)
+      dbQuery<-treeQuery(caseID, variant)
 
       cat("Querying tree list...", "\n")
 
       #Execute SQL query to obtain list of stand data
       standDF<-RSQLite::dbGetQuery(con,
-                                 dbQuery)
+                                   dbQuery)
 
       cat("Tree list query complete.", "\n")
 
       #Display column names and number of rows in standDF
       cat("Columns read from tree list:", colnames(standDF), "\n")
       cat("Number of rows read from tree list:", nrow(standDF), "\n")
-
-      #If query yields no results, skip to next iteration of loop across
-      #standList
-      if(nrow(standDF) <= 0)
-      {
-        cat("No valid tree records found in tree query.", "\n")
-        next
-      }
 
       #Initialize invalidStand. This variable is used to determine if a stand
       #is invalid and should not be written to output argument.
@@ -317,7 +386,7 @@ main<- function(input,
       if(nrow(standDF) <= 0)
       {
         noValidRecords <- noValidRecords + 1
-        cat("Stand:", standID, "has no valid tree records.", "\n")
+        cat("Stand:", standID, "has no valid tree records.", "\n", "\n")
         standSum<-standSum + 1
         next
       }
@@ -339,7 +408,7 @@ main<- function(input,
       #Sort years
       years<-sort(years)
 
-      #Create list that will store output for stand j for all years
+      #Create list that will store output for stand i for all years
       standYrOutput<-vector(mode = "list",
                             length(years))
 
@@ -356,9 +425,10 @@ main<- function(input,
       for(j in 1:length(years))
       {
 
-        #If this is the last year to process and addCompute/addPotFire is T,
-        #move to next iteration of loop. This is done, since FVS_Compute and
-        #FVS_PotFire table report one less cycle than FVS_Treelist.
+        #If this is the last year to process and addCompute, addPotFire,
+        #addCarbon, addFuels is T, move to next iteration of loop. This is done,
+        #since these tables report one less cycle than FVS_Treelist and
+        #FVS_Treelist_East
         if(j == length(years) & (addCompute | addPotFire | addCarbon |
                                  addFuels))
         {
@@ -392,6 +462,8 @@ main<- function(input,
         yrOutput<-data.frame(RUNTITLE = run,
                              CASEID = caseID,
                              STANDID = standID,
+                             VARIANT = variant,
+                             REGION = region,
                              YEAR = years[j])
 
         #Bind data from vegOut to yrOutput
@@ -401,24 +473,57 @@ main<- function(input,
         #If addVolume is TRUE, calculate volumes and add to yrOutput
         if(addVolume)
         {
-          volume <- volumeCalc(standYrDF,
-                               vol1DBH = vol1DBH,
-                               vol2DBH = vol2DBH,
-                               vol3DBH = vol3DBH)
+          #Logic for eastern variants
+          if(variant %in% c("CS", "LS", "NE", "SN"))
+          {
+            volume <- volumeCalc(standYrDF,
+                                 vol1 = "MCuFt",
+                                 vol2 = "SCuFt",
+                                 vol3 = "SBdFt",
+                                 vol1DBH = vol1DBH,
+                                 vol2DBH = vol2DBH,
+                                 vol3DBH = vol3DBH)
 
-          yrOutput$VOL1 <- volume["VOL1"]
-          yrOutput$VOL2 <- volume["VOL2"]
-          yrOutput$VOL3 <- volume["VOL3"]
+            yrOutput$VOL1 <- volume["VOL1"]
+            yrOutput$VOL2 <- volume["VOL2"]
+            yrOutput$VOL3 <- volume["VOL3"]
 
-          deadVolume <- volumeCalc(standYrDF,
-                                   expf = "MortPA",
-                                   vol1DBH = vol1DBH,
-                                   vol2DBH = vol2DBH,
-                                   vol3DBH = vol3DBH)
+            deadVolume <- volumeCalc(standYrDF,
+                                     vol1 = "MCuFt",
+                                     vol2 = "SCuFt",
+                                     vol3 = "SBdFt",
+                                     expf = "MortPA",
+                                     vol1DBH = vol1DBH,
+                                     vol2DBH = vol2DBH,
+                                     vol3DBH = vol3DBH)
 
-          yrOutput$DEADVOL1 <- deadVolume["VOL1"]
-          yrOutput$DEADVOL2 <- deadVolume["VOL2"]
-          yrOutput$DEADVOL3 <- deadVolume["VOL3"]
+            yrOutput$DEADVOL1 <- deadVolume["VOL1"]
+            yrOutput$DEADVOL2 <- deadVolume["VOL2"]
+            yrOutput$DEADVOL3 <- deadVolume["VOL3"]
+          }
+
+          #Logic for all other variants
+          else
+          {
+            volume <- volumeCalc(standYrDF,
+                                 vol1DBH = vol1DBH,
+                                 vol2DBH = vol2DBH,
+                                 vol3DBH = vol3DBH)
+
+            yrOutput$VOL1 <- volume["VOL1"]
+            yrOutput$VOL2 <- volume["VOL2"]
+            yrOutput$VOL3 <- volume["VOL3"]
+
+            deadVolume <- volumeCalc(standYrDF,
+                                     expf = "MortPA",
+                                     vol1DBH = vol1DBH,
+                                     vol2DBH = vol2DBH,
+                                     vol3DBH = vol3DBH)
+
+            yrOutput$DEADVOL1 <- deadVolume["VOL1"]
+            yrOutput$DEADVOL2 <- deadVolume["VOL2"]
+            yrOutput$DEADVOL3 <- deadVolume["VOL3"]
+          }
         }
 
         #Add yrOutput to standYrOutput
@@ -525,8 +630,9 @@ main<- function(input,
         else
         {
           cat("\n")
-          cat("FVS_Compute table not found in input. No information to join.",
-              "\n")
+          cat(paste("FVS_COMPUTE table not found in input database.",
+                    "No information to join.",
+                    "\n"))
         }
       }
 
@@ -534,13 +640,26 @@ main<- function(input,
       #FVS_PotFire table exists in input.
       if(addPotFire)
       {
-        #Test if FVS_PotFire table exists. Read in information from
-        #FVS_PotFire table.
+
+        #Set table name for eastern variants: CS and SN
+        if(variant %in% c("CS", "SN"))
+        {
+          potFire <- "FVS_POTFIRE_EAST"
+        }
+
+        #Set table name for western variants
+        else
+        {
+          potFire <- "FVS_POTFIRE"
+        }
+
+        #Test if FVS_PotFire table exists. Read in information from FVS_PotFire
+        #table.
         if(RSQLite::dbExistsTable(con,
-                                  "FVS_POTFIRE"))
+                                  potFire))
         {
           #Generate PotFire query
-          dbQuery <- potFireQuery(caseID)
+          dbQuery <- potFireQuery(caseID, variant)
 
           #Print FVS_PotFire query message
           cat("\n")
@@ -594,12 +713,13 @@ main<- function(input,
 
         }
 
-        #Report that FVS_PotFire table was not found in input.
+        #Report that FVS_PotFire/FVS_PotFire east table was not found in input.
         else
         {
           cat("\n")
-          cat("FVS_PotFire table not found in input. No information to join.",
-              "\n")
+          cat(paste(potFire, "table not found in input database.",
+                    "No information to join.",
+                    "\n"))
         }
       }
 
@@ -621,7 +741,7 @@ main<- function(input,
 
           #Get the data from FVS_Fuels
           fuelsDF <- RSQLite::dbGetQuery(con,
-                                           dbQuery)
+                                         dbQuery)
 
           cat("FVS_Fuels query complete.", "\n")
           cat("Number of rows read from FVS_Fuels query",
@@ -671,8 +791,9 @@ main<- function(input,
         else
         {
           cat("\n")
-          cat("FVS_Fuels table not found in input. No information to join.",
-              "\n")
+          cat(paste("FVS_FUELS table not found in input database.",
+                    "No information to join.",
+                    "\n"))
         }
       }
 
@@ -694,7 +815,7 @@ main<- function(input,
 
           #Get the data from FVS_Carbon
           carbonDF <- RSQLite::dbGetQuery(con,
-                                         dbQuery)
+                                          dbQuery)
 
           cat("FVS_Carbon query complete.", "\n")
           cat("Number of rows read from FVS_Carbon query",
@@ -744,14 +865,15 @@ main<- function(input,
         else
         {
           cat("\n")
-          cat("FVS_Carbon table not found in input. No information to join.",
+          cat("FVS_CARBON table not found in input. No information to join.",
               "\n")
         }
       }
 
       #Rearrange column headers in standOut so RUNTITLE, GROUP, CASEID,
       #STANDID, YEAR, CY are reported in the correct order
-      leadingCols <- c("RUNTITLE", "CASEID", "STANDID", "YEAR", "CY")
+      leadingCols <- c("RUNTITLE", "CASEID", "STANDID", "VARIANT", "REGION",
+                       "YEAR", "CY")
 
       #Get column names from standOut
       colNames <- colnames(standOut)
