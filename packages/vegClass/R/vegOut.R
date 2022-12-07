@@ -26,6 +26,7 @@
 # - Canopy size class woodland (CAN_SZWDL)
 # - QMD of top 20% (QMD_TOP20)
 # - Basal area weighted diameter (BA_WT_DIA)
+# - Basal area weighted height (BA_WT_HT)
 #
 #Arguments
 #
@@ -45,6 +46,10 @@
 #dbh:     Character string corresponding to name of column pertaining to DBH of
 #         tree records in data argument. By default, this argument is set to
 #         "DBH".
+#
+#ht:      Character string corresponding to name of column pertaining to total
+#         height of tree records in data argument. By default, this argument is
+#         set to "Ht".
 #
 #expf:    Character string corresponding to name of column pertaining to TPA of
 #         tree records in data argument. By default, this argument is set to
@@ -67,6 +72,7 @@ vegOut <- function(data,
                    stand = "StandID",
                    species = "SpeciesPLANTS",
                    dbh = "DBH",
+                   ht = "Ht",
                    expf = "TPA",
                    crwidth = "CrWidth",
                    debug = F)
@@ -83,6 +89,9 @@ vegOut <- function(data,
                         QMD_STM = NA,
                         ZSDI_STM = NA,
                         RSDI_STM = NA,
+                        BA_WT_DIA = NA,
+                        BA_WT_HT = NA,
+                        QMD_TOP20 = NA,
                         DOM_TYPE = NA,
                         DCC1 = NA,
                         XDCC1 = NA,
@@ -94,7 +103,7 @@ vegOut <- function(data,
                         BA_STORY = NA)
 
   #Check of missing columns in data
-  missing <- c(stand, species, dbh, expf, crwidth) %in% colnames(data)
+  missing <- c(stand, species, dbh, ht, expf, crwidth) %in% colnames(data)
 
   #If there is a FALSE value in missing report message and return vegData (all
   #NA values at this point)
@@ -121,6 +130,7 @@ vegOut <- function(data,
   allAttr <- plotAttr(data,
                       stand = stand,
                       dbh = dbh,
+                      ht = ht,
                       crwidth = crwidth,
                       expf = expf)
 
@@ -130,6 +140,7 @@ vegOut <- function(data,
   #Calculate BA, BA_WT_DIA, TPA, QMD, and SDI for seedlings + stems
   vegData$BA <- allAttr["BA"]
   vegData$BA_WT_DIA <- allAttr["BA_WT_DIA"]
+  vegData$BA_WT_HT <- allAttr["BA_WT_HT"]
   vegData$TPA <- allAttr["TPA"]
   vegData$QMD <- allAttr["QMD"]
   vegData$ZSDI <- allAttr["ZSDI"]
@@ -139,6 +150,7 @@ vegOut <- function(data,
   stemAttr <- plotAttr(data,
                        stand = stand,
                        dbh = dbh,
+                       ht = ht,
                        crwidth = crwidth,
                        expf = expf,
                        min = 1)
