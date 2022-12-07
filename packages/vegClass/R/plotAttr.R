@@ -10,6 +10,7 @@
 #Zeide SDI (ZSDI)
 #Reineke SDI (RSDI)
 #Basal area weighted diameter (BA_WT_DIA)
+#Basal area weighted height (BA_WT_HT)
 #
 #Arguments:
 #
@@ -24,6 +25,10 @@
 #dbh:     Character string corresponding to name of column pertaining to DBH of
 #         tree records in data argument. By default, this argument is set to
 #         "DBH".
+#
+#ht:      Character string corresponding to name of column pertaining to total
+#         tree height of tree records in data argument. By default, this
+#         argument is set to "Ht".
 #
 #expf:    Character string corresponding to name of column pertaining to TPA of
 #         tree records in data argument. By default, this argument is set to
@@ -44,13 +49,14 @@
 #
 #Value
 #
-#BA, TPA, QMD, CC, SDI, and BA_WT_DIA of inventory plot/stand
+#BA, TPA, QMD, CC, SDI, BA_WT_DIA, BA_WT_HT of inventory plot/stand
 ################################################################################
 
 #'@export
 plotAttr <- function(data,
                      stand = "StandID",
                      dbh = "DBH",
+                     ht = "Ht",
                      crwidth = "CrWidth",
                      expf = "TPA",
                      min = 0.1,
@@ -64,6 +70,7 @@ plotAttr <- function(data,
     cat("Columns:", "\n",
         "Stand:", stand, "\n",
         "dbh:", dbh, "\n",
+        "ht:", ht, "\n",
         "crWidth:", crwidth, "\n",
         "expf:", expf, "\n", "\n")
   }
@@ -76,10 +83,11 @@ plotAttr <- function(data,
             "CC" = 0,
             "ZSDI" = 0,
             "RSDI" = 0,
-            "BA_WT_DIA" = 0)
+            "BA_WT_DIA" = 0,
+            "BA_WT_HT" = 0)
 
   #Check for missing columns in data
-  missing <- c(dbh, crwidth, expf, stand) %in% colnames(data)
+  missing <- c(dbh, ht, crwidth, expf, stand) %in% colnames(data)
 
   #If name of columns provided in stand, dbh, expf, crwidth are not found in
   #data warning message is issued and 0 valued are returned.
@@ -89,7 +97,8 @@ plotAttr <- function(data,
     return(attr)
   }
 
-  #Initialize values for BA, TPA, CC, DBHSQ , BAWT, ZSDI (Zeide SDI), and RSDI
+  #Initialize values for BA, TPA, CC, DBHSQ ,ZSDI (Zeide SDI), and RSDI (Reineke
+  #SDI), BAWTD, and BAWTH
   BA = 0
   TPA = 0
   DBHSQ = 0
@@ -97,6 +106,7 @@ plotAttr <- function(data,
   ZSDI = 0
   RSDI = 0
   BAWTD = 0
+  BAWTH = 0
 
   #Loop across data and calculate attributes
   for(i in 1:nrow(data))
@@ -113,8 +123,11 @@ plotAttr <- function(data,
       #Calculate tree contribution to QMD
       DBHSQ <- DBHSQ + data[[dbh]][i]^2 * data[[expf]][i]
 
-      #Calculate tree contribution to BAWT
+      #Calculate tree contribution to BAWTD
       BAWTD = BAWTD + data[[dbh]][i] * TREEBA
+
+      #Calculate tree contribution to BAWTH
+      BAWTH = BAWTH + data[[ht]][i] * TREEBA
 
       #Update TPA
       attr["TPA"] <- attr["TPA"] + data[[expf]][i]
@@ -126,7 +139,8 @@ plotAttr <- function(data,
       attr["UNCC"] <- attr["UNCC"] + TREECC
 
       #Update ZSDI
-      attr["ZSDI"] <- attr["ZSDI"] + (data[[expf]][i] * (data[[dbh]][i]/10)^1.605)
+      attr["ZSDI"] <- attr["ZSDI"] + (data[[expf]][i] *
+                                        (data[[dbh]][i]/10)^1.605)
 
       if(debug)
       {
@@ -150,10 +164,11 @@ plotAttr <- function(data,
     attr["QMD"] = sqrt(DBHSQ/attr["TPA"])
   }
 
-  #Calculate BA weighted diameter if BA is not 0
+  #Calculate BA weighted diameter and height if BA is not 0
   if(attr["BA"] > 0)
   {
     attr["BA_WT_DIA"] <- BAWTD/attr["BA"]
+    attr["BA_WT_HT"] <- BAWTH/attr["BA"]
   }
 
   #Calculate RSDI
@@ -209,18 +224,8 @@ correctCC<-function(CC)
 ################################################################################
 #Function: volumeCalc
 #
-#This function calculates volume for three different pools:
-#
-#1: total cubic foot volume (Western variants)
-#
-#2: merchantable cubic foot volume (Western variants)
-#
-#3: board foot volume (Western variants)
-#
-#Volume is calculated for trees greater than diameter values specified in
-#vol1DBH - vol3DBH arguments. This function can calculate volume for eastern
-#regions/variants by changing values in the vol1, vol2, and vol3 arguments
-#below.
+#By default this function calculates volume for stand/plot for three different
+#pools found in FVS_TreeList or FVS_TreeList_East.
 #
 #Arguments:
 #
@@ -246,11 +251,11 @@ correctCC<-function(CC)
 #
 #vol2:    Character string corresponding to name of column pertaining to
 #         merchantable cubic foot volume of tree records in data argument. By
-#         default, this argument is set to "McuFt".
+#         default, this argument is set to "MCuFt".
 #
 #vol3:    Character string corresponding to name of column pertaining to
 #         board foot volume of tree records in data argument. By default, this
-#         argument is set to "Bdft".
+#         argument is set to "BdFt".
 #
 #vol1DBH: Minimum DBH of tree records included in calculation of vol1. By
 #         default this argument is set to 0.1.
@@ -262,18 +267,18 @@ correctCC<-function(CC)
 #         default this argument is set to 9.
 
 #debug:   logical variable indicating if debug statements should be printed. By
-#         default this value is set to FALSE.
+#         default this value is set to FALSE (F).
 #
 #Value
 #
-#VOL1:    Total cubic foot volume (western variants) / merchantable cubic foot
-#         volume (eastern variants)
+#VOL1:    Total cubic foot volume (western regions) / merchantable cubic foot
+#         volume (eastern regions)
 #
-#VOL2:    Merchantable cubic foot volume (western variants) / sawlog cubic
-#         foot volume (eastern variants)
+#VOL2:    Merchantable cubic foot volume (western regions) / sawlog cubic
+#         foot volume (eastern regions)
 #
-#VOL3:    Merchantable board foot volume (western variants) / sawlog board
-#         foot volume (eastern variants)
+#VOL3:    Merchantable board foot volume (western regions) / sawlog board
+#         foot volume (eastern regions)
 ################################################################################
 
 #'@export
