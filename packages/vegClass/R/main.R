@@ -169,6 +169,10 @@
 #              being reported in output argument. Data with years prior to this
 #              value will not be included in the output argument. By default,
 #              this value is set to 0 (all data will be included in output).
+#
+#Value
+#
+#0 value invisibly returned.
 ################################################################################
 
 #'@export
@@ -188,6 +192,9 @@ main<- function(input = NULL,
                 vol3DBH = 9,
                 startYear = 0)
 {
+  #Set the start time of function execution
+  startTime <- Sys.time()
+
   ###########################################################################
   #Check function arguments
   ###########################################################################
@@ -465,8 +472,6 @@ main<- function(input = NULL,
       standDF<-RSQLite::dbGetQuery(con,
                                    dbQuery)
 
-      cat("Tree list query complete.", "\n")
-
       #Display column names and number of rows in standDF
       cat("Columns read from tree list:", colnames(standDF), "\n")
       cat("Number of rows read from tree list:", nrow(standDF), "\n")
@@ -679,7 +684,6 @@ main<- function(input = NULL,
           computeDF <- RSQLite::dbGetQuery(con,
                                            dbQuery)
 
-          cat("FVS_Compute query complete.", "\n")
           cat("Number of rows read from compute query",
               nrow(computeDF),
               "\n")
@@ -687,10 +691,6 @@ main<- function(input = NULL,
           #If computeDF has data, merge it to standOut
           if(nrow(computeDF) > 0)
           {
-
-            cat("Merging FVS_Compute variables to stand:",
-                standID,
-                "\n")
 
             #Capitalize column names
             colnames(computeDF) <- toupper(colnames(computeDF))
@@ -731,10 +731,6 @@ main<- function(input = NULL,
 
             #Assign caseID to CASEID column
             computeDF$CASEID <- caseID
-
-            cat("Merging NA FVS_Compute variables to stand:",
-                standID,
-                "\n")
 
             #Merge computeDF to standOut by CASEID
             standOut <- merge(standOut,
@@ -799,7 +795,6 @@ main<- function(input = NULL,
           potFireDF <- RSQLite::dbGetQuery(con,
                                            dbQuery)
 
-          cat("FVS_PotFire query complete.", "\n")
           cat("Number of rows read from FVS_PotFire query",
               nrow(potFireDF),
               "\n")
@@ -807,10 +802,6 @@ main<- function(input = NULL,
           #If potFireDF has data, merge it to standOut
           if(nrow(potFireDF) > 0)
           {
-
-            cat("Merging FVS_PotFire variables to stand:",
-                standID,
-                "\n")
 
             #Capitalize column names
             colnames(potFireDF) <- toupper(colnames(potFireDF))
@@ -912,10 +903,6 @@ main<- function(input = NULL,
             #Assign caseID to CASEID column
             potFireDF$CASEID <- caseID
 
-            cat("Merging NA FVS_Potfire variables to stand:",
-                standID,
-                "\n")
-
             #Merge FVS_Potfire to standOut by CASEID
             standOut <- merge(standOut,
                               potFireDF,
@@ -966,7 +953,6 @@ main<- function(input = NULL,
           fuelsDF <- RSQLite::dbGetQuery(con,
                                          dbQuery)
 
-          cat("FVS_Fuels query complete.", "\n")
           cat("Number of rows read from FVS_Fuels query",
               nrow(fuelsDF),
               "\n")
@@ -974,10 +960,6 @@ main<- function(input = NULL,
           #If fuelsDF has data, merge it to standOut
           if(nrow(fuelsDF) > 0)
           {
-
-            cat("Merging FVS_Fuels variables to stand:",
-                standID,
-                "\n")
 
             #Capitalize column names
             colnames(fuelsDF) <- toupper(colnames(fuelsDF))
@@ -1018,10 +1000,6 @@ main<- function(input = NULL,
 
             #Assign caseID to CASEID column
             fuelsDF$CASEID <- caseID
-
-            cat("Merging NA FVS_Fuels variables to stand:",
-                standID,
-                "\n")
 
             #Merge FVS_Fuels to standOut by CASEID
             standOut <- merge(standOut,
@@ -1073,7 +1051,6 @@ main<- function(input = NULL,
           carbonDF <- RSQLite::dbGetQuery(con,
                                           dbQuery)
 
-          cat("FVS_Carbon query complete.", "\n")
           cat("Number of rows read from FVS_Carbon query",
               nrow(carbonDF),
               "\n")
@@ -1081,10 +1058,6 @@ main<- function(input = NULL,
           #If carbonDF has data, merge it to standOut
           if(nrow(carbonDF) > 0)
           {
-
-            cat("Merging FVS_Carbon variables to stand:",
-                standID,
-                "\n")
 
             #Capitalize column names
             colnames(carbonDF) <- toupper(colnames(carbonDF))
@@ -1144,7 +1117,6 @@ main<- function(input = NULL,
             #Remove carbonDF
             rm(carbonDF)
           }
-
         }
 
         #Report that FVS_Carbon table was not found in input.
@@ -1175,9 +1147,6 @@ main<- function(input = NULL,
       #Rearrange the column headers in standOut
       standOut <- standOut[, c(colNames)]
 
-      cat("\n")
-      cat("Columns in standOut:", "\n", colnames(standOut), "\n", "\n")
-
       #============================================================
       #Write stand output to CSV specified in output argument
       #============================================================
@@ -1204,7 +1173,10 @@ main<- function(input = NULL,
 
       #Update standSum and send to console
       standSum<-standSum + 1
-      cat(standSum, "stands processed out of", nrow(cases), "\n", "\n")
+      cat("\n")
+      cat(paste0(rep("*", 75), collapse = ""), "\n")
+      cat(standSum, "stands processed out of", nrow(cases), "\n")
+      cat(paste0(rep("*", 75), collapse = ""), "\n", "\n")
 
       #Remove standDF and standOut
       rm(standDF, standOut)
@@ -1243,8 +1215,37 @@ main<- function(input = NULL,
 
   #Disconnect from con
   RSQLite::dbDisconnect(con)
-  cat("Disconnected from input database:", input, "\n")
+  cat("Disconnected from input database:", input, "\n", "\n")
+
+  #=============================================================================
+  #Determine how long main function took to process (approximate)
+  #=============================================================================
+
+  #Set the end time of function execution
+  endTime <- Sys.time()
+
+  #Determine duration in seconds for function execution
+  duration <- as.numeric(difftime(endTime,
+                                  startTime,
+                                  units = "secs"))
+  duration <- round(duration, 0)
+
+  #Determine hours
+  hours <- floor(duration/3600)
+
+  #Determine minutes
+  mins <- floor(duration/60) %% 60
+
+  #Determine seconds
+  secs <- duration %% 60
+
+  #Print startTime, endTime, total processing time and end of program
+  cat(paste("Start time:", startTime, "\n"))
+  cat(paste("End time:", endTime, "\n"))
+  cat("Total processing time:", hours, "hours", mins, "minutes", secs,
+      "seconds", "\n")
+  cat("End of program.")
 
   #Return from function main
-  return(cat("End of program.", "\n"))
+  return(invisible(0))
 }
