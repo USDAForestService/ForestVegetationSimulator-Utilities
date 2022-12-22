@@ -170,6 +170,16 @@
 #              value will not be included in the output argument. By default,
 #              this value is set to 0 (all data will be included in output).
 #
+#setIndices:   Logical variable, where if TRUE, CaseID indices will be created
+#              in FVS database tables found in input argument. These indices
+#              significantly increase the speed of SQL queries executed in the
+#              main function. This argument DOES NOT need to be set to TRUE when
+#              users are processing an output database produced by the FVS
+#              graphical user interface (local or online configuration of FVS).
+#              This function should only be invoked when a user produces an
+#              output database through rFVS or FVS run through the command line.
+#              By default, this argument is set to FALSE (F).
+#
 #Value
 #
 #0 value invisibly returned.
@@ -190,7 +200,8 @@ main<- function(input = NULL,
                 vol1DBH = 0.1,
                 vol2DBH = 5,
                 vol3DBH = 9,
-                startYear = 0)
+                startYear = 0,
+                setIndices = F)
 {
   #Set the start time of function execution
   startTime <- Sys.time()
@@ -375,7 +386,8 @@ main<- function(input = NULL,
                          addCompute = addCompute,
                          addPotFire = addPotFire,
                          addFuels = addFuels,
-                         addCarbon = addCarbon)
+                         addCarbon = addCarbon,
+                         setIndices = setIndices)
 
   #If checkDBTables function returns a message that is not 'PASS' then
   #disconnect from con and stop with error message.
@@ -390,6 +402,24 @@ main<- function(input = NULL,
 
   #Reset runTitles to what is in RUNTITLES column of runs data frame.
   runTitles <- runs$RUNTITLE
+
+  #===========================================================================
+  #If setIndices is true, then create CaseID indices for each FVS table in
+  #input.
+  #===========================================================================
+
+  if(setIndices)
+  {
+    cat("Setting Case ID indices in:", input,
+        "\n",
+        "\n")
+
+    setCaseIndices(con)
+
+    cat("Case ID indices set in:", input,
+        "\n",
+        "\n")
+  }
 
   #===========================================================================
   #Begin loop across FVS run titles (runTitles)
@@ -557,6 +587,15 @@ main<- function(input = NULL,
           next
         }
 
+        #Calculate basal and percent canopy cover for each tree record
+        standYrDF$TREEBA <- standYrDF$DBH^2 * standYrDF$TPA * 0.005454
+        standYrDF$TREECC <- pi * (standYrDF$CrWidth/2)^2 *
+          (standYrDF$TPA/43560) * 100
+
+        #Sort standYrDF from largest to smallest diameter. This is donin preparation for qmdTop20 function.
+        #Sort data from largest to smallest diameter
+        standYrDF <- standYrDF[order(-standYrDF$DBH),]
+
         #Create dataframe that will store output for the stand in a given year.
         yrOutput<-data.frame(RUNTITLE = run,
                              CASEID = caseID,
@@ -586,19 +625,9 @@ main<- function(input = NULL,
             yrOutput$VOL1 <- volume["VOL1"]
             yrOutput$VOL2 <- volume["VOL2"]
             yrOutput$VOL3 <- volume["VOL3"]
-
-            deadVolume <- volumeCalc(standYrDF,
-                                     vol1 = "MCuFt",
-                                     vol2 = "SCuFt",
-                                     vol3 = "SBdFt",
-                                     expf = "MortPA",
-                                     vol1DBH = vol1DBH,
-                                     vol2DBH = vol2DBH,
-                                     vol3DBH = vol3DBH)
-
-            yrOutput$DEADVOL1 <- deadVolume["VOL1"]
-            yrOutput$DEADVOL2 <- deadVolume["VOL2"]
-            yrOutput$DEADVOL3 <- deadVolume["VOL3"]
+            yrOutput$DEADVOL1 <- volume["VOL4"]
+            yrOutput$DEADVOL2 <- volume["VOL5"]
+            yrOutput$DEADVOL3 <- volume["VOL6"]
           }
 
           #Logic for all other variants
@@ -612,16 +641,9 @@ main<- function(input = NULL,
             yrOutput$VOL1 <- volume["VOL1"]
             yrOutput$VOL2 <- volume["VOL2"]
             yrOutput$VOL3 <- volume["VOL3"]
-
-            deadVolume <- volumeCalc(standYrDF,
-                                     expf = "MortPA",
-                                     vol1DBH = vol1DBH,
-                                     vol2DBH = vol2DBH,
-                                     vol3DBH = vol3DBH)
-
-            yrOutput$DEADVOL1 <- deadVolume["VOL1"]
-            yrOutput$DEADVOL2 <- deadVolume["VOL2"]
-            yrOutput$DEADVOL3 <- deadVolume["VOL3"]
+            yrOutput$DEADVOL1 <- volume["VOL4"]
+            yrOutput$DEADVOL2 <- volume["VOL5"]
+            yrOutput$DEADVOL3 <- volume["VOL6"]
           }
         }
 
@@ -1212,6 +1234,24 @@ main<- function(input = NULL,
   cat(paste0(rep("*", 75), collapse = ""), "\n")
   cat("*", "Finished processing all runs.", "\n")
   cat(paste0(rep("*", 75), collapse = ""), "\n")
+
+  #===========================================================================
+  #If setIndices is true, then remove CaseID indices for each FVS table in
+  #input that were previously created by setCaseIndices.
+  #===========================================================================
+
+  if(setIndices)
+  {
+    cat("Removing Case ID indices from:", input,
+        "\n",
+        "\n")
+
+    removeCaseIndices(con)
+
+    cat("Case ID indices removed from:", input,
+        "\n",
+        "\n")
+  }
 
   #Disconnect from con
   RSQLite::dbDisconnect(con)

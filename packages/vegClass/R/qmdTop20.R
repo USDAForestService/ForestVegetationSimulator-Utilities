@@ -34,6 +34,12 @@
 #
 #CC:      Percent canopy cover corrected for overlap for plot/stand.
 #
+#sortData: Logical variable used to determine if input dataframe should be
+#          sorted in qmdTop20 function call. Data argument will not be sorted
+#          from largest to smallest diameter when this function is called
+#          outside of main function (main.R). By default, this argument is set
+#          to false.
+#
 #debug:   logical variable indicating if debug statements should be printed. By
 #         default this value is set to FALSE.
 #
@@ -49,6 +55,7 @@ qmdTop20 <- function(data,
                      expf = "TPA",
                      TPA,
                      CC,
+                     sortData = F,
                      debug = F)
 {
   if(debug)
@@ -71,8 +78,11 @@ qmdTop20 <- function(data,
     return(NA)
   }
 
-  #Sort data from largest to smallest diameter
-  data <- data[order(-data[[dbh]]),]
+  #Sort data from largest to smallest diameter if sortData is TRUE
+  if(sortData)
+  {
+    data <- data[order(-data[[dbh]]),]
+  }
 
   #If CC is greater than or equal to 10, set min to 0.2
   if(CC >= 10) minDBH = 0.2

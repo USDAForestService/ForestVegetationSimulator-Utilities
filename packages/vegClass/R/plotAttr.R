@@ -245,6 +245,10 @@ correctCC<-function(CC)
 #         tree records in data argument. By default, this argument is set to
 #         "TPA".
 #
+#expfM:   Character string corresponding to name of column pertaining to TPA of
+#         tree records that died during a cycle in argument. By default, this
+#         argument is set to "MortPA".
+#
 #vol1:    Character string corresponding to name of column pertaining to total
 #         cubic foot volume of tree records in data argument. By default, this
 #         argument is set to "TCuFt".
@@ -279,6 +283,15 @@ correctCC<-function(CC)
 #
 #VOL3:    Merchantable board foot volume (western regions) / sawlog board
 #         foot volume (eastern regions)
+#
+#VOL4:    Total cubic foot volume (western regions) / merchantable cubic foot
+#         volume (eastern regions) that died during cycle.
+#
+#VOL5:    Merchantable cubic foot volume (western regions) / sawlog cubic
+#         foot volume (eastern regions) that died during cycle.
+#
+#VOL6:    Merchantable board foot volume (western regions) / sawlog board
+#         foot volume (eastern regions) that died during cycle.
 ################################################################################
 
 #'@export
@@ -286,6 +299,7 @@ volumeCalc <- function(data,
                        stand = "StandID",
                        dbh = "DBH",
                        expf = "TPA",
+                       expfM = "MortPA",
                        vol1 = "TCuFt",
                        vol2 = "MCuFt",
                        vol3 = "BdFt",
@@ -301,6 +315,7 @@ volumeCalc <- function(data,
         "Stand:", stand, "\n",
         "dbh:", dbh, "\n",
         "expf:", expf, "\n",
+        "expfM:", expfM, "\n",
         "vol1:", vol1, "\n",
         "vol2:", vol2, "\n",
         "vol3:", vol3, "\n",
@@ -312,10 +327,13 @@ volumeCalc <- function(data,
   #Initialize volume vector that will be returned
   volume <- c("VOL1" = 0,
               "VOL2" = 0,
-              "VOL3" = 0)
+              "VOL3" = 0,
+              "VOL4" = 0,
+              "VOL5" = 0,
+              "VOL6" = 0)
 
   #Check for missing columns in data
-  missing <- c(dbh, expf, stand, vol1, vol2, vol3) %in% colnames(data)
+  missing <- c(dbh, expf, expfM, stand, vol1, vol2, vol3) %in% colnames(data)
 
   #If name of columns provided in stand, dbh, expf, vol1 - vol3 are not found in
   #data warning message is issued and 0 values are returned.
@@ -345,8 +363,29 @@ volumeCalc <- function(data,
     #If DBH of record is GE vol3DBH, add vol3 * expf to VOL3 in volume vector
     if(data[[dbh]][i] >= vol3DBH)
     {
-      #Accumulate volume 2 values
+      #Accumulate volume 3 values
       volume["VOL3"] <- volume["VOL3"] + data[[vol3]][i] * data[[expf]][i]
+    }
+
+    #If DBH of record is GE vol1DBH, add vol1 * expfM to VOL4 in volume vector
+    if(data[[dbh]][i] >= vol1DBH)
+    {
+      #Accumulate volume 1 values
+      volume["VOL4"] <- volume["VOL4"] + data[[vol1]][i] * data[[expfM]][i]
+    }
+
+    #If DBH of record is GE vol2DBH, add vol2 * expfM to VOL5 in volume vector
+    if(data[[dbh]][i] >= vol2DBH)
+    {
+      #Accumulate volume 2 values
+      volume["VOL5"] <- volume["VOL5"] + data[[vol2]][i] * data[[expfM]][i]
+    }
+
+    #If DBH of record is GE vol3DBH, add vol3 * expfM to VOL6 in volume vector
+    if(data[[dbh]][i] >= vol3DBH)
+    {
+      #Accumulate volume 3 values
+      volume["VOL6"] <- volume["VOL6"] + data[[vol3]][i] * data[[expfM]][i]
     }
   }
 
@@ -356,7 +395,10 @@ volumeCalc <- function(data,
     cat("Stand:", unique(data[[stand]]), "\n")
     cat("VOL1:", volume["VOL1"], "\n")
     cat("VOL2:", volume["VOL2"], "\n")
-    cat("VOL3:", volume["VOL3"], "\n", "\n")
+    cat("VOL3:", volume["VOL3"], "\n")
+    cat("VOL4:", volume["VOL4"], "\n")
+    cat("VOL5:", volume["VOL5"], "\n")
+    cat("VOL6:", volume["VOL6"], "\n","\n")
   }
 
   #Return volume
