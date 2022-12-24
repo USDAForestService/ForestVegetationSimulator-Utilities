@@ -169,6 +169,20 @@
 #              being reported in output argument. Data with years prior to this
 #              value will not be included in the output argument. By default,
 #              this value is set to 0 (all data will be included in output).
+#
+#setIndices:   Logical variable, where if TRUE, CaseID indices will be created
+#              in FVS database tables found in input argument. These indices
+#              significantly increase the speed of SQL queries executed in the
+#              main function. This argument DOES NOT need to be set to TRUE when
+#              users are processing an output database produced by the FVS
+#              graphical user interface (local or online configuration of FVS).
+#              This function should only be invoked when a user produces an
+#              output database through rFVS or FVS run through the command line.
+#              By default, this argument is set to FALSE (F).
+#
+#Value
+#
+#0 value invisibly returned.
 ################################################################################
 
 #'@export
@@ -186,8 +200,12 @@ main<- function(input = NULL,
                 vol1DBH = 0.1,
                 vol2DBH = 5,
                 vol3DBH = 9,
-                startYear = 0)
+                startYear = 0,
+                setIndices = F)
 {
+  #Set the start time of function execution
+  startTime <- Sys.time()
+
   ###########################################################################
   #Check function arguments
   ###########################################################################
@@ -342,6 +360,8 @@ main<- function(input = NULL,
   #FVS_PotFire, FVS_PotFire_East (if addPotFire is TRUE)
   #FVS_Fuels (if addFuels is TRUE)
   #FVS_Carbon (if addCarbon is TRUE)
+  #If setIndices is TRUE, check if input database has indexes that are used
+  #by main function.
   #==========================================================================
 
   #Grab all distinct runs and variants from FVS_Cases
@@ -368,7 +388,8 @@ main<- function(input = NULL,
                          addCompute = addCompute,
                          addPotFire = addPotFire,
                          addFuels = addFuels,
-                         addCarbon = addCarbon)
+                         addCarbon = addCarbon,
+                         setIndices = setIndices)
 
   #If checkDBTables function returns a message that is not 'PASS' then
   #disconnect from con and stop with error message.
@@ -383,6 +404,24 @@ main<- function(input = NULL,
 
   #Reset runTitles to what is in RUNTITLES column of runs data frame.
   runTitles <- runs$RUNTITLE
+
+  #===========================================================================
+  #If setIndices is true, then create CaseID indices for each FVS table in
+  #input.
+  #===========================================================================
+
+  if(setIndices)
+  {
+    cat("Setting Case ID indices in:", input,
+        "\n",
+        "\n")
+
+    setCaseIndices(con)
+
+    cat("Case ID indices set in:", input,
+        "\n",
+        "\n")
+  }
 
   #===========================================================================
   #Begin loop across FVS run titles (runTitles)
@@ -464,8 +503,6 @@ main<- function(input = NULL,
       #Execute SQL query to obtain list of stand data
       standDF<-RSQLite::dbGetQuery(con,
                                    dbQuery)
-
-      cat("Tree list query complete.", "\n")
 
       #Display column names and number of rows in standDF
       cat("Columns read from tree list:", colnames(standDF), "\n")
@@ -552,6 +589,11 @@ main<- function(input = NULL,
           next
         }
 
+        #Calculate basal and percent canopy cover for each tree record
+        standYrDF$TREEBA <- standYrDF$DBH^2 * standYrDF$TPA * 0.005454
+        standYrDF$TREECC <- pi * (standYrDF$CrWidth/2)^2 *
+          (standYrDF$TPA/43560) * 100
+
         #Create dataframe that will store output for the stand in a given year.
         yrOutput<-data.frame(RUNTITLE = run,
                              CASEID = caseID,
@@ -581,19 +623,9 @@ main<- function(input = NULL,
             yrOutput$VOL1 <- volume["VOL1"]
             yrOutput$VOL2 <- volume["VOL2"]
             yrOutput$VOL3 <- volume["VOL3"]
-
-            deadVolume <- volumeCalc(standYrDF,
-                                     vol1 = "MCuFt",
-                                     vol2 = "SCuFt",
-                                     vol3 = "SBdFt",
-                                     expf = "MortPA",
-                                     vol1DBH = vol1DBH,
-                                     vol2DBH = vol2DBH,
-                                     vol3DBH = vol3DBH)
-
-            yrOutput$DEADVOL1 <- deadVolume["VOL1"]
-            yrOutput$DEADVOL2 <- deadVolume["VOL2"]
-            yrOutput$DEADVOL3 <- deadVolume["VOL3"]
+            yrOutput$DEADVOL1 <- volume["VOL4"]
+            yrOutput$DEADVOL2 <- volume["VOL5"]
+            yrOutput$DEADVOL3 <- volume["VOL6"]
           }
 
           #Logic for all other variants
@@ -607,16 +639,9 @@ main<- function(input = NULL,
             yrOutput$VOL1 <- volume["VOL1"]
             yrOutput$VOL2 <- volume["VOL2"]
             yrOutput$VOL3 <- volume["VOL3"]
-
-            deadVolume <- volumeCalc(standYrDF,
-                                     expf = "MortPA",
-                                     vol1DBH = vol1DBH,
-                                     vol2DBH = vol2DBH,
-                                     vol3DBH = vol3DBH)
-
-            yrOutput$DEADVOL1 <- deadVolume["VOL1"]
-            yrOutput$DEADVOL2 <- deadVolume["VOL2"]
-            yrOutput$DEADVOL3 <- deadVolume["VOL3"]
+            yrOutput$DEADVOL1 <- volume["VOL4"]
+            yrOutput$DEADVOL2 <- volume["VOL5"]
+            yrOutput$DEADVOL3 <- volume["VOL6"]
           }
         }
 
@@ -679,7 +704,6 @@ main<- function(input = NULL,
           computeDF <- RSQLite::dbGetQuery(con,
                                            dbQuery)
 
-          cat("FVS_Compute query complete.", "\n")
           cat("Number of rows read from compute query",
               nrow(computeDF),
               "\n")
@@ -687,10 +711,6 @@ main<- function(input = NULL,
           #If computeDF has data, merge it to standOut
           if(nrow(computeDF) > 0)
           {
-
-            cat("Merging FVS_Compute variables to stand:",
-                standID,
-                "\n")
 
             #Capitalize column names
             colnames(computeDF) <- toupper(colnames(computeDF))
@@ -731,10 +751,6 @@ main<- function(input = NULL,
 
             #Assign caseID to CASEID column
             computeDF$CASEID <- caseID
-
-            cat("Merging NA FVS_Compute variables to stand:",
-                standID,
-                "\n")
 
             #Merge computeDF to standOut by CASEID
             standOut <- merge(standOut,
@@ -799,7 +815,6 @@ main<- function(input = NULL,
           potFireDF <- RSQLite::dbGetQuery(con,
                                            dbQuery)
 
-          cat("FVS_PotFire query complete.", "\n")
           cat("Number of rows read from FVS_PotFire query",
               nrow(potFireDF),
               "\n")
@@ -807,10 +822,6 @@ main<- function(input = NULL,
           #If potFireDF has data, merge it to standOut
           if(nrow(potFireDF) > 0)
           {
-
-            cat("Merging FVS_PotFire variables to stand:",
-                standID,
-                "\n")
 
             #Capitalize column names
             colnames(potFireDF) <- toupper(colnames(potFireDF))
@@ -912,10 +923,6 @@ main<- function(input = NULL,
             #Assign caseID to CASEID column
             potFireDF$CASEID <- caseID
 
-            cat("Merging NA FVS_Potfire variables to stand:",
-                standID,
-                "\n")
-
             #Merge FVS_Potfire to standOut by CASEID
             standOut <- merge(standOut,
                               potFireDF,
@@ -966,7 +973,6 @@ main<- function(input = NULL,
           fuelsDF <- RSQLite::dbGetQuery(con,
                                          dbQuery)
 
-          cat("FVS_Fuels query complete.", "\n")
           cat("Number of rows read from FVS_Fuels query",
               nrow(fuelsDF),
               "\n")
@@ -974,10 +980,6 @@ main<- function(input = NULL,
           #If fuelsDF has data, merge it to standOut
           if(nrow(fuelsDF) > 0)
           {
-
-            cat("Merging FVS_Fuels variables to stand:",
-                standID,
-                "\n")
 
             #Capitalize column names
             colnames(fuelsDF) <- toupper(colnames(fuelsDF))
@@ -1018,10 +1020,6 @@ main<- function(input = NULL,
 
             #Assign caseID to CASEID column
             fuelsDF$CASEID <- caseID
-
-            cat("Merging NA FVS_Fuels variables to stand:",
-                standID,
-                "\n")
 
             #Merge FVS_Fuels to standOut by CASEID
             standOut <- merge(standOut,
@@ -1073,7 +1071,6 @@ main<- function(input = NULL,
           carbonDF <- RSQLite::dbGetQuery(con,
                                           dbQuery)
 
-          cat("FVS_Carbon query complete.", "\n")
           cat("Number of rows read from FVS_Carbon query",
               nrow(carbonDF),
               "\n")
@@ -1081,10 +1078,6 @@ main<- function(input = NULL,
           #If carbonDF has data, merge it to standOut
           if(nrow(carbonDF) > 0)
           {
-
-            cat("Merging FVS_Carbon variables to stand:",
-                standID,
-                "\n")
 
             #Capitalize column names
             colnames(carbonDF) <- toupper(colnames(carbonDF))
@@ -1144,7 +1137,6 @@ main<- function(input = NULL,
             #Remove carbonDF
             rm(carbonDF)
           }
-
         }
 
         #Report that FVS_Carbon table was not found in input.
@@ -1175,9 +1167,6 @@ main<- function(input = NULL,
       #Rearrange the column headers in standOut
       standOut <- standOut[, c(colNames)]
 
-      cat("\n")
-      cat("Columns in standOut:", "\n", colnames(standOut), "\n", "\n")
-
       #============================================================
       #Write stand output to CSV specified in output argument
       #============================================================
@@ -1204,7 +1193,10 @@ main<- function(input = NULL,
 
       #Update standSum and send to console
       standSum<-standSum + 1
-      cat(standSum, "stands processed out of", nrow(cases), "\n", "\n")
+      cat("\n")
+      cat(paste0(rep("*", 75), collapse = ""), "\n")
+      cat(standSum, "stands processed out of", nrow(cases), "\n")
+      cat(paste0(rep("*", 75), collapse = ""), "\n", "\n")
 
       #Remove standDF and standOut
       rm(standDF, standOut)
@@ -1241,10 +1233,57 @@ main<- function(input = NULL,
   cat("*", "Finished processing all runs.", "\n")
   cat(paste0(rep("*", 75), collapse = ""), "\n")
 
+  #===========================================================================
+  #If setIndices is true, then remove CaseID indices for each FVS table in
+  #input that were previously created by setCaseIndices.
+  #===========================================================================
+
+  if(setIndices)
+  {
+    cat("Removing Case ID indices from:", input,
+        "\n",
+        "\n")
+
+    removeCaseIndices(con)
+
+    cat("Case ID indices removed from:", input,
+        "\n",
+        "\n")
+  }
+
   #Disconnect from con
   RSQLite::dbDisconnect(con)
-  cat("Disconnected from input database:", input, "\n")
+  cat("Disconnected from input database:", input, "\n", "\n")
+
+  #=============================================================================
+  #Determine how long main function took to process (approximate)
+  #=============================================================================
+
+  #Set the end time of function execution
+  endTime <- Sys.time()
+
+  #Determine duration in seconds for function execution
+  duration <- as.numeric(difftime(endTime,
+                                  startTime,
+                                  units = "secs"))
+  duration <- round(duration, 0)
+
+  #Determine hours
+  hours <- floor(duration/3600)
+
+  #Determine minutes
+  mins <- floor(duration/60) %% 60
+
+  #Determine seconds
+  secs <- duration %% 60
+
+  #Print startTime, endTime, total processing time and end of program
+  cat(paste("Start time:", startTime, "\n"))
+  cat(paste("End time:", endTime, "\n"))
+  cat("Total processing time:", hours, "hours", mins, "minutes", secs,
+      "seconds", "\n")
+  cat("End of program.")
 
   #Return from function main
-  return(cat("End of program.", "\n"))
+  return(invisible(0))
 }

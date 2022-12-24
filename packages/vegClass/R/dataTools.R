@@ -242,6 +242,45 @@ pvConvert<-function(pv)
 }
 
 ################################################################################
+#Function addERUGroup
+#
+#This function adds an ERU group label to GROUPS column of FVS_STANDINIT,
+#FVS_PLOTINIT, FVS_STANDINIT_PLOT, FVS_STANDINIT_COND, FVS_PLOTININT_PLOT for
+#PPF. This function is called from dbCombine when addERU is TRUE.
+#
+#Arguments
+#
+#group: character string of FVS group labels
+#
+#eru:   character string representing ERU code.
+#
+#Return value
+#
+#ERU code.
+################################################################################
+
+addERUGroup <- function(group, eru)
+{
+  #If eru is NA return group
+  if(is.na(eru))
+  {
+    return(group)
+  }
+
+  #Add ERU grouping code to group
+  group <- paste(group, paste0("ERU=", eru))
+
+  #If ERU is PPG or PPO, then add an additional grouping code for PPF
+  if(eru == 'PPG' | eru == 'PPO')
+  {
+    group <- paste(group, "ERU=PPF")
+  }
+
+  #Return group
+  return(group)
+}
+
+################################################################################
 #Function: dbCombine
 #
 #This function is used to read in database tables from input FVS-ready data sets
@@ -493,7 +532,7 @@ dbCombine <- function(dbIn = NULL,
     fileExtIn<-sub("(.*)\\.","",db)
 
     #Display file extension in console
-    cat("File extension of db:",
+    cat("File extension:",
         fileExtIn,
         "\n",
         "\n")
@@ -515,7 +554,7 @@ dbCombine <- function(dbIn = NULL,
                         "xxxvegClassdbCombineUnzipxxx",
                         sep = "/")
 
-      cat("Unzipping:", db, "through", unzipDir, "\n")
+      cat("Unzipping:", db, "to", unzipDir, "\n", "\n")
 
       #Unzip the file
       unzip(zipfile = db,
@@ -528,9 +567,6 @@ dbCombine <- function(dbIn = NULL,
                            pattern = ".db",
                            full.names = T,
                            recursive = T)
-      cat("Files found in dbList:",
-          paste(dbList, sep = "\n"),
-          "\n")
 
       #If dbList is empty move to next iteration of loop
       if(length(dbList) <= 0)
@@ -543,11 +579,7 @@ dbCombine <- function(dbIn = NULL,
       #dbInUpdate.
       else
       {
-        cat("More than one file found in", db, "\n")
         dbInUpdate <- c(dbInUpdate, dbList)
-        cat("dbIn after addition of db files:",
-            dbIn,
-            "\n")
       }
     }
 
@@ -556,6 +588,26 @@ dbCombine <- function(dbIn = NULL,
     {
       dbInUpdate <- c(dbInUpdate, db)
     }
+  }
+
+  #If dbInUpdate does not have any databases, then stop with error message and
+  #delete unzip directory if it exists.
+  if(length(dbInUpdate) <= 0)
+  {
+    #Check if unzipDir exists. If it does, delete it.
+    if(file.exists(unzipDir))
+    {
+      retCode <- unlink(unzipDir,
+                        recursive = T,
+                        force = T)
+
+      if(retCode != 0)
+      {
+        cat("Failed to delete temporary unzip directory:", unzipDir, "\n")
+      }
+    }
+
+    stop("No valid database files (.db) are available for processing.")
   }
 
   #Remove duplicate values in dbInUpdate
@@ -661,11 +713,6 @@ dbCombine <- function(dbIn = NULL,
       unlink(db,
              force = T)
     }
-
-    if(deleteInput)
-    {
-      unlink(db)
-    }
   }
 
   #Determine if GAAK table should be written to dbOut.
@@ -686,6 +733,24 @@ dbCombine <- function(dbIn = NULL,
 
     #Disconnect from conOut
     RSQLite::dbDisconnect(conOut)
+  }
+
+  #If deleteInput is TRUE, loop through dbIn and delete files.
+  if(deleteInput)
+  {
+    for(i in 1:length(dbIn))
+    {
+      cat(paste("deleteInput is TRUE.",
+                "Deleting database:", dbIn[i],
+                "\n", "\n"))
+
+      retCode <- unlink(dbIn[i])
+
+      if(retCode != 0)
+      {
+        cat("Failed to delete:", dbIn[i], "\n", "\n")
+      }
+    }
   }
 
   #Before returning, delete unzipDir if it exists.
@@ -1023,10 +1088,10 @@ addDbTable<-function(db,
       #Cross walk PV_CODE to ERU
       dbTable$ERU<-mapply(pvConvert, dbTable$PV_CODE)
 
-      #Paste ERU to GROUPS field with an "ERU=" tag.
-      dbTable$GROUPS<-paste(dbTable$GROUPS,
-                            paste0("ERU=",
-                                   dbTable$ERU))
+      #Add ERU grouping code
+      dbTable$GROUPS<-mapply(addERUGroup,
+                             dbTable$GROUPS,
+                             dbTable$ERU)
     }
   }
 
@@ -1330,10 +1395,10 @@ addDbRows<-function(db,
         #Cross walk PV_CODE to ERU
         dbTable$ERU<-mapply(pvConvert, dbTable$PV_CODE)
 
-        #Paste ERU to GROUPS field with an ERU= tag
-        dbTable$GROUPS<-paste(dbTable$GROUPS,
-                              paste0("ERU=",
-                                     dbTable$ERU))
+        #Add ERU grouping code
+        dbTable$GROUPS<-mapply(addERUGroup,
+                               dbTable$GROUPS,
+                               dbTable$ERU)
       }
     }
 

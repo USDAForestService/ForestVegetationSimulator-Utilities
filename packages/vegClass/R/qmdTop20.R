@@ -49,6 +49,7 @@ qmdTop20 <- function(data,
                      expf = "TPA",
                      TPA,
                      CC,
+                     sortData = F,
                      debug = F)
 {
   if(debug)

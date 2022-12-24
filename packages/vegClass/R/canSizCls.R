@@ -100,8 +100,12 @@ canSizeCl<-function(data,
   #Statement used to avoid NOTE when stateTrans package is built.
   DC<-NULL
 
-  #Calculate percent canopy cover for each tree record
-  data$TREECC <- pi * (data[[crwidth]]/2)^2 *(data[[expf]]/43560) * 100
+  #Calculate percent canopy cover for each tree record if TREECC does not
+  #exist in data
+  if(! "TREECC" %in% colnames(data))
+  {
+    data$TREECC <- pi * (data[[crwidth]]/2)^2 *(data[[expf]]/43560) * 100
+  }
 
   #If plot CC is less than 10% and TPA less than 100, then cansizcl is 0
   if(CC < 10 & TPA < 100)
