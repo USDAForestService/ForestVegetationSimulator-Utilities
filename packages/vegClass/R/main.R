@@ -360,6 +360,8 @@ main<- function(input = NULL,
   #FVS_PotFire, FVS_PotFire_East (if addPotFire is TRUE)
   #FVS_Fuels (if addFuels is TRUE)
   #FVS_Carbon (if addCarbon is TRUE)
+  #If setIndices is TRUE, check if input database has indexes that are used
+  #by main function.
   #==========================================================================
 
   #Grab all distinct runs and variants from FVS_Cases
@@ -591,10 +593,6 @@ main<- function(input = NULL,
         standYrDF$TREEBA <- standYrDF$DBH^2 * standYrDF$TPA * 0.005454
         standYrDF$TREECC <- pi * (standYrDF$CrWidth/2)^2 *
           (standYrDF$TPA/43560) * 100
-
-        #Sort standYrDF from largest to smallest diameter. This is donin preparation for qmdTop20 function.
-        #Sort data from largest to smallest diameter
-        standYrDF <- standYrDF[order(-standYrDF$DBH),]
 
         #Create dataframe that will store output for the stand in a given year.
         yrOutput<-data.frame(RUNTITLE = run,

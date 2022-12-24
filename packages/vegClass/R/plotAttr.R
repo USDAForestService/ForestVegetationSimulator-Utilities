@@ -39,7 +39,7 @@
 #         argument is set to "CrWidth".
 #
 #min:     Minimum diameter to consider in calculation of plot attributes. By
-#         default this argument is set to 0.1.
+#         default this argument is set to 0.
 #
 #max:     Maximum diameter to consider in calculation of plot attributes. By
 #         default this argument is set to 999.
@@ -59,7 +59,7 @@ plotAttr <- function(data,
                      ht = "Ht",
                      crwidth = "CrWidth",
                      expf = "TPA",
-                     min = 0.1,
+                     min = 0,
                      max = 999,
                      debug = F,
                      type = 1)
@@ -262,7 +262,7 @@ correctCC<-function(CC)
 #         argument is set to "BdFt".
 #
 #vol1DBH: Minimum DBH of tree records included in calculation of vol1. By
-#         default this argument is set to 0.1.
+#         default this argument is set to 0.
 #
 #vol2DBH: Minimum DBH of tree records included in calculation of vol2. By
 #         default this argument is set to 5.
@@ -303,7 +303,7 @@ volumeCalc <- function(data,
                        vol1 = "TCuFt",
                        vol2 = "MCuFt",
                        vol3 = "BdFt",
-                       vol1DBH = 0.1,
+                       vol1DBH = 0,
                        vol2DBH = 5,
                        vol3DBH = 9,
                        debug = F)
