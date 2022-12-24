@@ -112,8 +112,12 @@ domType<-function(data,
   xdcc1<-0
   xdcc2<-0
 
-  #Calculate percent canopy cover for each tree record
-  data$TREECC <- pi * (data[[crwidth]]/2)^2 *(data[[expf]]/43560) * 100
+  #Calculate percent canopy cover for each tree record if TREECC does not
+  #exist in data
+  if(! "TREECC" %in% colnames(data))
+  {
+    data$TREECC <- pi * (data[[crwidth]]/2)^2 *(data[[expf]]/43560) * 100
+  }
 
   #Print CC and TPA if debug is TRUE
   if(debug) cat("CC of plot is", CC, "\n")

@@ -29,6 +29,10 @@
 #            table should be included in output. Refer to main function in
 #            main.R for further details.
 #
+#setIndices: Logical variable used to indicate if Case ID indices should be
+#            created in input argument. Refer to main function in main.R for
+#            further details.
+#
 #Value
 #
 #Character string containing message.
@@ -39,7 +43,8 @@ checkDBTables<-function(con,
                         addCompute,
                         addPotFire,
                         addFuels,
-                        addCarbon)
+                        addCarbon,
+                        setIndices)
 {
   #Flag variable used to determine if further checks should be made on incoming
   #database con.
@@ -204,6 +209,46 @@ checkDBTables<-function(con,
       #Assign value of F to validDB. Database (con) is not ready for
       #processing.
       validDB = F
+    }
+  }
+
+  #=============================================================================
+  #If setIndices is TRUE, check for index names used in main function. If index
+  #names used by main function exist, change message and set validDB to F.
+  #=============================================================================
+
+  if(validDB & setIndices)
+  {
+    #Check if index names exist in input
+    indexNames <- getIndexNames(con)
+
+    #If there are index names, check them against ones used by main function
+    if(length(indexNames) > 0)
+    {
+      #Replace IDX_ with FVS_ in indexNames
+      fvsIndexNames <- sub("IDX_", "FVS_", indexNames)
+
+      #Retrieve table names from input
+      dbTables <- RSQLite::dbListTables(con)
+
+      #Find tables in fvsIndexNames that exist in dbTables
+      tableMatches <- fvsIndexNames %in% dbTables
+
+      #If there is at least one single match in tableMatches, then change
+      #message and set validDB to F.
+      if(TRUE %in% tableMatches)
+      {
+        message <- paste("The following index names used by main function",
+                         "already exist in input database:", "\n",
+                         paste(indexNames[tableMatches],collapse = ", "),
+                         "\n",
+                         "Set the setIndices argument to FALSE or change index",
+                         "names in input database.")
+
+        #Assign value of F to validDB. Database (con) is not ready for
+        #processing.
+        validDB = F
+      }
     }
   }
 
@@ -617,6 +662,193 @@ carbonQuery<-function(cases)
   }
 
   return(query)
+}
+
+################################################################################
+#Function: getIndexNames
+#
+#This function returns the names of indices that exist in input database
+#argument.
+#
+#Arguments
+#
+#input: Connection to a SQLite database (.db)
+#
+#Value
+#
+#Character vector of index names that exist in input argument.
+################################################################################
+
+#'@export
+getIndexNames <- function(input)
+{
+  #Initialize character vector of length zero
+  indexNames <- vector(mode = "character")
+
+  #Get type and name column
+  tables = RSQLite::dbGetQuery(input,"select * from sqlite_master")[,1:2]
+
+  #Extract index values from type column
+  tables <- tables[tables$type == 'index',]
+
+  #If there are indexes in tables, retrieve them
+  if(nrow(tables) > 0)
+  {
+    indexNames <- tables$name
+  }
+
+  #If there are no indexes in tables, set indexNames to "No index names found in
+  #database"
+  if(length(indexNames) <= 0)
+  {
+    indexNames <- "No index names found in database"
+  }
+
+  return(indexNames)
+}
+
+################################################################################
+#Function: setCaseIndices
+#
+#This function creates indices on CaseID field for all FVS database tables found
+#in input database argument. This function should be used if input database in
+#main function (main.R) was not created in the FVS interface (i.e rFVS or FVS
+#run through command line). Some Logic in this function was borrowed from
+#mkDBIndices function (fvsRunUtilities.R).
+#
+#Arguments
+#
+#input: Connection to a SQLite database (.db)
+#
+#Value
+#
+#0 value returned invisibly. A value of 1 is returned invisibly if no database
+#tables were found in input argument.
+################################################################################
+
+#'@export
+setCaseIndices <- function(input)
+{
+  #Extract database tables from input connection
+  dbTables <- RSQLite::dbListTables(input)
+
+  #If there are no database tables return
+  if(length(dbTables) <= 0)
+  {
+    return(invisible(1))
+  }
+
+  #Loop across dbTables and set CaseID indices
+  for(i in 1:length(dbTables))
+  {
+    #Extract database table
+    dbTab <- dbTables[i]
+    cat("Processing table:", dbTab, "\n")
+
+    #Extract fields in dbTab
+    dbFields <- RSQLite::dbListFields(input,
+                                      dbTab)
+
+    #If there are no fields in dbTab, move to next table
+    if(length(dbFields) <= 0)
+    {
+      cat("No fields found in table:", dbTab, "\n")
+      cat("n")
+      next
+    }
+
+    #Determine if table is an FVS table. Criteria for determination is table
+    #name includes "FVS_" prefix and contains CaseID column.
+    if(grepl('FVS_', dbTab, fixed = T) & ("CaseID" %in% dbFields))
+    {
+      #Creating index for table dbTab
+      cat("Creating index for table:", dbTab, "\n")
+
+      #Strip off FVS_ prefix in dbTab
+      dbTab <- sub("FVS_", "", dbTab)
+
+      #Create index query
+      indexQuery=paste0("create index IDX_",dbTab," on FVS_",dbTab," (CaseID);")
+      cat ("indexQuery:", indexQuery, "\n")
+
+      #Use query to create index in input database.
+      RSQLite::dbExecute(input,indexQuery)
+
+      #Index for table dbTab created
+      cat("Index created for table:", paste0("FVS_", dbTab), "\n", "\n")
+    }
+  }
+  return(invisible(0))
+}
+
+################################################################################
+#Function: removeCaseIndices
+#
+#This function removes all indices created by setCaseIndices function in FVS
+#database tables found in input database argument. Some Logic in this function
+#was borrowed from mkDBIndices function (fvsRunUtilities.R).
+#
+#Arguments
+#
+#input: Connection to a SQLite database (.db)
+#
+#Value
+#
+#0 value returned invisibly. A value of 1 is returned invisibly if no database
+#tables were found in input argument.
+################################################################################
+
+#'@export
+removeCaseIndices <- function(input)
+{
+  #Extract database tables from input connection
+  dbTables <- RSQLite::dbListTables(input)
+
+  #If there are no database tables return
+  if(length(dbTables) <= 0)
+  {
+    return(invisible(1))
+  }
+
+  #Loop across dbTables and remove indices
+  for(i in 1:length(dbTables))
+  {
+    #Extract database table
+    dbTab <- dbTables[i]
+    cat("Processing table:", dbTab, "\n")
+
+    #Extract fields in dbTab
+    dbFields <- RSQLite::dbListFields(input,
+                                      dbTab)
+
+    #If length of dbFields is 0, move to next table
+    if(length(dbFields) <= 0)
+    {
+      cat("No fields found in table:", dbTab, "\n")
+      cat("n")
+      next
+    }
+
+    #Determine if table is an FVS table. Criteria for determination is table
+    #name includes "FVS_" prefix and contains CaseID column.
+    if(grepl('FVS_', dbTab, fixed = T) & ("CaseID" %in% dbFields))
+    {
+      #Remove index
+      cat("Removing index for table:", dbTab, "\n")
+
+      #Strip off FVS_ prefix in dbTab
+      dbTab <- sub("FVS_", "", dbTab)
+
+      #Drop indices if they exist
+      indexQuery=paste0("drop index if exists ","IDX_", dbTab)
+      cat ("indexQuery:", indexQuery, "\n")
+      RSQLite::dbExecute(input,indexQuery)
+
+      #Index removed from table message
+      cat("Index removed from table:", paste0("FVS_", dbTab), "\n", "\n")
+    }
+  }
+  return(invisible(0))
 }
 
 ################################################################################

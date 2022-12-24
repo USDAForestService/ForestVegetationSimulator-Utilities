@@ -70,8 +70,11 @@ baStory<-function(data,
     return(NA)
   }
 
-  #Calculate BA of each tree record
-  data$TREEBA <- data[[dbh]]^2 * data[[expf]] * 0.005454
+  #Calculate BA of each tree record if TREEBA does not exist in data.
+  if(! "TREEBA" %in% colnames(data))
+  {
+    data$TREEBA <- data[[dbh]]^2 * data[[expf]] * 0.005454
+  }
 
   #Print BA, CC, and TPA of plot
   if(debug) cat("BA of plot is", BA, "\n")
