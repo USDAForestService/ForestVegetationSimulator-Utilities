@@ -1,5 +1,5 @@
 ################################################################################
-#Function: canSizeCl
+#Function: canSizCl
 #
 #This function calculates canopy size class for stand/plot in accordance with
 #Region 3 rulesets from Vandendriesche, D., 2013. A Compendium of NFS
@@ -61,7 +61,7 @@
 ################################################################################
 
 #'@export
-canSizeCl<-function(data,
+canSizCl<-function(data,
                     stand = "StandID",
                     dbh = "DBH",
                     expf = "TPA",
@@ -74,7 +74,7 @@ canSizeCl<-function(data,
 
   if(debug)
   {
-    cat("In function canSizCls", "\n")
+    cat("In function canSizCl", "\n")
     cat("Stand:", unique(data[[stand]]), "\n")
     cat("Columns:", "\n",
         "Stand:", stand, "\n",
@@ -107,23 +107,23 @@ canSizeCl<-function(data,
     data$TREECC <- pi * (data[[crwidth]]/2)^2 *(data[[expf]]/43560) * 100
   }
 
-  #If plot CC is less than 10% and TPA less than 100, then cansizcl is 0
+  #If plot CC is less than 10% and TPA less than 100, then CAN_SIZCL is 0
   if(CC < 10 & TPA < 100)
   {
-    cansizcl = 0
+    CAN_SIZCL = 0
     if(debug) cat("Total CC:", CC, " LT 10 and TPA:", TPA,
                   "LT 100.", "\n")
   }
 
-  #If plot CC is less than 10% and TPA GE 100, then cansizcl is 1
+  #If plot CC is less than 10% and TPA GE 100, then CAN_SIZCL is 1
   else if(CC < 10 & TPA >= 100)
   {
-    cansizcl = 1
+    CAN_SIZCL = 1
     if(debug) cat("Total CC:", CC, " LT 10 and TPA:", TPA,
                   "GE 100.", "\n")
   }
 
-  #Else calculate cansizcl
+  #Else calculate CAN_SIZCL
   else
   {
 
@@ -138,14 +138,14 @@ canSizeCl<-function(data,
       ccVec[dcIndex]<- ccVec[dcIndex] + data$TREECC[i]
     }
 
-    #Extract cansizcl associated with maximum CC
-    cansizcl<-names(ccVec)[which.max(ccVec)]
+    #Extract CAN_SIZCL associated with maximum CC
+    CAN_SIZCL<-names(ccVec)[which.max(ccVec)]
 
     if(debug) cat("In canSizeCl function", "\n",
-                  "Initial cansizcl", "\n",
+                  "Initial CAN_SIZCL", "\n",
                   "DC:", names(ccVec), "\n",
                   "CC:", ccVec, "\n",
-                  "cansizcl:", cansizcl, "\n")
+                  "CAN_SIZCL:", CAN_SIZCL, "\n")
 
     #Timberland canopy size class adjustments
     if(type == 2)
@@ -154,20 +154,20 @@ canSizeCl<-function(data,
       #is greater than the canopy cover in class 2, then a canopy size class
       #selection is made from classes 3 - 5 (whichever has the most canopy
       #cover).
-      if(cansizcl == "2" & sum(ccVec[3:5]) >= ccVec[2])
+      if(CAN_SIZCL == "2" & sum(ccVec[3:5]) >= ccVec[2])
       {
         ccVec[1:2]<-0
-        cansizcl<-names(ccVec)[which.max(ccVec)]
+        CAN_SIZCL<-names(ccVec)[which.max(ccVec)]
       }
 
       #If canopy size class is 1 and the amount of canopy cover in classes 2 - 5
       #is greater than the canopy cover in class 1, then a canopy size class
       #selection is made from classes 2 - 5 (whichever has the most canopy
       #cover).
-      if(cansizcl == "1" & sum(ccVec[2:5]) >= ccVec[1])
+      if(CAN_SIZCL == "1" & sum(ccVec[2:5]) >= ccVec[1])
       {
         ccVec[1]<-0
-        cansizcl<-names(ccVec)[which.max(ccVec)]
+        CAN_SIZCL<-names(ccVec)[which.max(ccVec)]
       }
     }
 
@@ -178,23 +178,23 @@ canSizeCl<-function(data,
       #is greater than the canopy cover in class 1, then a canopy size class
       #selection is made from classes 2 - 5 (whichever has the most canopy
       #cover).
-      if(cansizcl == "1" & sum(ccVec[2:5]) >= ccVec[1])
+      if(CAN_SIZCL == "1" & sum(ccVec[2:5]) >= ccVec[1])
       {
         ccVec[1]<-0
-        cansizcl<-names(ccVec)[which.max(ccVec)]
+        CAN_SIZCL<-names(ccVec)[which.max(ccVec)]
       }
     }
 
-    #Convert cansizcl to integer
-    cansizcl<-as.integer(cansizcl)
+    #Convert CAN_SIZCL to integer
+    CAN_SIZCL<-as.integer(CAN_SIZCL)
 
-    if(debug) cat("Final cansizcl", "\n",
+    if(debug) cat("Final CAN_SIZCL", "\n",
                   "DC:", names(ccVec), "\n",
                   "CC:", ccVec, "\n",
-                  "cansizcl:", cansizcl, "\n")
+                  "CAN_SIZCL:", CAN_SIZCL, "\n")
   }
 
-  return(cansizcl)
+  return(CAN_SIZCL)
 }
 
 ################################################################################
