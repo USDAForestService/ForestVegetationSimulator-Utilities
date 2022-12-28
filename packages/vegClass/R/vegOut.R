@@ -197,7 +197,7 @@ vegOut <- function(data,
   vegData$XDCC2<-round(dtResults[["XDCC2"]],2)
 
   #Canopy size class - R3 midscale mapping
-  vegData$CAN_SIZCL<-canSizeCl(data = data,
+  vegData$CAN_SIZCL<-canSizCl(data = data,
                                stand = stand,
                                dbh = dbh,
                                crwidth = crwidth,
@@ -207,7 +207,7 @@ vegOut <- function(data,
                                CC = allAttr[["ALL"]]["CC"])
 
   #Canopy size class - timberland
-  vegData$CAN_SZTMB<-canSizeCl(data = data,
+  vegData$CAN_SZTMB<-canSizCl(data = data,
                                stand = stand,
                                dbh = dbh,
                                crwidth = crwidth,
@@ -217,7 +217,7 @@ vegOut <- function(data,
                                CC = allAttr[["ALL"]]["CC"])
 
   #Canopy size class - woodland
-  vegData$CAN_SZWDL<-canSizeCl(data = data,
+  vegData$CAN_SZWDL<-canSizCl(data = data,
                                stand = stand,
                                dbh = dbh,
                                crwidth = crwidth,

@@ -503,7 +503,8 @@ plotAttr <- function(data,
       cat("CC:", attrList[[i]]["CC"], "\n")
       cat("ZSDI:", attrList[[i]]["ZSDI"], "\n")
       cat("RSDI:", attrList[[i]]["RSDI"], "\n")
-      cat("BA_WT_DIA:", attrList[[i]]["BA_WT_DIA"], "\n", "\n")
+      cat("BA_WT_DIA:", attrList[[i]]["BA_WT_DIA"], "\n")
+      cat("BA_WT_HT:", attrList[[i]]["BA_WT_HT"],"\n", "\n")
     }
   }
 

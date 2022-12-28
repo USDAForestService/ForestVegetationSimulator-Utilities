@@ -15,8 +15,6 @@
 #
 #tpa:     Trees per acre of stand/plot.
 #
-#region:  USFS region code. Valid values are 1, 2, 3, 4, 5, 6, 8, 9, or 10.
-#
 #debug:   logical variable indicating if debug statements should be printed. By
 #         default this value is set to FALSE.
 #
