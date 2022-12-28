@@ -393,13 +393,32 @@ domType<-function(data,
         #Set DomType
         DomType<-paste(genusSpNames, collapse = '_')
 
-        #Set dcc1 and xdcc1
-        dcc1 = names(sppCC[1])
-        xdcc1 = sppCC[1]
 
-        #Set dcc2 and xdcc2
-        dcc2 = names(genusCC[genIndex])
-        xdcc2 = genusCC[genIndex]
+        #Set dcc1, xdcc1, dcc2, and xdcc2
+
+        #Situation where species has more CC than genus
+        if(sppCC[1] > genusCC[genIndex])
+        {
+          #Set dcc1 and xdcc1 (species is dominant)
+          dcc1 = names(sppCC[1])
+          xdcc1 = sppCC[1]
+
+          #Set dcc2 and xdcc2
+          dcc2 = names(genusCC[genIndex])
+          xdcc2 = genusCC[genIndex]
+        }
+
+        #Situation where genus has more CC than species
+        else
+        {
+          #Set dcc1 and xdcc1 (genus is dominant)
+          dcc1 = names(genusCC[genIndex])
+          xdcc1 = genusCC[genIndex]
+
+          #Set dcc2 and xdcc2
+          dcc2 = names(sppCC[1])
+          xdcc2 = sppCC[1]
+        }
 
         domTypeFound = T
 
