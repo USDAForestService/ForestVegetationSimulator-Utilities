@@ -129,22 +129,23 @@ vegOut <- function(data,
   #Calculate plot attributes for all trees (seedlings + stems)
   allAttr <- plotAttr(data,
                       stand = stand,
+                      species = species,
                       dbh = dbh,
                       ht = ht,
                       crwidth = crwidth,
                       expf = expf)
 
   #Calculate canopy cover uncorrected for overlap (CAN_COV)
-  vegData$CAN_COV <- allAttr["CC"]
+  vegData$CAN_COV <- allAttr[["ALL"]]["CC"]
 
   #Calculate BA, BA_WT_DIA, TPA, QMD, and SDI for seedlings + stems
-  vegData$BA <- allAttr["BA"]
-  vegData$BA_WT_DIA <- allAttr["BA_WT_DIA"]
-  vegData$BA_WT_HT <- allAttr["BA_WT_HT"]
-  vegData$TPA <- allAttr["TPA"]
-  vegData$QMD <- allAttr["QMD"]
-  vegData$ZSDI <- allAttr["ZSDI"]
-  vegData$RSDI <- allAttr["RSDI"]
+  vegData$BA <- allAttr[["ALL"]]["BA"]
+  vegData$BA_WT_DIA <- allAttr[["ALL"]]["BA_WT_DIA"]
+  vegData$BA_WT_HT <- allAttr[["ALL"]]["BA_WT_HT"]
+  vegData$TPA <- allAttr[["ALL"]]["TPA"]
+  vegData$QMD <- allAttr[["ALL"]]["QMD"]
+  vegData$ZSDI <- allAttr[["ALL"]]["ZSDI"]
+  vegData$RSDI <- allAttr[["ALL"]]["RSDI"]
 
   #Calculate BA, BA_WT_DIA, TPA, QMD, and SDI for stems (DBH >= 1")
   stemAttr <- plotAttr(data,
@@ -153,21 +154,22 @@ vegOut <- function(data,
                        ht = ht,
                        crwidth = crwidth,
                        expf = expf,
-                       min = 1)
+                       min = 1,
+                       allSpecies = F)
 
-  vegData$BA_STM <- stemAttr["BA"]
-  vegData$TPA_STM <- stemAttr["TPA"]
-  vegData$QMD_STM <- stemAttr["QMD"]
-  vegData$ZSDI_STM <- stemAttr["ZSDI"]
-  vegData$RSDI_STM <- stemAttr["RSDI"]
+  vegData$BA_STM <- stemAttr[["ALL"]]["BA"]
+  vegData$TPA_STM <- stemAttr[["ALL"]]["TPA"]
+  vegData$QMD_STM <- stemAttr[["ALL"]]["QMD"]
+  vegData$ZSDI_STM <- stemAttr[["ALL"]]["ZSDI"]
+  vegData$RSDI_STM <- stemAttr[["ALL"]]["RSDI"]
 
   #Calculate QMD_TOP20
   vegData$QMD_TOP20 <- qmdTop20(data,
                                 stand = stand,
                                 dbh = dbh,
                                 expf = expf,
-                                TPA = allAttr["TPA"],
-                                CC = allAttr["CC"])
+                                TPA = allAttr[["ALL"]]["TPA"],
+                                CC = allAttr[["ALL"]]["CC"])
 
   #Calculate DomType, dcc1, dcc2, xdcc1, and xdcc2
   dtResults<-domType(data = data,
@@ -176,8 +178,8 @@ vegOut <- function(data,
                      dbh = dbh,
                      crwidth = crwidth,
                      expf = expf,
-                     TPA = allAttr["TPA"],
-                     CC = allAttr["UNCC"])
+                     TPA = allAttr[["ALL"]]["TPA"],
+                     CC = allAttr[["ALL"]]["UNCC"])
 
   #Dominance type
   vegData$DOM_TYPE<-dtResults[["DOMTYPE"]]
@@ -195,43 +197,43 @@ vegOut <- function(data,
   vegData$XDCC2<-round(dtResults[["XDCC2"]],2)
 
   #Canopy size class - R3 midscale mapping
-  vegData$CAN_SIZCL<-canSizeCl(data = data,
+  vegData$CAN_SIZCL<-canSizCl(data = data,
                                stand = stand,
                                dbh = dbh,
                                crwidth = crwidth,
                                expf = expf,
                                type = 1,
-                               TPA = allAttr["TPA"],
-                               CC = allAttr["CC"])
+                               TPA = allAttr[["ALL"]]["TPA"],
+                               CC = allAttr[["ALL"]]["CC"])
 
   #Canopy size class - timberland
-  vegData$CAN_SZTMB<-canSizeCl(data = data,
+  vegData$CAN_SZTMB<-canSizCl(data = data,
                                stand = stand,
                                dbh = dbh,
                                crwidth = crwidth,
                                expf = expf,
                                type = 2,
-                               TPA = allAttr["TPA"],
-                               CC = allAttr["CC"])
+                               TPA = allAttr[["ALL"]]["TPA"],
+                               CC = allAttr[["ALL"]]["CC"])
 
   #Canopy size class - woodland
-  vegData$CAN_SZWDL<-canSizeCl(data = data,
+  vegData$CAN_SZWDL<-canSizCl(data = data,
                                stand = stand,
                                dbh = dbh,
                                crwidth = crwidth,
                                expf = expf,
                                type = 3,
-                               TPA = allAttr["TPA"],
-                               CC = allAttr["CC"])
+                               TPA = allAttr[["ALL"]]["TPA"],
+                               CC = allAttr[["ALL"]]["CC"])
 
   #BA storiedness
   vegData$BA_STORY<-baStory(data,
                             stand = stand,
                             dbh = dbh,
                             expf = expf,
-                            BA = allAttr["BA"],
-                            TPA = allAttr["TPA"],
-                            CC = allAttr["CC"])
+                            BA = allAttr[["ALL"]]["BA"],
+                            TPA = allAttr[["ALL"]]["TPA"],
+                            CC = allAttr[["ALL"]]["CC"])
 
   return(vegData)
 }
