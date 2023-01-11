@@ -180,6 +180,14 @@
 #              output database through rFVS or FVS run through the command line.
 #              By default, this argument is set to FALSE (F).
 #
+#modstandID:   Logical variable, where if TRUE, an underscore will be appended
+#              before each Stand ID sent to output argument. The addition of
+#              the underscore forces Microsoft Excel to recognize that the Stand
+#              ID is a character and avoids the problem of long character
+#              strings of numbers (i.e. Stand IDs in FIA data:
+#              0004201904090101990050) being truncated and converted to numbers.
+#              By default, this argument is set to TRUE (T).
+#
 #Value
 #
 #0 value invisibly returned.
@@ -197,11 +205,12 @@ main<- function(input = NULL,
                 addFuels = F,
                 addCarbon = F,
                 addVolume = F,
-                vol1DBH = 0.1,
+                vol1DBH = 0,
                 vol2DBH = 5,
                 vol3DBH = 9,
                 startYear = 0,
-                setIndices = F)
+                setIndices = F,
+                modStandID = T)
 {
   #Set the start time of function execution
   startTime <- Sys.time()
@@ -490,6 +499,14 @@ main<- function(input = NULL,
         groups  <- cases$Groups[caseIndex]
         standID <- cases$StandID[caseIndex]
         variant <- cases$Variant[caseIndex]
+
+        #If modStandID is TRUE, append an underscore in front of STANDID.
+        #This will force Excel to recognize that STANDID is text when opening a
+        #CSV.
+        if(modStandID)
+        {
+          standID <- paste0("_", standID)
+        }
       }
 
       #Display which stand and case ID is being processed
@@ -675,11 +692,6 @@ main<- function(input = NULL,
 
       #Create cycle field now
       standOut$CY <- seq(from = 1, to = nrow(standOut), by = 1)
-
-      #Add tab to standIDs. This avoids the problems of stand IDs being
-      #converted to scientific notation in csv. There may be a better way to
-      #deal with this but not quite sure what it is.
-      standOut$STANDID<-paste0(standOut$STANDID, "\t")
 
       #=========================================================================
       #Join compute variables to output if addCompute is TRUE and FVS_Compute
