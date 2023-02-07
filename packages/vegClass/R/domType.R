@@ -80,7 +80,7 @@ domType<-function(data,
     return(results)
   }
 
-  #Print stand
+  #Print stand and columns from data
   if(debug)
   {
     cat("In function domType", "\n")
@@ -645,12 +645,8 @@ excGenusSp<-function(sp, genNames, genusList)
   #Extract genus from genus list
   genus<-genusList[genIndex]
 
-  # cat("genIndex:", genIndex,
-  #     "genus:", genus,
-  #     "\n")
-
-  #Traverse across genNames and look for first instance when genus and genus from
-  #genusList do NOT match.
+  #Traverse across genNames and look for first instance when genus and genus
+  #from genusList do NOT match.
   while(i <= length(genNames) & !validMatch)
   {
     #Extract genus from genera ordered by abundance of percent canopy cover

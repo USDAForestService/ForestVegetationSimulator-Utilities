@@ -73,13 +73,13 @@ fvsGaak<-function(dbName="FVS_Data", type = 2)
                                          "WHERE StandPlot_CN ='%Stand_CN%'",
                                          "EndSQL", "END", sep = "\n")))
 
-  #If type is 1, return GAAK with just FVS grouping codes
+  #GAAK with just FVS grouping codes
   if(type == 1)
   {
     gaak<-gaak[1:2,]
   }
 
-  #If type is 2, return GAAK with just FIA grouping codes
+  #GAAK with just FIA grouping codes
   if(type == 2)
   {
     gaak<-gaak[3:5,]
@@ -232,7 +232,6 @@ pvConvert<-function(pv)
     value<-eru()[pvIndex]
   }
 
-  #Else assign value as NA
   else
   {
     value = NA
@@ -246,7 +245,7 @@ pvConvert<-function(pv)
 #
 #This function adds an ERU group label to GROUPS column of FVS_STANDINIT,
 #FVS_PLOTINIT, FVS_STANDINIT_PLOT, FVS_STANDINIT_COND, FVS_PLOTININT_PLOT for
-#PPF. This function is called from dbCombine when addERU is TRUE.
+#PPF. This function is called from dbCompile when addERU is TRUE.
 #
 #Arguments
 #
@@ -276,12 +275,11 @@ addERUGroup <- function(group, eru)
     group <- paste(group, "ERU=PPF")
   }
 
-  #Return group
   return(group)
 }
 
 ################################################################################
-#Function: dbCombine
+#Function: dbCompile
 #
 #This function is used to read in database tables from input FVS-ready data sets
 #and write the database tables from each of these to a single output SQLite
@@ -297,8 +295,8 @@ addERUGroup <- function(group, eru)
 #              or zipped folder (.zip) which contains a SQLite database(s).
 
 #              NOTE: .zip files will be unzipped to a temporary folder called
-#              xxxvegClassdbCombineUnzipxxx in current working directory.
-#              Temporary folder will be deleted after dbCombine has finished
+#              xxxvegClassdbCompileUnzipxxx in current working directory.
+#              Temporary folder will be deleted after dbCompile has finished
 #              writing data to output database.
 #
 #              Examples of valid dbIn formats:
@@ -345,13 +343,13 @@ addERUGroup <- function(group, eru)
 #             TRUE.
 #
 #deleteInput: Logical variable used to determine if values in dbIn should be
-#             deleted after dbCombine has been called. By default this argument
+#             deleted after dbCompile has been called. By default this argument
 #             is set to FALSE. Be careful with this argument. The primary
 #             purpose of this argument is to conserve hard disk space for users
 #             who do not want the input databases specified in dbIn.
 #
 #readChunks:  Logical variable used to determine if data from database table
-#             should be read in chunks. In general, processing time of dbCombine
+#             should be read in chunks. In general, processing time of dbCompile
 #             increases but less RAM is used in R session if this argument is
 #             TRUE. By default this argument is set to FALSE.
 #
@@ -365,7 +363,7 @@ addERUGroup <- function(group, eru)
 ################################################################################
 
 #'@export
-dbCombine <- function(dbIn = NULL,
+dbCompile <- function(dbIn = NULL,
                       dbOut = NULL,
                       dbTables = c("FVS_STANDINIT",
                                    "FVS_TREEINIT",
@@ -385,7 +383,7 @@ dbCombine <- function(dbIn = NULL,
   #Create directory where file will be unzipped to.
   #If this file exists for any reason, delete it.
   unzipDir <- paste(getwd(),
-                    "xxxvegClassdbCombineUnzipxxx",
+                    "xxxvegClassdbCompileUnzipxxx",
                     sep = "/")
 
   if(file.exists(unzipDir))
@@ -393,16 +391,6 @@ dbCombine <- function(dbIn = NULL,
     unlink(unzipDir,
            recursive = T)
   }
-
-  #Vector containing valid table names that can be processed. These values
-  #match the default values in dbTables argument.
-  validTables <- c("FVS_STANDINIT",
-                   "FVS_TREEINIT",
-                   "FVS_STANDINIT_PLOT",
-                   "FVS_STANDINIT_COND",
-                   "FVS_PLOTINIT_PLOT",
-                   "FVS_TREEINIT_PLOT",
-                   "FVS_TREEINIT_COND")
 
   #Test if no values have been specified for dbIn
   if(is.null(dbIn))
@@ -416,28 +404,21 @@ dbCombine <- function(dbIn = NULL,
     stop(paste("No file was specified for dbOut."))
   }
 
-  #Test if dbTables is null and return with error message. Otherwise capitalize
-  #the table names in dbTables.
+  #Test if dbTables is null and return with error message.
   if(is.null(dbTables))
   {
     stop(paste("No table names were provided for dbTables."))
   }
+
+  #Print database tables to consider
   else
   {
+    #Capitalize dbTables
     dbTables <- toupper(dbTables)
 
-    #Select only tables found in validTables
-    dbTables <- dbTables[dbTables %in% validTables]
     cat("Database table names to consider:",
         dbTables,
         "\n")
-
-    #If dbTables is empty after selection from validTables, stop with error
-    #message.
-    if(length(dbTables) <= 0)
-    {
-      stop(paste("No valid databases tables to process."))
-    }
   }
 
   #Catch erroneous gaakType values
@@ -531,7 +512,6 @@ dbCombine <- function(dbIn = NULL,
     #Grab file extension for db
     fileExtIn<-sub("(.*)\\.","",db)
 
-    #Display file extension in console
     cat("File extension:",
         fileExtIn,
         "\n",
@@ -546,17 +526,15 @@ dbCombine <- function(dbIn = NULL,
           "\n"))
     }
 
-    #If the file is a zip file, then it will be unzipped into xxxdbCombinexxx
+    #If the file is a zip file, then it will be unzipped into xxxdbCompilexxx
     if(fileExtIn == "zip")
     {
-      #Create directory where file will be unzipped to
       unzipDir <- paste(getwd(),
-                        "xxxvegClassdbCombineUnzipxxx",
+                        "xxxvegClassdbCompileUnzipxxx",
                         sep = "/")
 
       cat("Unzipping:", db, "to", unzipDir, "\n", "\n")
 
-      #Unzip the file
       unzip(zipfile = db,
             exdir = unzipDir)
 
@@ -620,17 +598,16 @@ dbCombine <- function(dbIn = NULL,
     cat("Database", i, dbInUpdate[i], "\n")
   }
 
-  #Begin processing dbInUpdate
+  #Begin processing databases in dbInUpdate
   for(i in 1:length(dbInUpdate))
   {
 
-    #Extract database to process
     db <- dbInUpdate[i]
 
     cat("\n")
     cat("Processing db:", db, "\n", "\n")
 
-    #Begin processing dbTables
+    #Begin processing dbTables in db
     for(j in 1:length(dbTables))
     {
       #Extract table name
@@ -682,7 +659,6 @@ dbCombine <- function(dbIn = NULL,
         addDbTable(db,
                    dbOut,
                    tableName,
-                   ignoreCol,
                    addERU)
       }
       else
@@ -690,7 +666,6 @@ dbCombine <- function(dbIn = NULL,
         addDbRows(db,
                    dbOut,
                    tableName,
-                   ignoreCol,
                    addERU,
                    rowsToRead,
                    numRows)
@@ -703,7 +678,7 @@ dbCombine <- function(dbIn = NULL,
         "\n")
 
     #Check if db should be deleted
-    #Any files that are unzipped by dbCombine function will be deleted.
+    #Any files that are unzipped by dbCompile function will be deleted.
     #All other dbs will be deleted if deleteInput is T
     if(db %in% list.files(unzipDir,
                           pattern = ".db",
@@ -865,33 +840,25 @@ fvsGetTypes <- function()
 #This function accepts a dataframe and checks if all columns in the data frame
 #match a specified datatype. If a column does not match a specified data type,
 #the column in the dataframe is cast to the correct data type. Only double,
-#integer, and character values are considered in this function. If a column is
-#not recognized, then it is either ignored or cast to character type depending
-#on the value specified in argument ignoreCols.
+#integer, and character values are considered in this function.
 #
 #Arguments
 #
-#data:       Input dataframe
+#data:     Input dataframe.
 #
-#cols:       Character vector of variable names.By default this argument
-#            is set  to NULL. When this value is NULL, variables will be
-#            set to values produced by fvsGetCols function. Length of variables
-#            argument must match length of types argument.
+#cols:     Character vector of variable names.By default this argument
+#          is set  to NULL. When this value is NULL, variables will be
+#          set to values produced by fvsGetCols function. Length of variables
+#          argument must match length of types argument.
 #
-#colTypes:   Character vector of data type types that correspond to variables in
-#            argument variables. By default this argument is set to NULL. When
-#            this value is NULL, variables will be set to values produced by
-#            fvsGetTypes function. Length of types argument must match length of
-#            types argument.
+#colTypes: Character vector of data type types that correspond to variables in
+#          argument variables. By default this argument is set to NULL. When
+#          this value is NULL, variables will be set to values produced by
+#          fvsGetTypes function. Length of types argument must match length of
+#          types argument.
 #
-#ignoreCols: Boolean variable that determines how to handle columns that are in
-#            argument data but not in argument variables. If this argument is
-#            FALSE, then these columns will be cast to character type. If this
-#            argument is TRUE, then these columns are ignored. By default this
-#            argument is set to FALSE.
-#
-#verbose:    Boolean variable that determines if debug information should be
-#            printed to console. By default this argument set to FALSE.
+#debug:    Boolean variable that determines if debug information should be
+#          printed to console. By default this argument set to FALSE.
 #
 #Return value
 #
@@ -901,8 +868,7 @@ fvsGetTypes <- function()
 setDataTypes<-function(data,
                        cols = NULL,
                        colTypes = NULL,
-                       ignoreCols = F,
-                       verbose = F)
+                       debug = F)
 {
 
   #If data is not dataframe stop with error message
@@ -932,17 +898,16 @@ setDataTypes<-function(data,
   #If length of variables is not equal to types, return with error.
   if(length(cols) != length(colTypes))
   {
-    if(verbose) cat("Length cols:", length(cols), "\n")
-    if(verbose) cat("Length types:", length(colTypes), "\n")
+    if(debug) cat("Length cols:", length(cols), "\n")
+    if(debug) cat("Length types:", length(colTypes), "\n")
     stop("Variables and types arguments must have the same length.")
   }
 
   #Iterate across columns of input dataframe
   for(i in 1:length(names(data)))
   {
-    #Extract column name
     colname<-toupper(names(data)[i])
-    if(verbose) cat("Column:", colname, "being processed.", "\n")
+    if(debug) cat("Column:", colname, "being processed.", "\n")
 
     #Attempt to match column name with variable in fvsvars
     varIndex<-match(colname, cols)
@@ -956,23 +921,23 @@ setDataTypes<-function(data,
       #If data type of column matches with designated data type, move to next
       #loop iteration.
       if(typeof(data[,i]) == datatype){
-        if(verbose) cat("Data type of", colname, "is a match.", "\n")
+        if(debug) cat("Data type of", colname, "is a match.", "\n")
         next
       }
 
       #Variable is a character
-      if(datatype == "character")
+      if(datatype %in% c("character", "complex"))
       {
         #Print message that column will be converted to character.
-        if(verbose) cat(colname, "being converted to", datatype, "\n")
+        if(debug) cat(colname, "being converted to", datatype, "\n")
         data[,i]<-as.character(data[,i])
       }
 
       #Variable is a integer
-      if(datatype == "integer")
+      if(datatype %in% c("integer", "logical"))
       {
         #Print message that column will be converted to integer.
-        if(verbose) cat(colname, "being converted to", datatype, "\n")
+        if(debug) cat(colname, "being converted to", datatype, "\n")
         data[,i]<-as.integer(data[,i])
       }
 
@@ -980,27 +945,15 @@ setDataTypes<-function(data,
       if(datatype == "double")
       {
         #Print message that column will be converted to double.
-        if(verbose) cat(colname, "being converted to", datatype, "\n")
+        if(debug) cat(colname, "being converted to", datatype, "\n")
         data[,i]<-as.double(data[,i])
       }
     }
 
-    #If varIndex is NA, then determine what will happen with column. The column
-    #will either be ignored or converted to character type depending on input
-    #argument ignoreCols.
+    #If varIndex is NA it will be ignored.
     else
     {
-      if(!ignoreCols)
-      {
-        if(verbose) cat(colname,
-                        "not recognized and being converted to character",
-                        "\n")
-        data[,i]<-as.character(data[,i])
-      }
-
-      else{
-        if(verbose) cat(colname, "not recognized and ignored.", "\n")
-      }
+      if(debug) cat(colname, "not recognized and ignored.", "\n")
     }
   }
 
@@ -1021,13 +974,9 @@ setDataTypes<-function(data,
 #
 #tableName:  Name of database table in db being sent to dbOut.
 #
-#ignoreCols: Logical variable indicating if unrecognized fields in setDataTypes
-#            function should be ignored. See setDataTypes function for more
-#            details.
-#
 #addERU:     Logical variable indicating if ERU should be added to GROUPS column
 #            of FVS_STANDINIT tables (FIA or regular FVS versions). See
-#            dbCombine function for more details.
+#            dbCompile function for more details.
 #
 #Return value
 #
@@ -1037,7 +986,6 @@ setDataTypes<-function(data,
 addDbTable<-function(db,
                      dbOut,
                      tableName,
-                     ignoreCol,
                      addERU)
 {
 
@@ -1106,16 +1054,11 @@ addDbTable<-function(db,
   #appended to the existing table in output (conOut).
   if(tableName %in% toupper(RSQLite::dbListTables(conOut)))
   {
-    #Set datatypes of dbTable
-    dbTable <- setDataTypes(dbTable,
-                            ignoreCols = F)
-
     #Identify any fields in dbTable that are missing from the same data table
     #in conOut.
     dbFields <- RSQLite::dbListFields(conOut,
                                       name = tableName)
 
-    #Missing fields
     missingFields <- names(dbTable)[! names(dbTable) %in% dbFields]
 
     #Loop through missingFields and add to database table in conOut
@@ -1181,6 +1124,11 @@ addDbTable<-function(db,
       }
     }
 
+    #Set any data types that are a mismatch between tableName and dbTable
+    dbTable <- checkDataTypes(con = conOut,
+                              tableName = tableName,
+                              data = dbTable)
+
     cat("Appending",
         tableName,
         "to",
@@ -1204,8 +1152,7 @@ addDbTable<-function(db,
   else
   {
     #Set datatypes of dbTable
-    dbTable <- setDataTypes(dbTable,
-                            ignoreCols = F)
+    dbTable <- setDataTypes(dbTable)
 
     cat("Writing",
         tableName,
@@ -1249,13 +1196,9 @@ addDbTable<-function(db,
 #
 #tableName:  Name of database table being sent from db to dbOut.
 #
-#ignoreCols: Logical variable indicating if unrecognized fields in setDataTypes
-#            function should be ignored. See setDataTypes function for more
-#            details.
-#
 #addERU:     Logical variable indicating if ERU should be added to GROUPS column
 #            of FVS_STANDINIT tables (FIA or regular FVS versions). See
-#            dbCombine function for more details.
+#            dbCompile function for more details.
 #
 #numToRead:  Number of rows to read in from database table at a time.
 #
@@ -1267,12 +1210,11 @@ addDbTable<-function(db,
 ################################################################################
 
 addDbRows<-function(db,
-                     dbOut,
-                     tableName,
-                     ignoreCol,
-                     addERU,
-                     numToRead,
-                     numRows)
+                    dbOut,
+                    tableName,
+                    addERU,
+                    numToRead,
+                    numRows)
 {
 
   #Variable to signify when read of data from tableName in db is complete
@@ -1410,16 +1352,11 @@ addDbRows<-function(db,
     #appended to the existing table in output (conOut).
     if(tableName %in% toupper(RSQLite::dbListTables(conOut)))
     {
-      #Set datatypes of dbTable
-      dbTable <- setDataTypes(dbTable,
-                              ignoreCols = F)
-
       #Identify any fields in dbTable that are missing from the same data table
       #in conOut.
       dbFields <- RSQLite::dbListFields(conOut,
                                         name = tableName)
 
-      #Missing fields
       missingFields <- names(dbTable)[! names(dbTable) %in% dbFields]
 
       #Loop through missingFields and add to database table in conOut
@@ -1485,6 +1422,11 @@ addDbRows<-function(db,
         }
       }
 
+      #Set any data types that are a mismatch between tableName and dbTable
+      dbTable <- checkDataTypes(con = conOut,
+                                tableName = tableName,
+                                data = dbTable)
+
       cat("Appending rows", lower + 1, "through", upper, "from",
           tableName,
           "to",
@@ -1508,8 +1450,7 @@ addDbRows<-function(db,
     else
     {
       #Set datatypes of dbTable
-      dbTable <- setDataTypes(dbTable,
-                              ignoreCols = F)
+      dbTable <- setDataTypes(dbTable)
 
       cat("Writing rows", lower + 1, "through", upper, "from",
           tableName,
@@ -1546,4 +1487,180 @@ addDbRows<-function(db,
   }
 
   return()
+}
+
+################################################################################
+#convertType
+#
+#This function maps R data types to SQLite data types or SQLite data types to
+#R data types depending on the value specified in the input type argument.
+#
+#Arguments
+#
+#value:   Character string corresponding to an R or SQLite data type
+#
+#type:    Integer variable used to determine if converting to R data type
+#         or SQLite data type.
+#         1: Convert to SQLite data type
+#         2: Convert to R data type
+#
+#Value
+#
+#Character string corresponding to R of SQLite data type
+################################################################################
+
+convertType <- function(value,
+                        type = 1)
+{
+  dataType <- NA
+
+  #Convert to SQLite database type from R data type
+  if(type == 1)
+  {
+    if(value %in% c("double"))
+    {
+      dataType <- "REAL"
+    }
+
+    else if(value %in% c("integer", "logical"))
+    {
+      dataType <- "INTEGER"
+    }
+
+    else
+    {
+      dataType <- "TEXT"
+    }
+  }
+
+  #Convert to R data type from SQLite data type. SQLite data types are based on
+  #those specified in PRAGMA table_info(name of table)
+  else
+  {
+    if(value %in% c("INT", "INTEGER", "TINYINT", "SMALLINT", "MEDIUMINT",
+                    "BIGINT", "UNSIGNED BIG INT", "INT2", "INT8", "BOOLEAN"))
+    {
+      dataType <- "integer"
+    }
+
+    else if(value %in% c("REAL", "DOUBLE", "DOUBLE PRECISION", "FLOAT",
+                         "NUMERIC", "DECIMAL(10,5)"))
+    {
+      dataType <- "double"
+    }
+
+    else
+    {
+      dataType <- "character"
+    }
+  }
+
+  return(dataType)
+}
+
+################################################################################
+#checkDataTypes
+#
+#This function is used to determine if column data types in an input dataframe
+#match the field types in a table from a SQLite database where information in
+#dataframe will be inserted. If a column type in the dataframe does not match
+#the data type of the field in the SQLite database, then the column in the
+#dataframe is cast to the correct type. This function is used when data is being
+#appended to output SQLite database in the addDBTable or addDBRows functions.
+#
+#Arguments
+#
+#con:       Connection to SQLite database.
+#
+#tableName: Name of table in SQLite database.
+#
+#data:      Input dataframe whose column data types will compared against data
+#           types in argument tableName.
+#
+#debug:     Logical variable that determines if debug information should be
+#           printed to console. By default this argument set to FALSE.
+#
+#Value
+#
+#data frame
+################################################################################
+
+checkDataTypes <- function(con,
+                           tableName,
+                           data,
+                           debug = F)
+{
+
+  #Extract field names and data types for tableName
+  tableDefs <- RSQLite::dbGetQuery(con,
+                                   paste0("PRAGMA table_info('",
+                                          tableName,
+                                          "')"))[,c(2,3)]
+
+  #Obtain column names from data
+  dfCols <- colnames(data)
+
+  #Start loop across column names in data
+  for(i in 1:length(dfCols))
+  {
+    colName <- dfCols[i]
+
+    #Determine type of colName
+    colType <- typeof(data[[colName]])
+
+    #Find column in tableDefs
+    colIndex <- match(colName, tableDefs$name)
+
+    #If colName is not in tableDefs skip to next iteration in loop
+    if(is.na(colIndex)) next
+
+    #Obtain data type of field
+    fieldType <- tableDefs$type[colIndex]
+
+    #Get R version of fieldType
+    fieldType <- convertType(fieldType, 2)
+
+    #If debug, print column name, field type and column type
+    if(debug)
+    {
+      cat("Column name:", colName, "\n")
+      cat("Field type:", fieldType, "\n")
+      cat("Column type:", colType, "\n")
+    }
+
+    #Check if colType and fieldType are the same. If they are, skip to the next
+    #iteration
+    if(colType == fieldType)
+    {
+      if(debug) cat("Data type of", colName, "is a match.", "\n", "\n")
+      next
+    }
+
+    #Types did not match
+    else
+    {
+      #If field type is double, convert colName to double
+      if(fieldType == "double")
+      {
+        if(debug) cat(colName, "being converted to", fieldType, "\n", "\n")
+        data[,i]<-as.double(data[,i])
+      }
+
+      #If field type is integer, convert colName to integer
+      else if(fieldType == "integer")
+      {
+        if(debug) cat(colName, "being converted to", fieldType, "\n", "\n")
+        data[,i]<-as.integer(data[,i])
+      }
+
+      #If field type is anything else, convert to character
+      else
+      {
+        if(debug) cat(colName, "being converted to character", "\n", "\n")
+        data[,i]<-as.character(data[,i])
+      }
+    }
+  }
+
+  return(data)
 }

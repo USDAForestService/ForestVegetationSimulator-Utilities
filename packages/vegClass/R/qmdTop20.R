@@ -148,9 +148,13 @@ qmdTop20 <- function(data,
         else
         {
           DBHSQ = DBHSQ + data[[dbh]][i] ^ 2 * data[[expf]][i]
-          cat("TREE DBH:", data[[dbh]][i], "\n",
-              "EXPF:", data[[expf]][i], "\n",
-              "TPASUM:", TPASUM, "\n", "\n")
+
+          if(debug)
+          {
+            cat("TREE DBH:", data[[dbh]][i], "\n",
+                "EXPF:", data[[expf]][i], "\n",
+                "TPASUM:", TPASUM, "\n", "\n")
+          }
         }
 
         if(debug) cat("Breaking out of loop.", "\n")
@@ -159,7 +163,7 @@ qmdTop20 <- function(data,
         break
       }
 
-      #TPA20 has not been exceeded. Added next DBH^2 * TPA value to DBHSQ
+      #TPA20 has not been exceeded. Add next DBH^2 * TPA value to DBHSQ
       else
       {
         DBHSQ = DBHSQ + data[[dbh]][i] ^ 2 * data[[expf]][i]
