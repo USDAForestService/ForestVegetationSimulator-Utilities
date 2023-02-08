@@ -11,7 +11,9 @@
 #         selecting all lines of code with Ctrl + A, you can press the Run
 #         button.
 
-#RGui: press Crtl + A key and then press Ctrl + R.
+#RGui:    press Crtl + A key and then press Ctrl + R. Alternatively, after
+#         selecting all lines of code with Ctrl + A, you can press the Run line
+#         or selection button. 
 
 #Attach vegClass package
 library(vegClass)
@@ -19,7 +21,8 @@ library(vegClass)
 #Example call to main function in vegClass package
 main(input = "C:/FVS/VegClass Example/FVSOut.db",
      output = "C:/Veg_Classification/vegClassOut.csv",
-     runTitles = c("MCD Run", "Mew Run"),
+     runTitles = c("MCD Run"),
+     region = 3,
      addCompute = T,
      addPotFire = T,
      addFuels = T,
@@ -30,7 +33,6 @@ main(input = "C:/FVS/VegClass Example/FVSOut.db",
      vol3DBH = 9,
      startYear = 2022)
 
-#You can call the main function as many times as you want in an R script or R
-#project. You can simply copy and paste the code above and change the function
-#arguments as needed.
-
+#You can call the main function as many times as you want in an R script. You
+#can simply copy and paste the code above and change the function arguments as
+#needed.
