@@ -663,45 +663,39 @@ volumeCalc <- function(data,
   #Loop across data and calculate volumes
   for(i in 1:nrow(data))
   {
-    #If DBH of record is GE vol1DBH, add vol1 * expf to VOL1 in volume vector
+    #Accumulate volume 1 values
     if(data[[dbh]][i] >= vol1DBH)
     {
-      #Accumulate volume 1 values
       volume["VOL1"] <- volume["VOL1"] + data[[vol1]][i] * data[[expf]][i]
     }
 
-    #If DBH of record is GE vol2DBH, add vol2 * expf to VOL2 in volume vector
+    #Accumulate volume 2 values
     if(data[[dbh]][i] >= vol2DBH)
     {
-      #Accumulate volume 2 values
       volume["VOL2"] <- volume["VOL2"] + data[[vol2]][i] * data[[expf]][i]
     }
 
-    #If DBH of record is GE vol3DBH, add vol3 * expf to VOL3 in volume vector
+    #Accumulate volume 3 values
     if(data[[dbh]][i] >= vol3DBH)
     {
-      #Accumulate volume 3 values
       volume["VOL3"] <- volume["VOL3"] + data[[vol3]][i] * data[[expf]][i]
     }
 
-    #If DBH of record is GE vol1DBH, add vol1 * expfM to VOL4 in volume vector
+    #Accumulate volume 5 values
     if(data[[dbh]][i] >= vol1DBH)
     {
-      #Accumulate volume 1 values
       volume["VOL4"] <- volume["VOL4"] + data[[vol1]][i] * data[[expfM]][i]
     }
 
-    #If DBH of record is GE vol2DBH, add vol2 * expfM to VOL5 in volume vector
+    #Accumulate volume 5 values
     if(data[[dbh]][i] >= vol2DBH)
     {
-      #Accumulate volume 2 values
       volume["VOL5"] <- volume["VOL5"] + data[[vol2]][i] * data[[expfM]][i]
     }
 
-    #If DBH of record is GE vol3DBH, add vol3 * expfM to VOL6 in volume vector
+    #Accumulate volume 6 values
     if(data[[dbh]][i] >= vol3DBH)
     {
-      #Accumulate volume 3 values
       volume["VOL6"] <- volume["VOL6"] + data[[vol3]][i] * data[[expfM]][i]
     }
   }

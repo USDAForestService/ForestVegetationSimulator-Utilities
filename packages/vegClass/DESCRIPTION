@@ -1,6 +1,6 @@
 Package: vegClass
 Title: Vegetation Classification
-Version: 0.1.0
+Version: 0.3.0
 Authors@R: person("Mark", "Castle", email = "mark.castle@usda.gov", role=c("aut",
           "cre"))
 Description: This package provides a suite of functions that are used to derive

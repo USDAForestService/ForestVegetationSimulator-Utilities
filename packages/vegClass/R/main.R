@@ -168,7 +168,33 @@
 #startYear:    Integer value corresponding to the year that data should start
 #              being reported in output argument. Data with years prior to this
 #              value will not be included in the output argument. By default,
-#              this value is set to 0 (all data will be included in output).
+#              this argument is set to NA.
+#
+#endYear:      Integer value corresponding to the last year that data should be
+#              reported in output argument. Data associated with years after
+#              this value will not be included in the output argument. By
+#              default,this value is set to NA. If this argument is left as NA,
+#              then all information after startYear argument will be sent to
+#              output argument.
+#
+#startCycle:   Integer value corresponding to the cycle that data should start
+#              being reported in output argument. Data with cycles prior to this
+#              value will not be included in the output argument. By default,
+#              this value is set to NA.
+#
+#endCycle:     Integer value corresponding to the last cycle that data should be
+#              reported in output argument. Data associated with cycles after
+#              this value will not be included in the output argument. By
+#              default,this value is set to NA. If this argument is left as NA,
+#              then all information after startCycle argument will be sent to
+#              output argument.
+#
+#              NOTE: If both startYear and startCycle arguments do not have a
+#              value specified (left as NA), main function will stop with an
+#              error message. One of these arguments must be used. If non NA
+#              values are specified for both startYear and startCycle, then the
+#              main function will default to using cycles for determining what
+#              information gets sent to output argument.
 #
 #setIndices:   Logical variable, where if TRUE, CaseID indices will be created
 #              in FVS database tables found in input argument. These indices
@@ -198,6 +224,10 @@ main<- function(input = NULL,
                 output = NULL,
                 runTitles = NULL,
                 allRuns = F,
+                startYear = NA,
+                endYear = NA,
+                startCycle = NA,
+                endCycle = NA,
                 overwriteOut = F,
                 region = NA,
                 addCompute = F,
@@ -208,7 +238,6 @@ main<- function(input = NULL,
                 vol1DBH = 0,
                 vol2DBH = 5,
                 vol3DBH = 9,
-                startYear = 0,
                 setIndices = F,
                 modStandID = T)
 {
@@ -310,6 +339,37 @@ main<- function(input = NULL,
   {
     stop(paste("Invalid region number was specified in region argument.",
                "Please enter a value of 1, 2, 3, 4, 5, 6, 8, 9, or 10"))
+  }
+
+  #==========================================================================
+  #Determine if years or cycles should be used for establishing what data
+  #gets sent to output.
+  #==========================================================================
+
+  #Initialize useYear and useCycle
+  useYear <- F
+  useCycle <- F
+
+  #If both startYear and startCycle are NA, stop with error message. One of
+  #these arguments has to be used.
+  if(is.na(startYear) & is.na(startCycle))
+  {
+    stop(paste("No value entered for startYear or startCycle.",
+               "One of these variables needs to have a specified value."))
+  }
+
+  #Set useYear to T if startYear is not NA.
+  if(!is.na(startYear))
+  {
+    useYear = T
+  }
+
+  #Set useCycle to T if startCycle is not NA. If both startYear and startCycle
+  #are not NA, then useCycle takes precedence.
+  if(!is.na(startCycle))
+  {
+    useCycle = T
+    useYear = F
   }
 
   ###########################################################################
@@ -572,13 +632,62 @@ main<- function(input = NULL,
 
       for(j in 1:length(years))
       {
+        #Determine if year needs to be skipped when endYear is NA
+        if(useYear & is.na(endYear))
+        {
+          #If year j is less than startYear, skip to next iteration of loop
+          if(years[j] < startYear)
+          {
+            cat("Year:", years[j], "is before start year:", startYear,
+                "and will not be processed.", "\n")
+            next
+          }
+        }
+
+        #Determine if year needs to be skipped when endYear is not NA
+        if(useYear & !is.na(endYear))
+        {
+          #If year j is less than startYear or greater than endYear, skip to
+          #next iteration of loop
+          if(years[j] < startYear | years[j] > endYear)
+          {
+            cat("Year:", years[j], "is before:", startYear,"or after:", endYear,
+                "and will not be processed.", "\n")
+            next
+          }
+        }
+
+        #Determine if cycle (j) needs to be skipped when endCycle is NA
+        if(useCycle & is.na(endCycle))
+        {
+          #If cycle j is less than startCycle, skip to next iteration of loop
+          if(j < startCycle)
+          {
+            cat("Cycle:", j, "is before start cycle:", startCycle,
+                "and will not be processed.", "\n")
+            next
+          }
+        }
+
+        #Determine if cycle (j) needs to be skipped when endCycle is not NA
+        if(useCycle & !is.na(endCycle))
+        {
+          #If cycle j is less than startCycle or greater than endCycle, skip to
+          #next iteration of loop
+          if(j < startCycle | j > endCycle)
+          {
+            cat("Cycle:", j, "is before:", startCycle,"or after:", endCycle,
+                "and will not be processed.", "\n")
+            next
+          }
+        }
 
         #If this is the last year to process and addCompute, addPotFire,
         #addCarbon, addFuels is T, move to next iteration of loop. This is done,
         #since these tables report one less cycle than FVS_Treelist and
         #FVS_Treelist_East
         if(j == length(years) & (addCompute | addPotFire | addCarbon |
-                                 addFuels))
+                                 addFuels) & length(years) != 1)
         {
           cat("Skipping last year:", years[j], "\n")
           next
@@ -595,15 +704,6 @@ main<- function(input = NULL,
           invalidStands <- invalidStands + 1
           invalidStand = T
           break
-        }
-
-        #If year j is less than startYear, skip to next iteration of loop
-        if(years[j] < startYear)
-        {
-          cat("Year:", years[j], "is before start year:", startYear,
-              "and will not be processed.", "\n")
-          rm(standYrDF)
-          next
         }
 
         #Calculate basal and percent canopy cover for each tree record
@@ -686,6 +786,13 @@ main<- function(input = NULL,
       #Combine all year-by-year information for standID into a single
       #dataframe.
       standOut<-do.call("rbind", standYrOutput)
+
+      #If standOut has no information, skip to next iteration of loop.
+      if(length(standOut) <= 0)
+      {
+        cat("\n", "No information produced for stand:", standID, "\n", "\n")
+        next
+      }
 
       #Remove standYrOutput
       rm(standYrOutput)

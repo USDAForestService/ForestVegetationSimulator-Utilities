@@ -102,7 +102,7 @@ checkDBTables<-function(con,
 
   if(validDB & addCompute)
   {
-    #Check for FVS_TREELIST in con
+    #Check for FVS_COMPUTE in con
     if(!RSQLite::dbExistsTable(con,
                                "FVS_COMPUTE"))
     {
@@ -126,10 +126,9 @@ checkDBTables<-function(con,
 
   if(validDB & addPotFire)
   {
-    #Check for FVS_PotFire_East for any runs that assume CS or SN variant
+    #Check for FVS_POTFIRE_EAST for any runs that assume CS or SN variant
     if(is.element(T, variants %in% c("CS", "SN")))
        {
-         #Check for FVS_POTFIRE_EAST in con
          if(!RSQLite::dbExistsTable(con,
                                     "FVS_POTFIRE_EAST"))
          {
@@ -145,11 +144,10 @@ checkDBTables<-function(con,
          }
     }
 
-    #Check for FVS_PotFire for any runs that assume variants other than CS or
+    #Check for FVS_POTFIRE for any runs that assume variants other than CS or
     #SN.
     else
     {
-      #Check for FVS_POTFIRE in con
       if(!RSQLite::dbExistsTable(con,
                                  "FVS_POTFIRE"))
       {
@@ -173,7 +171,7 @@ checkDBTables<-function(con,
 
   if(validDB & addFuels)
   {
-    #Check for FVS_TREELIST in con
+    #Check for FVS_FUELS in con
     if(!RSQLite::dbExistsTable(con,
                                "FVS_FUELS"))
     {
@@ -196,7 +194,7 @@ checkDBTables<-function(con,
 
   if(validDB & addCarbon)
   {
-    #Check for FVS_TREELIST in con
+    #Check for FVS_CARBON in con
     if(!RSQLite::dbExistsTable(con,
                                "FVS_CARBON"))
     {
@@ -324,17 +322,8 @@ treeQuery<-function(cases, variant)
   #Add stand query as long as length of cases is at least 1.
   if(length(cases) >= 1)
   {
-    #Add quotes to stand and commas to cases
-    cases<-paste0("'",cases,"'", ",")
-
-    #Collapse cases into a single string
-    cases<-paste(cases, collapse = "")
-
-    #Remove last comma from cases
-    cases<-substr(cases,1, nchar(cases)-1)
-
-    #Add parentheses around cases
-    cases<-paste0("(", cases, ")")
+    #Get string of cases
+    cases<-collectID(cases)
 
     #Create WHERE clause with cases
     standQuery<-paste0("WHERE TL.CaseID IN", cases)
@@ -350,9 +339,9 @@ treeQuery<-function(cases, variant)
 #Function: caseQuery
 #
 #This function builds and returns a string of SQL statements that is used to
-#read CaseID, StandID, Groups, and Viarnt from the FVS_Cases table for a FVS run
-#title specified in the caseQuery function arguments. The caseQuery function can
-#be invoked outside of main.R with the dbGetQuery function of the RSQLite R
+#read CaseID, StandID, Groups, and Variant from the FVS_Cases table for a FVS
+#run title specified in the caseQuery function arguments. The caseQuery function
+#can be invoked outside of main.R with the dbGetQuery function of the RSQLite R
 #package.
 #
 #Arguments
@@ -403,17 +392,8 @@ computeQuery<-function(cases)
   #Add stand query as long as length of cases is at least 1.
   if(length(cases) >= 1)
   {
-    #Add quotes to stand and commas to cases
-    cases<-paste0("'",cases,"'", ",")
-
-    #Collapse cases into a single string
-    cases<-paste(cases, collapse = "")
-
-    #Remove last comma from cases
-    cases<-substr(cases,1, nchar(cases)-1)
-
-    #Add parentheses around cases
-    cases<-paste0("(", cases, ")")
+    #Get string of cases
+    cases<-collectID(cases)
 
     #Create WHERE clause with cases
     caseQuery<-paste0("WHERE FVS_Compute.CaseID IN", cases)
@@ -497,17 +477,8 @@ potFireQuery<-function(cases, variant)
   #Add stand query as long as length of cases is at least 1.
   if(length(cases) >= 1)
   {
-    #Add quotes to stand and commas to cases
-    cases<-paste0("'",cases,"'", ",")
-
-    #Collapse cases into a single string
-    cases<-paste(cases, collapse = "")
-
-    #Remove last comma from cases
-    cases<-substr(cases,1, nchar(cases)-1)
-
-    #Add parentheses around cases
-    cases<-paste0("(", cases, ")")
+    #Get string of cases
+    cases<-collectID(cases)
 
     #Create WHERE clause with cases
     caseQuery<-paste0("WHERE PF.CaseID IN", cases)
@@ -591,17 +562,8 @@ fuelsQuery<-function(cases)
   #Add stand query as long as length of cases is at least 1.
   if(length(cases) >= 1)
   {
-    #Add quotes to stand and commas to cases
-    cases<-paste0("'",cases,"'", ",")
-
-    #Collapse cases into a single string
-    cases<-paste(cases, collapse = "")
-
-    #Remove last comma from cases
-    cases<-substr(cases,1, nchar(cases)-1)
-
-    #Add parentheses around cases
-    cases<-paste0("(", cases, ")")
+    #Get string of cases
+    cases<-collectID(cases)
 
     #Create WHERE clause with cases
     caseQuery<-paste0("WHERE FVS_Fuels.CaseID IN", cases)
@@ -642,17 +604,8 @@ carbonQuery<-function(cases)
   #Add stand query as long as length of cases is at least 1.
   if(length(cases) >= 1)
   {
-    #Add quotes to stand and commas to cases
-    cases<-paste0("'",cases,"'", ",")
-
-    #Collapse cases into a single string
-    cases<-paste(cases, collapse = "")
-
-    #Remove last comma from cases
-    cases<-substr(cases,1, nchar(cases)-1)
-
-    #Add parentheses around cases
-    cases<-paste0("(", cases, ")")
+    #Get string of cases
+    cases<-collectID(cases)
 
     #Create WHERE clause with cases
     caseQuery<-paste0("WHERE FVS_Carbon.CaseID IN", cases)
@@ -662,6 +615,42 @@ carbonQuery<-function(cases)
   }
 
   return(query)
+}
+
+################################################################################
+#Function: collectID
+#
+#This function takes in a character vector of IDs used for querying a database
+#and collects them into a single string where IDs are surrounded by parentheses
+#and separated by commas.
+#
+#Example IDs: "Stand1", "Stand2", "Stand3" would be collected into the
+#the following string: "('Stand1', 'Stand2', 'Stand3')"
+#
+#Arguments
+#
+#ids:    Chracter vector of IDs.
+#
+#value:
+#
+#Character string of IDs surrounded by parentheses and separated by commas.
+################################################################################
+
+collectID <- function(ids)
+{
+  #Add quotes arounds ids and separate with commas
+  ids<-paste0("'",ids,"'", ",")
+
+  #Collapse ids into a single string
+  idString<-paste(ids, collapse = "")
+
+  #Remove last comma from idString
+  idString<-substr(idString,1, nchar(idString)-1)
+
+  #Add parentheses around idString
+  idString<-paste0("(",idString, ")")
+
+  return(idString)
 }
 
 ################################################################################
@@ -852,7 +841,7 @@ removeCaseIndices <- function(input)
 }
 
 ################################################################################
-#Function: getGroup
+#Function: getGroup ***NOT CURRENTLY IN USE***
 #
 #This function takes in a string of FVS group labels and returns the group
 #proceeding the input string identifier as specified in label argument.
