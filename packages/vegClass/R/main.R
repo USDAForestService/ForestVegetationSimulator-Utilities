@@ -719,47 +719,46 @@ main<- function(input = NULL,
                              REGION = region,
                              YEAR = years[j])
 
+        #Determine what volumes should be used for vegOut and volumeCalc
+        #Logic for eastern variants
+        if(variant %in% c("CS", "LS", "NE", "SN"))
+        {
+          vol1 = "MCuFt"
+          vol2 = "SCuFt"
+          vol3 = "SBdFt"
+        }
+        else
+        {
+          vol1 = "TCuFt"
+          vol2 = "MCuFt"
+          vol3 = "BdFt"
+        }
+
         #Bind data from vegOut to yrOutput
         yrOutput <- cbind(yrOutput,
-                          vegOut(standYrDF))
+                          vegOut(data = standYrDF,
+                                 region = region,
+                                 vol1 = vol1,
+                                 vol2 = vol2,
+                                 vol3 = vol3))
 
         #If addVolume is TRUE, calculate volumes and add to yrOutput
         if(addVolume)
         {
-          #Logic for eastern variants
-          if(variant %in% c("CS", "LS", "NE", "SN"))
-          {
-            volume <- volumeCalc(standYrDF,
-                                 vol1 = "MCuFt",
-                                 vol2 = "SCuFt",
-                                 vol3 = "SBdFt",
-                                 vol1DBH = vol1DBH,
-                                 vol2DBH = vol2DBH,
-                                 vol3DBH = vol3DBH)
+          volume <- volumeCalc(standYrDF,
+                               vol1 = vol1,
+                               vol2 = vol2,
+                               vol3 = vol3,
+                               vol1DBH = vol1DBH,
+                               vol2DBH = vol2DBH,
+                               vol3DBH = vol3DBH)
 
-            yrOutput$VOL1 <- volume["VOL1"]
-            yrOutput$VOL2 <- volume["VOL2"]
-            yrOutput$VOL3 <- volume["VOL3"]
-            yrOutput$DEADVOL1 <- volume["VOL4"]
-            yrOutput$DEADVOL2 <- volume["VOL5"]
-            yrOutput$DEADVOL3 <- volume["VOL6"]
-          }
-
-          #Logic for all other variants
-          else
-          {
-            volume <- volumeCalc(standYrDF,
-                                 vol1DBH = vol1DBH,
-                                 vol2DBH = vol2DBH,
-                                 vol3DBH = vol3DBH)
-
-            yrOutput$VOL1 <- volume["VOL1"]
-            yrOutput$VOL2 <- volume["VOL2"]
-            yrOutput$VOL3 <- volume["VOL3"]
-            yrOutput$DEADVOL1 <- volume["VOL4"]
-            yrOutput$DEADVOL2 <- volume["VOL5"]
-            yrOutput$DEADVOL3 <- volume["VOL6"]
-          }
+          yrOutput$VOL1 <- volume["VOL1"]
+          yrOutput$VOL2 <- volume["VOL2"]
+          yrOutput$VOL3 <- volume["VOL3"]
+          yrOutput$DEADVOL1 <- volume["VOL4"]
+          yrOutput$DEADVOL2 <- volume["VOL5"]
+          yrOutput$DEADVOL3 <- volume["VOL6"]
         }
 
         #Add yrOutput to standYrOutput
