@@ -1,324 +1,10 @@
 ################################################################################
-#Function plotAttr2
-#
-#This function calculates the following attributes for each species or across
-#all species in plot/stand:
-#Basal area per acre (BA)
-#Trees per acre (TPA)
-#QMD (QMD)
-#Percent canopy cover uncorrected for overlap (UNCC)
-#Percent canopy cover corrected for overlap (CC)
-#Zeide SDI (ZSDI)
-#Reineke SDI (RSDI)
-#Basal area weighted diameter (BA_WT_DIA)
-#Basal area weighted height (BA_WT_HT)
-#
-#Arguments:
-#
-#data:       Data frame containing tree records from a single stand or plot.
-#            Data frame must contain a column corresponding to stand/plot ID,
-#            DBH, height, species, expansion factor, and crown width for each
-#            tree record.
-#
-#stand:      Character string corresponding to name of column pertaining to
-#            stand or plot ID associated with tree records in data argument. By
-#            default, this value is set to "StandID".
-#
-#species:    Character string corresponding to name of column pertaining to USDA
-#            plant symbols of tree records in data argument. By default, this
-#            argument is set to "SpeciesPLANTS".
-#
-#dbh:        Character string corresponding to name of column pertaining to DBH
-#            of tree records in data argument. By default, this argument is set
-#            to "DBH".
-#
-#ht:         Character string corresponding to name of column pertaining to
-#            total tree height of tree records in data argument. By default,
-#            this argument is set to "Ht".
-#
-#expf:       Character string corresponding to name of column pertaining to TPA
-#            of tree records in data argument. By default, this argument is set
-#            to "TPA".
-#
-#crwidth:    Character string corresponding to name of column pertaining to
-#            crown width values of tree records in data argument. By default,
-#            this argument is set to "CrWidth".
-#
-#min:        Minimum diameter to consider in calculation of plot attributes. By
-#            default this argument is set to 0.
-#
-#max:        Maximum diameter to consider in calculation of plot attributes. By
-#            default this argument is set to 999.
-#
-#allSpecies: Logical variable used to determine if plot attributes should be
-#            calculated for all species in the stand. If argument is TRUE (T),
-#            then plot attributes are calculated for each species in plot/stand
-#            and across all species in stand. If the argument is FALSE (F), plot
-#            attributes are only calculated across all species in plot/stand. By
-#            default this argument is set to TRUE (T).
-#
-#debug:      logical variable indicating if debug statements should be printed.
-#            By default this value is set to FALSE (F).
-#
-#Value
-#
-#Named list containing plot attributes for each species in plot/stand and/or
-#across all species in plot/stand.
-################################################################################
-
-# plotAttr <- function(data,
-#                      stand = "StandID",
-#                      species = "SpeciesPLANTS",
-#                      dbh = "DBH",
-#                      ht = "Ht",
-#                      crwidth = "CrWidth",
-#                      expf = "TPA",
-#                      min = 0,
-#                      max = 999,
-#                      allSpecies = T,
-#                      debug = F)
-# {
-#   if(debug)
-#   {
-#     cat("In function plotAttr", "\n")
-#     cat("Columns:", "\n",
-#         "Stand:", stand, "\n",
-#         "Species", species, "\n",
-#         "dbh:", dbh, "\n",
-#         "ht:", ht, "\n",
-#         "crWidth:", crwidth, "\n",
-#         "expf:", expf, "\n", "\n")
-#   }
-#
-#   #Check for missing columns in data
-#   missing <- c(dbh, ht, crwidth, expf, stand, species) %in% colnames(data)
-#
-#   #If name of columns provided in stand, dbh, expf, crwidth are not found in
-#   #data warning message is issued and 0 valued are returned.
-#   if(F %in% missing)
-#   {
-#     cat("One or more input arguments not found in data. Check spelling.", "\n")
-#
-#     #Initialize attr list that will be returned
-#     attrList <- list(c("BA" = 0,
-#                        "TPA" = 0,
-#                        "QMD" = 0,
-#                        "UNCC" = 0,
-#                        "CC" = 0,
-#                        "ZSDI" = 0,
-#                        "RSDI" = 0,
-#                        "BA_WT_DIA" = 0,
-#                        "BA_WT_HT" = 0))
-#
-#     return(attr)
-#   }
-#
-#   #Determine number of unique species in stand
-#
-#   #If allSpecies is TRUE, define vector (spStand) of unique species found in
-#   #data
-#   if(allSpecies)
-#   {
-#     spStand <- c(unique(data[[species]]), "ALL")
-#   }
-#
-#   #Else set spStand to "ALL"
-#   else
-#   {
-#     spStand <- "ALL"
-#   }
-#
-#   #Create list that will house plot attributes for each species in data
-#   attrList <- vector(mode = "list", length = length(spStand))
-#
-#   #Loop across attrList and store initialized plot attributes for each species
-#   for(i in 1:length(spStand))
-#   {
-#     #Extract species
-#     sp <- spStand[i]
-#
-#     #Create name for species in list
-#     names(attrList)[i] <- sp
-#
-#     #Assign vector for species sp
-#     attr <- c("BA" = 0,
-#               "TPA" = 0,
-#               "QMD" = 0,
-#               "UNCC" = 0,
-#               "CC" = 0,
-#               "ZSDI" = 0,
-#               "RSDI" = 0,
-#               "BA_WT_DIA" = 0,
-#               "BA_WT_HT" = 0)
-#
-#     #Store attr in attrList
-#     attrList[[i]] <- attr
-#   }
-#
-#   #Initialize values for BA, TPA, CC, DBHSQ ,ZSDI (Zeide SDI), and RSDI (Reineke
-#   #SDI), BAWTD, and BAWTH
-#   TBA = 0
-#   TEXPF = 0
-#   DBHSQ = 0
-#   TCC = 0
-#   TZSDI = 0
-#   BAWTD = 0
-#   BAWTH = 0
-#
-#   #Loop across data and calculate attributes
-#   for(i in 1:nrow(data))
-#   {
-#     #If DBH of record is GE min DBH and less than max include it in calculations
-#     if(data[[dbh]][i] >= min & data[[dbh]][i] < max)
-#     {
-#       #Get species for tree i
-#       sp <- data[[species]][i]
-#
-#       #Extract expansion factor of tree i
-#       TEXPF <- data[[expf]][i]
-#
-#       #Extract DBH of tree i
-#       DBH <- data[[dbh]][i]
-#
-#       #Calculate BA of tree
-#       TBA <- DBH^2 * TEXPF * 0.005454
-#
-#       #Calculate CC of tree
-#       TCC <- pi * (data[[crwidth]][i]/2)^2 *(TEXPF/43560) * 100
-#
-#       #Calculate tree contribution to QMD
-#       DBHSQ <- DBH^2 * TEXPF
-#
-#       #Calculate tree contribution to BAWTD
-#       BAWTD = DBH * TBA
-#
-#       #Calculate tree contribution to BAWTH
-#       BAWTH = data[[ht]][i] * TBA
-#
-#       #Calculate tree contribution of ZSDI
-#       TZSDI <- (TEXPF * (DBH/10)^1.605)
-#
-#       if(debug)
-#       {
-#         cat("SPECIES:", sp, "\n",
-#             "TREE DBH:", DBH, "\n",
-#             "TREE EXP:", TEXPF, "\n",
-#             "TREECC:", TCC, "\n",
-#             "TREEBA:", TBA, "\n",
-#             "DBHSQ:", DBHSQ, "\n",
-#             "BAWTD:", BAWTD, "\n",
-#             "BAWTH:", BAWTH, "\n",
-#             "TZSDI:", TZSDI, "\n", "\n")
-#       }
-#
-#       #=========================================================================
-#       #Update values for ALL code
-#       #=========================================================================
-#
-#       #Update TPA
-#       attrList[["ALL"]]["TPA"] <- attrList[["ALL"]]["TPA"] + TEXPF
-#
-#       #Update BA
-#       attrList[["ALL"]]["BA"] <- attrList[["ALL"]]["BA"] + TBA
-#
-#       #Update QMD (DBHSQ values for now)
-#       attrList[["ALL"]]["QMD"] <- attrList[["ALL"]]["QMD"] + DBHSQ
-#
-#       #Update CC
-#       attrList[["ALL"]]["UNCC"] <- attrList[["ALL"]]["UNCC"] + TCC
-#
-#       #Update BA_WT_DIA
-#       attrList[["ALL"]]["BA_WT_DIA"] <- attrList[["ALL"]]["BA_WT_DIA"] + BAWTD
-#
-#       #Update BA_WT_HT
-#       attrList[["ALL"]]["BA_WT_HT"] <- attrList[["ALL"]]["BA_WT_HT"] + BAWTH
-#
-#       #Update ZSDI
-#       attrList[["ALL"]]["ZSDI"] <- attrList[["ALL"]]["ZSDI"] + TZSDI
-#
-#       #=========================================================================
-#       #Update values for species (sp) if allSpecies is TRUE
-#       #=========================================================================
-#
-#       if(allSpecies)
-#       {
-#         #Update TPA
-#         attrList[[sp]]["TPA"] <- attrList[[sp]]["TPA"] + TEXPF
-#
-#         #Update BA
-#         attrList[[sp]]["BA"] <- attrList[[sp]]["BA"] + TBA
-#
-#         #Update QMD (DBHSQ values for now)
-#         attrList[[sp]]["QMD"] <- attrList[[sp]]["QMD"] + DBHSQ
-#
-#         #Update CC
-#         attrList[[sp]]["UNCC"] <- attrList[[sp]]["UNCC"] + TCC
-#
-#         #Update BA_WT_DIA
-#         attrList[[sp]]["BA_WT_DIA"] <- attrList[[sp]]["BA_WT_DIA"] + BAWTD
-#
-#         #Update BA_WT_HT
-#         attrList[[sp]]["BA_WT_HT"] <- attrList[[sp]]["BA_WT_HT"] + BAWTH
-#
-#         #Update ZSDI
-#         attrList[[sp]]["ZSDI"] <- attrList[[sp]]["ZSDI"] + TZSDI
-#       }
-#     }
-#   }
-#
-#   #Loop across attrList and finalize values
-#   for(i in 1:length(attrList))
-#   {
-#     #Now calculate QMD if TPA is not 0
-#     if(attrList[[i]]["TPA"] > 0)
-#     {
-#       attrList[[i]]["QMD"] = sqrt(attrList[[i]]["QMD"]/attrList[[i]]["TPA"])
-#     }
-#
-#     #Calculate BA weighted diameter and height if BA is not 0
-#     if(attrList[[i]]["BA"] > 0)
-#     {
-#       attrList[[i]]["BA_WT_DIA"] <- attrList[[i]]["BA_WT_DIA"]/
-#         attrList[[i]]["BA"]
-#
-#       attrList[[i]]["BA_WT_HT"] <- attrList[[i]]["BA_WT_HT"]/
-#         attrList[[i]]["BA"]
-#     }
-#
-#     #Calculate RSDI
-#     attrList[[i]]["RSDI"] = attrList[[i]]["TPA"] *
-#       (attrList[[i]]["QMD"]/10)^1.605
-#
-#     #Calculate corrected canopy cover
-#     attrList[[i]]["CC"] <- correctCC(attrList[[i]]["UNCC"])
-#
-#     #Print stand and values in attr
-#     if(debug)
-#     {
-#       cat("Stand:", unique(data[[stand]]), "\n")
-#       cat("Species", names(attrList)[i], "\n")
-#       cat("BA:", attrList[[i]]["BA"], "\n")
-#       cat("TPA:", attrList[[i]]["TPA"], "\n")
-#       cat("QMD:", attrList[[i]]["QMD"], "\n")
-#       cat("UNCC:", attrList[[i]]["UNCC"], "\n")
-#       cat("CC:", attrList[[i]]["CC"], "\n")
-#       cat("ZSDI:", attrList[[i]]["ZSDI"], "\n")
-#       cat("RSDI:", attrList[[i]]["RSDI"], "\n")
-#       cat("BA_WT_DIA:", attrList[[i]]["BA_WT_DIA"], "\n")
-#       cat("BA_WT_HT:", attrList[[i]]["BA_WT_HT"],"\n", "\n")
-#     }
-#   }
-#
-#   #Return List of attributes
-#   return(attrList)
-# }
-
-################################################################################
 #Function plotAttr
 #
-#This function calculates the following attributes for each species or across
-#all species in plot/stand:
+#This function calculates the following attributes for each species in
+#plot/stand:
 #
+#Number of records in plot/stand (N)
 #Basal area per acre (BA)
 #Trees per acre (TPA)
 #QMD (QMD)
@@ -329,10 +15,10 @@
 #Basal area weighted diameter (BA_WT_DIA)
 #Basal area weighted height (BA_WT_HT)
 #
-#If region argument in function is 8 (USFS R8) the following values are
+#If region argument in function is 8 or 9 (USFS R8/R9) the following values are
 #calculated:
 #
-#Lorey height of advanced regeneration size class (ARSIZE)
+#TPA weighted average height of advanced regeneration size class (ARSIZE)
 #Trees per acre of advanced regeneration size class (ARTPA)
 #Basal area of advanced regeneration size class (ARBA)
 #Basal area weighted diameter of non merchantable size class (NMSIZE)
@@ -349,8 +35,8 @@
 #            DBH, height, species, expansion factor, and crown width for each
 #            tree record.
 #
-#region:     Integer variable corresponding to USFS region number. Valid
-#            values are 1, 2, 3, 4, 5, 6, 8, 9, or 10.
+#region:     Integer variable corresponding to USFS region number (1, 2, 3, 4,
+#            5, 6, 8, 9, or 10).
 #
 #stand:      Character string corresponding to name of column pertaining to
 #            stand or plot ID associated with tree records in data argument. By
@@ -439,6 +125,30 @@ plotAttr <- function(data,
         "vol3:", vol3, "\n", "\n")
   }
 
+  #Default attr list that will be returned if error is thrown.
+  attrList <- list("ALL" = c("N" = NA,
+                                "BA" = NA,
+                                "TPA" = NA,
+                                "QMD" = NA,
+                                "UNCC" = NA,
+                                "CC" = NA,
+                                "ZSDI" = NA,
+                                "RSDI" = NA,
+                                "BA_WT_DIA" = NA,
+                                "BA_WT_HT" = NA,
+                                "ARSIZE" = NA,
+                                "ARTPA" = NA,
+                                "ARBA" = NA,
+                                "NMSIZE" = NA,
+                                "NMBA" = NA,
+                                "PWSIZE" = NA,
+                                "PWBA" = NA,
+                                "STSIZE" = NA,
+                                "STBA" = NA))
+
+  #If data has no rows, return
+  if(nrow(data) <= 0) return(attrList)
+
   #Check for missing columns in data
   missing <- c(dbh, ht, crwidth, expf, stand, species, vol1, vol2, vol3) %in%
     colnames(data)
@@ -448,27 +158,6 @@ plotAttr <- function(data,
   if(F %in% missing)
   {
     cat("One or more input arguments not found in data. Check spelling.", "\n")
-
-    #Initialize attr list that will be returned
-    attrList <- list(c("BA" = 0,
-                       "TPA" = 0,
-                       "QMD" = 0,
-                       "UNCC" = 0,
-                       "CC" = 0,
-                       "ZSDI" = 0,
-                       "RSDI" = 0,
-                       "BA_WT_DIA" = 0,
-                       "BA_WT_HT" = 0,
-                       "ARSIZE" = 0,
-                       "ARTPA" = 0,
-                       "ARBA" = 0,
-                       "NMSIZE" = 0,
-                       "NMBA" = 0,
-                       "PWSIZE" = 0,
-                       "PWBA" = 0,
-                       "STSIZE" = 0,
-                       "STBA" = 0))
-
     return(attrList)
   }
 
@@ -489,7 +178,8 @@ plotAttr <- function(data,
     names(attrList)[i] <- sp
 
     #Assign vector for species sp
-    attr <- c("BA" = 0,
+    attr <- c("N" = 0,
+              "BA" = 0,
               "TPA" = 0,
               "QMD" = 0,
               "UNCC" = 0,
@@ -521,6 +211,8 @@ plotAttr <- function(data,
   TZSDI = 0
   BAWTD = 0
   BAWTH = 0
+  N = 0
+  advN = 0
 
   #Loop across data and calculate attributes
   for(i in 1:nrow(data))
@@ -537,6 +229,9 @@ plotAttr <- function(data,
       #Extract DBH of tree i
       DBH <- data[[dbh]][i]
 
+      #Extract HT of tree i
+      HT <- data[[ht]][i]
+
       #Calculate BA of tree
       TBA <- DBH^2 * TEXPF * 0.005454
 
@@ -550,27 +245,20 @@ plotAttr <- function(data,
       BAWTD = DBH * TBA
 
       #Calculate tree contribution to BAWTH
-      BAWTH = data[[ht]][i] * TBA
+      BAWTH = HT * TBA
 
       #Calculate tree contribution of ZSDI
       TZSDI <- (TEXPF * (DBH/10)^1.605)
 
-      if(debug)
-      {
-        cat("SPECIES:", sp, "\n",
-            "TREE DBH:", DBH, "\n",
-            "TREE EXP:", TEXPF, "\n",
-            "TREECC:", TCC, "\n",
-            "TREEBA:", TBA, "\n",
-            "DBHSQ:", DBHSQ, "\n",
-            "BAWTD:", BAWTD, "\n",
-            "BAWTH:", BAWTH, "\n",
-            "TZSDI:", TZSDI, "\n", "\n")
-      }
+      #Update number of trees processed
+      N <- N + 1
 
       #=========================================================================
       #Update values for ALL code
       #=========================================================================
+
+      #Update N
+      attrList[["ALL"]]["N"] <- attrList[["ALL"]]["N"] + 1
 
       #Update TPA
       attrList[["ALL"]]["TPA"] <- attrList[["ALL"]]["TPA"] + TEXPF
@@ -597,6 +285,9 @@ plotAttr <- function(data,
       #Update values for individual species
       #=========================================================================
 
+      #Update N
+      attrList[[sp]]["N"] <- attrList[[sp]]["N"] + 1
+
       #Update TPA
       attrList[[sp]]["TPA"] <- attrList[[sp]]["TPA"] + TEXPF
 
@@ -619,14 +310,17 @@ plotAttr <- function(data,
       attrList[[sp]]["ZSDI"] <- attrList[[sp]]["ZSDI"] + TZSDI
 
       #=========================================================================
-      #If region is 8, then update R8 specific variables
+      #If region is 8 or 9, then update R8/R9 specific variables
       #=========================================================================
 
-      if(region == 8)
+      if(region %in% c(8,9))
       {
         #If tree is advanced regeneration
         if(DBH < 1.5)
         {
+          #Update number of advanced regeneration records
+          advN = advN + 1
+
           #Update ARTPA
           attrList[[sp]]["ARTPA"] <- attrList[[sp]]["ARTPA"] + TEXPF
 
@@ -634,7 +328,7 @@ plotAttr <- function(data,
           attrList[[sp]]["ARBA"] <- attrList[[sp]]["ARBA"] + TBA
 
           #Update ARSIZE (lorey height)
-          attrList[[sp]]["ARSIZE"] <- attrList[[sp]]["ARSIZE"] + BAWTH
+          attrList[[sp]]["ARSIZE"] <- attrList[[sp]]["ARSIZE"] + HT*TEXPF
 
           #Update ARTPA
           attrList[["ALL"]]["ARTPA"] <- attrList[["ALL"]]["ARTPA"] + TEXPF
@@ -643,7 +337,7 @@ plotAttr <- function(data,
           attrList[["ALL"]]["ARBA"] <- attrList[["ALL"]]["ARBA"] + TBA
 
           #Update ARSIZE (lorey height)
-          attrList[["ALL"]]["ARSIZE"] <- attrList[["ALL"]]["ARSIZE"] + BAWTH
+          attrList[["ALL"]]["ARSIZE"] <- attrList[["ALL"]]["ARSIZE"] + HT*TEXPF
         }
 
         #If the tree is non merch
@@ -694,6 +388,21 @@ plotAttr <- function(data,
           attrList[["ALL"]]["STSIZE"] <- attrList[["ALL"]]["STSIZE"] + BAWTD
         }
       }
+
+      if(debug)
+      {
+        cat("TREE:", N, "\n",
+            "advN:", advN, "\n",
+            "SPECIES:", sp, "\n",
+            "TREE DBH:", DBH, "\n",
+            "TREE EXP:", TEXPF, "\n",
+            "TREECC:", TCC, "\n",
+            "TREEBA:", TBA, "\n",
+            "DBHSQ:", DBHSQ, "\n",
+            "BAWTD:", BAWTD, "\n",
+            "BAWTH:", BAWTH, "\n",
+            "TZSDI:", TZSDI, "\n", "\n")
+      }
     }
   }
 
@@ -716,11 +425,10 @@ plotAttr <- function(data,
         attrList[[i]]["BA"]
     }
 
-    #Calculate advance regen size if BA is greater than 0
-    if(attrList[[i]]["ARBA"] > 0)
+    #Calculate advance regen size if ARTPA is greater than 0
+    if(attrList[[i]]["ARTPA"] > 0)
     {
-      attrList[[i]]["ARSIZE"] <- attrList[[i]]["ARSIZE"]/
-        attrList[[i]]["ARBA"]
+      attrList[[i]]["ARSIZE"] <- attrList[[i]]["ARSIZE"]/attrList[[i]]["ARTPA"]
     }
 
     #Calculate non-merch size if BA is greater than 0
@@ -756,6 +464,7 @@ plotAttr <- function(data,
     {
       cat("Stand:", unique(data[[stand]]), "\n")
       cat("Species", names(attrList)[i], "\n")
+      cat("N:", attrList[[i]]["N"], "\n")
       cat("BA:", attrList[[i]]["BA"], "\n")
       cat("TPA:", attrList[[i]]["TPA"], "\n")
       cat("QMD:", attrList[[i]]["QMD"], "\n")
@@ -909,12 +618,15 @@ volumeCalc <- function(data,
   }
 
   #Initialize volume vector that will be returned
-  volume <- c("VOL1" = 0,
-              "VOL2" = 0,
-              "VOL3" = 0,
-              "VOL4" = 0,
-              "VOL5" = 0,
-              "VOL6" = 0)
+  volume <- c("VOL1" = NA,
+              "VOL2" = NA,
+              "VOL3" = NA,
+              "VOL4" = NA,
+              "VOL5" = NA,
+              "VOL6" = NA)
+
+  #If data has no rows, return
+  if(nrow(data) <= 0) return(volume)
 
   #Check for missing columns in data
   missing <- c(dbh, expf, expfM, stand, vol1, vol2, vol3) %in% colnames(data)

@@ -27,6 +27,19 @@
 # - QMD of top 20% (QMD_TOP20)
 # - Basal area weighted diameter (BA_WT_DIA)
 # - Basal area weighted height (BA_WT_HT)
+# - Dominance type of advance regeneration ARDOMSPP - R8 only)
+# - TPA weighted average height of advance regeneration (ARSIZE - R8 only)
+# - Tree per acre of advance regeneration (ARTPA - R8 only)
+# - Dominance type of non-merchantable trees (NMDOMSPP - R8 only)
+# - Basal area weighted diameter of non-merchantable trees (NMSIZE - R8 only)
+# - Basal area of non-merchantable trees (NMBA - R8 only)
+# - Dominance type of pulpwood trees (PWDOMSPP - R8 only)
+# - Basal area weighted diameter of pulpwood trees (PWSIZE - R8 only)
+# - Basal area of pulpwood trees (PWBA - R8 only)
+# - Dominance type of saw timber sized trees (STDOMSPP - R8 only)
+# - Basal area weighted diameter of saw timber sized trees (STSIZE - R8 only)
+# - Basal area of saw timber sized trees (STBA - R8 only)
+# - Size and density class (VEGCLASS - R8 only)
 #
 #Arguments
 #
@@ -34,6 +47,9 @@
 #         frame must contain a column corresponding to stand/plot ID, species
 #         (USDA Plant Symbol only), DBH, expansion factor, and crown width for
 #         each tree record.
+#
+#region:  Integer variable corresponding to USFS region number (1, 2, 3, 4,
+#         5, 6, 8, 9, or 10).
 #
 #stand:   Character string corresponding to name of column pertaining to stand
 #         or plot ID associated with tree records in data argument. By default,
@@ -158,17 +174,17 @@ vegOut <- function(data,
                       vol3 = vol3)
 
   #Calculate canopy cover uncorrected for overlap (CAN_COV)
-  vegData$CAN_COV <- allAttr[["ALL"]]["CC"]
+  vegData$CAN_COV <- round(allAttr[["ALL"]]["CC"],2)
 
   #Calculate BA, BA_WT_DIA, TPA, QMD, and SDI for seedlings + stems. Do this for
   #all regions.
-  vegData$BA <- allAttr[["ALL"]]["BA"]
-  vegData$BA_WT_DIA <- allAttr[["ALL"]]["BA_WT_DIA"]
-  vegData$BA_WT_HT <- allAttr[["ALL"]]["BA_WT_HT"]
-  vegData$TPA <- allAttr[["ALL"]]["TPA"]
-  vegData$QMD <- allAttr[["ALL"]]["QMD"]
-  vegData$ZSDI <- allAttr[["ALL"]]["ZSDI"]
-  vegData$RSDI <- allAttr[["ALL"]]["RSDI"]
+  vegData$BA <- round(allAttr[["ALL"]]["BA"],2)
+  vegData$BA_WT_DIA <- round(allAttr[["ALL"]]["BA_WT_DIA"],2)
+  vegData$BA_WT_HT <- round(allAttr[["ALL"]]["BA_WT_HT"],2)
+  vegData$TPA <- round(allAttr[["ALL"]]["TPA"],2)
+  vegData$QMD <- round(allAttr[["ALL"]]["QMD"],2)
+  vegData$ZSDI <- round(allAttr[["ALL"]]["ZSDI"],2)
+  vegData$RSDI <- round(allAttr[["ALL"]]["RSDI"],2)
 
   #Calculate BA, BA_WT_DIA, TPA, QMD, and SDI for stems (DBH >= 1")
   stemAttr <- plotAttr(data,
@@ -183,19 +199,19 @@ vegOut <- function(data,
                        vol3 = vol3,
                        min = 1)
 
-  vegData$BA_STM <- stemAttr[["ALL"]]["BA"]
-  vegData$TPA_STM <- stemAttr[["ALL"]]["TPA"]
-  vegData$QMD_STM <- stemAttr[["ALL"]]["QMD"]
-  vegData$ZSDI_STM <- stemAttr[["ALL"]]["ZSDI"]
-  vegData$RSDI_STM <- stemAttr[["ALL"]]["RSDI"]
+  vegData$BA_STM <- round(stemAttr[["ALL"]]["BA"],2)
+  vegData$TPA_STM <- round(stemAttr[["ALL"]]["TPA"],2)
+  vegData$QMD_STM <- round(stemAttr[["ALL"]]["QMD"],2)
+  vegData$ZSDI_STM <- round(stemAttr[["ALL"]]["ZSDI"],2)
+  vegData$RSDI_STM <- round(stemAttr[["ALL"]]["RSDI"],2)
 
   #Calculate QMD_TOP20
-  vegData$QMD_TOP20 <- qmdTop20(data,
+  vegData$QMD_TOP20 <- round(qmdTop20(data,
                                 stand = stand,
                                 dbh = dbh,
                                 expf = expf,
                                 TPA = allAttr[["ALL"]]["TPA"],
-                                CC = allAttr[["ALL"]]["CC"])
+                                CC = allAttr[["ALL"]]["CC"]),2)
 
   #If region is not 8 or 9
   if(! region %in% c(8, 9))
@@ -280,37 +296,37 @@ vegOut <- function(data,
     vegData$ARDOMSPP <- dtResults[["ARDOMSPP"]]
 
     #ARSIZE
-    vegData$ARSIZE <- allAttr[["ALL"]]["ARSIZE"]
+    vegData$ARSIZE <- round(allAttr[["ALL"]]["ARSIZE"],2)
 
     #ARTPA
-    vegData$ARTPA <- allAttr[["ALL"]]["ARTPA"]
+    vegData$ARTPA <- round(allAttr[["ALL"]]["ARTPA"],2)
 
     #NMDOMSPP
     vegData$NMDOMSPP <- dtResults[["NMDOMSPP"]]
 
     #NMSIZE
-    vegData$NMSIZE <- allAttr[["ALL"]]["NMSIZE"]
+    vegData$NMSIZE <- round(allAttr[["ALL"]]["NMSIZE"],2)
 
     #NMBA
-    vegData$NMBA <- allAttr[["ALL"]]["NMBA"]
+    vegData$NMBA <- round(allAttr[["ALL"]]["NMBA"],2)
 
     #PWDOMSPP
     vegData$PWDOMSPP <- dtResults[["PWDOMSPP"]]
 
     #PWSIZE
-    vegData$PWSIZE <- allAttr[["ALL"]]["PWSIZE"]
+    vegData$PWSIZE <- round(allAttr[["ALL"]]["PWSIZE"],2)
 
     #PWBA
-    vegData$PWBA <- allAttr[["ALL"]]["PWBA"]
+    vegData$PWBA <- round(allAttr[["ALL"]]["PWBA"],2)
 
     #STDOMSPP
     vegData$STDOMSPP <- dtResults[["STDOMSPP"]]
 
     #STSIZE
-    vegData$STSIZE <- allAttr[["ALL"]]["STSIZE"]
+    vegData$STSIZE <- round(allAttr[["ALL"]]["STSIZE"],2)
 
     #STBA
-    vegData$STBA <- allAttr[["ALL"]]["STBA"]
+    vegData$STBA <- round(allAttr[["ALL"]]["STBA"],2)
 
     #DOMTYPE
     vegData$DOMTYPE <- dtResults[["DOMTYPE"]]

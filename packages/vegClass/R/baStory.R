@@ -44,11 +44,14 @@ baStory<-function(data,
                   stand = "StandID",
                   dbh = "DBH",
                   expf = "TPA",
-                  BA,
-                  TPA,
-                  CC,
+                  BA = 0,
+                  TPA = 0,
+                  CC = 0,
                   debug = F)
 {
+  #Initialize variable to return
+  story <- NA
+
   if(debug)
   {
     cat("In function baStory", "\n")
@@ -59,6 +62,12 @@ baStory<-function(data,
         "expf:", expf, "\n", "\n")
   }
 
+  #if TPA is 0, return
+  if(TPA <= 0) return(story)
+
+  #If data has no rows, return
+  if(nrow(data) <= 0) return(story)
+
   #Check for missing columns in data
   missing <- c(stand, dbh, expf) %in% colnames(data)
 
@@ -67,7 +76,7 @@ baStory<-function(data,
   if(F %in% missing)
   {
     cat("One or more input arguments not found in data. Check spelling.", "\n")
-    return(NA)
+    return(story)
   }
 
   #Calculate BA of each tree record if TREEBA does not exist in data.

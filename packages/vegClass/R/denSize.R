@@ -7,7 +7,7 @@
 #If the basal area of the stand is less than 10 BA, then the size class in the
 #size density classification is advanced regeneration.
 #
-#Advanced regeneration size class = 2
+#Advanced regeneration size class = 1
 #
 #If the size class of the stand is advanced regeneration, then one of the
 #following density classes will be determined:
@@ -37,9 +37,7 @@
 #Arguments
 #
 #data:     Data frame containing tree records from a single stand or plot. Data
-#          frame must contain a column corresponding to stand/plot ID, DBH,
-#          species code (USDA plant symbol), expansion factor, and crown width
-#          for each tree record.
+#          frame must contain a column corresponding to stand/plot ID.
 #
 #stand:    Character string corresponding to name of column pertaining to stand
 #          or plot ID associated with tree records in data argument. By default,
@@ -60,7 +58,10 @@ denSizeR8<-function(data,
                     debug = F)
 {
   #Initialize density size class variable that will be returned
-  denSize = NA
+  denSize <- NA
+
+  #If data has no rows, return
+  if(nrow(data) <= 0) return(denSize)
 
   #Check for missing columns in data
   missing <- c(stand) %in% colnames(data)
@@ -73,8 +74,9 @@ denSizeR8<-function(data,
     return(denSize)
   }
 
-  #If attribute list is NULL or length is 0 return
-  if(is.null(attrList) | length(attrList) <=0)
+  #If attribute list is NULL or length is less than or equal to 1 (ALL
+  #species with NA values), return
+  if(is.null(attrList) | length(attrList) <= 1)
   {
     return(denSize)
   }
@@ -125,7 +127,7 @@ denSizeR8<-function(data,
     else densityClass = "D"
   }
 
-  #Create denSize by pasting sizeClass and densityClass together
+  #Determine denSize
   denSize <- paste0(sizeClass,
                     densityClass)
 
