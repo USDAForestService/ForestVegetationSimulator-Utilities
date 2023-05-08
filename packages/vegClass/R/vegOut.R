@@ -14,32 +14,33 @@
 # - Quadratic mean diameter for stems (QMD_STM)
 # - Zeide stand density index stems (ZSDI_STM)
 # - Reineke stand density index for stems (RSDI_STM)
-# - Dominance type (DOM_TYPE)
+# - Dominance type (DOM_TYPE - R3 or R8 ruleset)
 # - Dominant species/genus/category or species/genus/category occurring before
-#   underscore in dominance type (DCC1)
-# - Percent canopy cover represented by DCC1 (XDCC1),
-# - Species/genus/category occurring after underscore in dominance type (DCC2),
-# - Percent canopy cover represented by DCC2 (XDCC2).
-# - Storiedness (BA_STORY)
-# - Canopy size class (CAN_SIZCLS)
-# - Canopy size class timberland (CAN_SZTMB)
-# - Canopy size class woodland (CAN_SZWDL)
+#   underscore in dominance type (DCC1 - R3 ruleset)
+# - Percent canopy cover represented by DCC1 (XDCC1 - R3 ruleset),
+# - Species/genus/category occurring after underscore in dominance type (DCC2 -
+#   R3 ruleset)
+# - Percent canopy cover represented by DCC2 (XDCC2 - R3 ruleset).
+# - Storiedness (BA_STORY - R3 ruleset)
+# - Canopy size class (CAN_SIZCLS - R3 ruleset)
+# - Canopy size class timberland (CAN_SZTMB - R3 ruleset)
+# - Canopy size class woodland (CAN_SZWDL - R3 ruleset)
 # - QMD of top 20% (QMD_TOP20)
 # - Basal area weighted diameter (BA_WT_DIA)
 # - Basal area weighted height (BA_WT_HT)
-# - Dominance type of advance regeneration ARDOMSPP - R8 only)
-# - TPA weighted average height of advance regeneration (ARSIZE - R8 only)
-# - Tree per acre of advance regeneration (ARTPA - R8 only)
+# - Dominance type of advance regeneration ARDOMSPP - R8 ruleset)
+# - TPA weighted average height of advance regeneration (ARSIZE - R8 ruleset)
+# - Tree per acre of advance regeneration (ARTPA - R8 ruleset)
 # - Dominance type of non-merchantable trees (NMDOMSPP - R8 only)
-# - Basal area weighted diameter of non-merchantable trees (NMSIZE - R8 only)
-# - Basal area of non-merchantable trees (NMBA - R8 only)
-# - Dominance type of pulpwood trees (PWDOMSPP - R8 only)
-# - Basal area weighted diameter of pulpwood trees (PWSIZE - R8 only)
-# - Basal area of pulpwood trees (PWBA - R8 only)
-# - Dominance type of saw timber sized trees (STDOMSPP - R8 only)
-# - Basal area weighted diameter of saw timber sized trees (STSIZE - R8 only)
-# - Basal area of saw timber sized trees (STBA - R8 only)
-# - Size and density class (VEGCLASS - R8 only)
+# - Basal area weighted diameter of non-merchantable trees (NMSIZE - R8 ruleset)
+# - Basal area of non-merchantable trees (NMBA - R8 ruleset)
+# - Dominance type of pulpwood trees (PWDOMSPP - R8 ruleset)
+# - Basal area weighted diameter of pulpwood trees (PWSIZE - R8 ruleset)
+# - Basal area of pulpwood trees (PWBA - R8 ruleset)
+# - Dominance type of saw timber sized trees (STDOMSPP - R8 ruleset)
+# - Basal area weighted diameter of saw timber sized trees (STSIZE - R8 ruleset)
+# - Basal area of saw timber sized trees (STBA - R8 ruleset)
+# - Size and density class (VEGCLASS - R8 ruleset)
 #
 #Arguments
 #
