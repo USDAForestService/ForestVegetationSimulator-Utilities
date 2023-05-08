@@ -212,7 +212,6 @@ plotAttr <- function(data,
   BAWTD = 0
   BAWTH = 0
   N = 0
-  advN = 0
 
   #Loop across data and calculate attributes
   for(i in 1:nrow(data))
@@ -318,9 +317,6 @@ plotAttr <- function(data,
         #If tree is advanced regeneration
         if(DBH < 1.5)
         {
-          #Update number of advanced regeneration records
-          advN = advN + 1
-
           #Update ARTPA
           attrList[[sp]]["ARTPA"] <- attrList[[sp]]["ARTPA"] + TEXPF
 
@@ -392,7 +388,6 @@ plotAttr <- function(data,
       if(debug)
       {
         cat("TREE:", N, "\n",
-            "advN:", advN, "\n",
             "SPECIES:", sp, "\n",
             "TREE DBH:", DBH, "\n",
             "TREE EXP:", TEXPF, "\n",
