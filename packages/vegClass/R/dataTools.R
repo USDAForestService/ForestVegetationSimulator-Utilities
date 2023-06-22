@@ -735,6 +735,8 @@ fvsGetTypes <- function()
 ################################################################################
 #Function: setDataTypes
 #
+#THIS FUNCTION IS CURRENTLY NOT IN USE.
+#
 #This function accepts a dataframe and checks if all columns in the data frame
 #match a specified datatype. If a column does not match a specified data type,
 #the column in the dataframe is cast to the correct data type. Only double,
@@ -898,6 +900,10 @@ addDbTable<-function(db,
   #Capitalize column headers
   colnames(dbTable) <- toupper(colnames(dbTable))
 
+  #Get column data types from tableName
+  tableTypes <-getDataTypes(conIn,
+                            tableName)
+
   #Determine if ERU needs to be added to dbTable
   if(addERU & tableName %in% c("FVS_STANDINIT",
                                "FVS_PLOTINIT",
@@ -962,12 +968,13 @@ addDbTable<-function(db,
     #Loop through missingFields and add to database table in conOut
     if(length(missingFields) > 0)
     {
-      cat("Fields missing from",
+      cat("\n",
+          "Fields missing from",
           tableName,
           "in",
           dbOut,
           "\n",
-          missingFields, "\n")
+          missingFields, "\n", "\n")
 
       for(i in 1:length(missingFields))
       {
@@ -975,15 +982,8 @@ addDbTable<-function(db,
         field <- missingFields[i]
 
         #Extract datatype of field
-        colType <- typeof(dbTable[[field]])
-
-        cat("colType:", colType, "\n")
-
-        #Change colType to REAL, TEXT, or INTEGER depending on dataType.
-        #REAL, CHARACTER, and TEXT are used since these datatypes are assumed
-        #by default when sending data to database with dbWriteTable function.
-        dataType <- convertType(value = colType,
-                                type = 1)
+        dataType <- tableTypes[names(tableTypes) == field]
+        cat("Field:", field, "dataType:", dataType, "\n")
 
         cat("Adding field:",
             field,
@@ -1006,14 +1006,9 @@ addDbTable<-function(db,
             field,
             "added to table:",
             tableName,
-            "\n")
+            "\n", "\n")
       }
     }
-
-    #Set any data types that are a mismatch between tableName and dbTable
-    dbTable <- checkDataTypes(con = conOut,
-                              tableName = tableName,
-                              data = dbTable)
 
     cat("Appending",
         tableName,
@@ -1037,10 +1032,6 @@ addDbTable<-function(db,
   #Table will be created in conOut and data will then be written to the table.
   else
   {
-    #Set datatypes of dbTable if table is an FVS table
-    fvs <- fvsDBTable(tableName)
-    if(fvs) dbTable <- setDataTypes(dbTable)
-
     cat("Writing",
         tableName,
         "to",
@@ -1051,7 +1042,8 @@ addDbTable<-function(db,
     RSQLite::dbWriteTable(conn = conOut,
                           name = tableName,
                           value = dbTable,
-                          overwrite = T)
+                          overwrite = T,
+                          field.types = tableTypes)
 
     cat(tableName,
         "written to",
@@ -1174,6 +1166,10 @@ addDbRows<-function(db,
     dbTable <- RSQLite::dbGetQuery(conIn,
                                    query)
 
+    #Get column data types from tableName
+    tableTypes <-getDataTypes(conIn,
+                              tableName)
+
     #Disconnect from db
     RSQLite::dbDisconnect(conIn)
 
@@ -1249,12 +1245,13 @@ addDbRows<-function(db,
       #Loop through missingFields and add to database table in conOut
       if(length(missingFields) > 0)
       {
-        cat("Fields missing from",
+        cat("\n",
+            "Fields missing from",
             tableName,
             "in",
             dbOut,
             "\n",
-            missingFields, "\n")
+            missingFields, "\n", "\n")
 
         for(i in 1:length(missingFields))
         {
@@ -1262,15 +1259,8 @@ addDbRows<-function(db,
           field <- missingFields[i]
 
           #Extract datatype of field
-          colType <- typeof(dbTable[[field]])
-
-          cat("colType:", colType, "\n")
-
-          #Change colType to REAL, TEXT, or INTEGER depending on dataType.
-          #REAL, CHARACTER, and TEXT are used since these datatypes are assumed
-          #by default when sending data to database with dbWriteTable function.
-          dataType <- convertType(value = colType,
-                                  type = 1)
+          dataType <- tableTypes[names(tableTypes) == field]
+          cat("Field:", field, "dataType:", dataType, "\n")
 
           cat("Adding field:",
               field,
@@ -1279,7 +1269,7 @@ addDbRows<-function(db,
               tableName,
               "\n")
 
-          #Create query to add field to table in conout
+          #Create query to alter table and add field in conout
           addField <-paste("ALTER TABLE",
                            tableName,
                            "ADD COLUMN",
@@ -1293,14 +1283,9 @@ addDbRows<-function(db,
               field,
               "added to table:",
               tableName,
-              "\n")
+              "\n", "\n")
         }
       }
-
-      #Set any data types that are a mismatch between tableName and dbTable
-      dbTable <- checkDataTypes(con = conOut,
-                                tableName = tableName,
-                                data = dbTable)
 
       cat("Appending rows", lower + 1, "through", upper, "from",
           tableName,
@@ -1324,9 +1309,6 @@ addDbRows<-function(db,
     #table.
     else
     {
-      #Set datatypes of dbTable if table is an FVS table
-      fvs <- fvsDBTable(tableName)
-      if(fvs) dbTable <- setDataTypes(dbTable)
 
       cat("Writing rows", lower + 1, "through", upper, "from",
           tableName,
@@ -1338,7 +1320,8 @@ addDbRows<-function(db,
       RSQLite::dbWriteTable(conn = conOut,
                             name = tableName,
                             value = dbTable,
-                            overwrite = T)
+                            overwrite = T,
+                            field.types = tableTypes)
 
       cat("Rows", lower + 1, "through", upper, "from", tableName,
           "written to",
@@ -1367,6 +1350,8 @@ addDbRows<-function(db,
 
 ################################################################################
 #convertType
+#
+#THIS FUNCTION IS CURRENTLY NOT IN USE.
 #
 #This function maps R data types to SQLite data types or SQLite data types to
 #R data types depending on the value specified in the input type argument.
@@ -1437,6 +1422,8 @@ convertType <- function(value,
 
 ################################################################################
 #checkDataTypes
+#
+#THIS FUNCTION IS CURRENTLY NOT IN USE.
 #
 #This function is used to determine if column data types in an input dataframe
 #match the field types in a table from a SQLite database where information in
@@ -1594,6 +1581,8 @@ deleteFiles <- function(files = c(),
 ################################################################################
 #Function: fvsDBTable
 #
+#THIS FUNCTION IS CURRENTLY NOT IN USE.
+#
 #This function takes in a database table name and checks if it is an input FVS
 #table name.
 #
@@ -1657,7 +1646,8 @@ getDataTypes <- function(con,
                          dbTable = "")
 {
   #If dbTable does not exist in db, return empty vector
-  if(! dbTable %in% RSQLite::dbListTables(con))
+  if(!RSQLite::dbExistsTable(conn = con,
+                             name = dbTable))
   {
     return(c())
   }
@@ -1670,7 +1660,7 @@ getDataTypes <- function(con,
 
   #Make named vector from variables and data types
   dataTypes<- tableDefs$type
-  names(dataTypes) <- tableDefs$name
+  names(dataTypes) <- toupper(tableDefs$name)
 
   return(dataTypes)
 }
