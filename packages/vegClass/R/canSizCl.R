@@ -66,11 +66,14 @@ canSizCl<-function(data,
                     dbh = "DBH",
                     expf = "TPA",
                     crwidth = "CrWidth",
-                    TPA,
-                    CC,
+                    TPA = 0,
+                    CC = 0,
                     type=1,
                     debug = F)
 {
+
+  #Intialize variable to return
+  CAN_SIZCL <- NA
 
   if(debug)
   {
@@ -83,6 +86,12 @@ canSizCl<-function(data,
         "expf:", expf, "\n", "\n")
   }
 
+  #if TPA is 0, return
+  if(TPA <= 0) return(CAN_SIZCL)
+
+  #If data has no rows, return
+  if(nrow(data) <= 0) return(CAN_SIZCL)
+
   #Check for missing columns in data
   missing <- c(stand, dbh, expf, crwidth) %in% colnames(data)
 
@@ -91,7 +100,7 @@ canSizCl<-function(data,
   if(F %in% missing)
   {
     cat("One or more input arguments not found in data. Check spelling.", "\n")
-    return(NA)
+    return(CAN_SIZCL)
   }
 
   #Initialize named vector for storing percent canopy cover (CC) by diameter

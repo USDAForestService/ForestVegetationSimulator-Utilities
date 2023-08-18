@@ -138,13 +138,14 @@ FIA=c(
 ################################################################################
 #Vector of USDA plant symbols.
 #Vector contains 460 values and is arranged in rows of 4 species codes.
+#index 15 (CHNO) changed to CANO9
 ################################################################################
 
 PLANT=c(
   "ABIES", "ABAM", "ABBA", "ABBR",
   "ABCO", "ABFR", "ABGR", "ABLAA",
   "ABLA", "ABMA", "ABSH", "ABPR",
-  "CHAMA4", "CHLA", "CHNO", "CHTH2",
+  "CHAMA4", "CHLA", "CANO9", "CHTH2",
   "CUPRE", "CUAR", "CUBA", "CUFO2",
   "CUMA2", "CUSA3", "CUMA", "JUNIP",
   "JUPI", "JUCO11", "JUFL", "JUAS",

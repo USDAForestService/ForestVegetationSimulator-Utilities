@@ -1,5 +1,5 @@
 ################################################################################
-#Function: domType
+#Function: domTypeR3
 #
 #Calculates stand dominance type using USFS Region 3 rule sets in accordance with
 #Vandendriesche, D., 2013. A Compendium of NFS Regional Vegetation
@@ -52,15 +52,15 @@
 ################################################################################
 
 #'@export
-domType<-function(data,
-                  stand = "StandID",
-                  species = "SpeciesPLANTS",
-                  dbh = "DBH",
-                  expf = "TPA",
-                  crwidth = "CrWidth",
-                  TPA,
-                  CC,
-                  debug = F){
+domTypeR3<-function(data,
+                    stand = "StandID",
+                    species = "SpeciesPLANTS",
+                    dbh = "DBH",
+                    expf = "TPA",
+                    crwidth = "CrWidth",
+                    TPA = 0,
+                    CC = 0,
+                    debug = F){
 
   #Initialize results vector to NA
   results=list("DOMTYPE" = NA,
@@ -68,6 +68,12 @@ domType<-function(data,
                "XDCC1" = NA,
                "DCC2" = NA,
                "XDCC2" = NA)
+
+  #If TPA is 0 return
+  if(TPA <= 0) return(results)
+
+  #If data has no rows, return
+  if(nrow(data) <= 0) return(results)
 
   #Check for missing columns in data
   missing <- c(stand, species, dbh, expf, crwidth) %in% colnames(data)
@@ -282,15 +288,15 @@ domType<-function(data,
     #========================================================================
     #LEAD 11-12
     #
-    #LEAD 11: Canopy cover of single most abundant tree species > 60% of
+    #LEAD 11: Canopy cover of single most abundant tree species >= 60% of
     #         total tree canopy cover.
-    #LEAD 12: Canopy cover of two most abundant tree species > 80% of total
-    #         tree canopy cover and each species individually > 20% of total
+    #LEAD 12: Canopy cover of two most abundant tree species >= 80% of total
+    #         tree canopy cover and each species individually >= 20% of total
     #         tree canopy cover.
     #========================================================================
 
     #Test if most abundant species is the dominance type
-    if(sppCC[1] > (CC * 0.60)){
+    if(sppCC[1] >= (CC * 0.60)){
 
       #Set dominance type
       DomType = names(sppCC[1])
@@ -312,7 +318,7 @@ domType<-function(data,
 
     if(!domTypeFound)
     {
-      #Test if Canopy cover of two most abundant tree species > 80% of total
+      #Test if Canopy cover of two most abundant tree species >= 80% of total
       #tree canopy cover and each species individually > 20% of total tree
       #canopy cover
       if(sppCC[1] >= (CC * 0.20) &&
@@ -346,18 +352,18 @@ domType<-function(data,
     #========================================================================
     #LEAD 13-14
     #
-    #LEAD 13: Canopy cover of single most abundant tree genus > 60% of total
+    #LEAD 13: Canopy cover of single most abundant tree genus >= 60% of total
     #         tree canopy cover.
     #LEAD 14: Canopy cover of the single most abundant tree species and
-    #         single most abundant tree genus collectively > 80% of total
-    #         tree canopy cover, each individually > 20% of total tree canopy
+    #         single most abundant tree genus collectively >= 80% of total
+    #         tree canopy cover, each individually >= 20% of total tree canopy
     #         cover. The most abundant genus must be mutually exclusive from
     #         the genus of the most abundant species.
     #========================================================================
 
     #Check if most abundant genus is the dominance type
     if(!domTypeFound){
-      if(genusCC[1] > (CC * 0.60)){
+      if(genusCC[1] >= (CC * 0.60)){
 
         #Set DomType
         DomType = names(genusCC[1])
@@ -431,8 +437,8 @@ domType<-function(data,
     }
 
     #==========================================================================
-    #LEAD 15: Canopy cover of two most abundant tree genera > 80% of total tree
-    #         canopy cover, each individually > 20% of total tree canopy cover.
+    #LEAD 15: Canopy cover of two most abundant tree genera >= 80% of total tree
+    #         canopy cover, each individually >= 20% of total tree canopy cover.
     #==========================================================================
 
     if(!domTypeFound)
@@ -663,4 +669,403 @@ excGenusSp<-function(sp, genNames, genusList)
   }
 
   return(excIndex)
+}
+
+################################################################################
+#Function: domTypeR8
+#
+#Calculates stand dominance type using USFS Region 8 rule sets determined by
+#Chad Keyser in 2023. Five dominance type classifications are calculated in this
+#function: dominance type of advanced regeneration, non-merchantable trees,
+#pulpwood sized trees, saw timber sized trees, and entire stand. Criteria for
+#determining dominance type is as follows:
+#
+#Advance regeneration dominance
+#
+#If 1 species represents greater than 70% of trees per acre in advanced
+#regeneration size class then dominance type is a single species.
+#
+#If 2 species represent greater than 70% of trees per acre in advanced
+#regeneration size class then dominance type is two species.
+#
+#Otherwise dominance type is 3 species (3 most abundant species based on TPA).
+#
+#If there is no TPA in advance regeneration size class, then dominance type is
+#set to NONE.
+#
+#Non merch, pulpwood, sawtimber, and stand dominance
+#
+#If 1 species represents greater than 70% of basal area in respective size class
+#(non merch, pulpwood, sawtimber, and stand) the dominance type is two species.
+#
+#If 2 species represent greater than 70% of basal area in respective size class
+#(non merch, pulpwood, sawtimber, and stand) the dominance type is two species.
+#
+#Otherwise dominance type is 3 species (3 most abundant species based on BA).
+#
+#If there is no BA in a given size class, then dominance type is set to NONE
+#for that size class.
+#
+#Example Dominance types:
+#
+#Single species: ACRU
+#Two species:    ACRU-ACSA3
+#Three species:  ACRU-ACSA3-NYSY
+#
+#Arguments
+#
+#data:     Data frame containing tree records from a single stand or plot. Data
+#          frame must contain a column corresponding to stand/plot ID.
+#
+#stand:    Character string corresponding to name of column pertaining to stand
+#          or plot ID associated with tree records in data argument. By default,
+#          this value is set to "StandID".
+#
+#attrList: List of size and density attributes for species found in stand/plot.
+#          This list is produced by the plotAttr function.
+#
+#debug:	   Logical variable used to specify if debug output should be printed to
+#          R console. If value is TRUE, then debug output will printed to R
+#          console.
+#
+#Return value
+#
+#Named list containing:
+# - Dominance type of advanced regeneration (SSDOMSPP)
+# - Dominance type of non-merchantable trees (NMDOMSPP)
+# - Dominance type of pulpwood sized trees (PWDOMSPP)
+# - Dominance type of saw timber sized trees (STDOMSPP)
+# - Dominance type of stand (DOMTYPE)
+#################################################################################
+
+#'@export
+domTypeR8<-function(data,
+                    stand = "StandID",
+                    attrList,
+                    debug = F){
+
+  #Initialize results vector to NA
+  results=list("SSDOMSPP" = NA,
+               "NMDOMSPP" = NA,
+               "PWDOMSPP" = NA,
+               "STDOMSPP" = NA,
+               "DOMTYPE" = NA)
+
+  #If data has no rows, return
+  if(nrow(data) <= 0) return(results)
+
+  #Check for missing columns in data
+  missing <- c(stand) %in% colnames(data)
+
+  #If name of column provided in stand is not found in data, warning message is
+  #issued and NA values are returned.
+  if(F %in% missing)
+  {
+    cat("One or more input arguments not found in data. Check spelling.", "\n")
+    return(results)
+  }
+
+  #If attribute list is NULL return or length is less than or equal to 1 (ALL
+  #species with NA values), return
+  if(is.null(attrList) | length(attrList) <= 1)
+  {
+    return(results)
+  }
+
+  #Print stand and columns from data
+  if(debug)
+  {
+    cat("In function domTypeR8", "\n")
+    cat("Stand:", unique(data[[stand]]), "\n", "\n")
+  }
+
+  #Get ALL SSTPA, NMBA, PWBA, STBA, BA, and TPA
+  allSSTPA <- attrList[["ALL"]]["SSTPA"]
+  allNMBA <- attrList[["ALL"]]["NMBA"]
+  allPWBA <- attrList[["ALL"]]["PWBA"]
+  allSTBA <- attrList[["ALL"]]["STBA"]
+  allBA <- attrList[["ALL"]]["BA"]
+  allTPA <- attrList[["ALL"]]["TPA"]
+
+  #Do debug if true
+  if(debug)
+  {
+    cat("SSTPA:", allSSTPA, "\n")
+    cat("NMBA:", allNMBA, "\n")
+    cat("PWBA:", allPWBA, "\n")
+    cat("STBA:", allSTBA, "\n")
+    cat("BA:", allBA, "\n")
+    cat("TPA:", allTPA, "\n", "\n")
+  }
+
+  #Define vectors that will be used to determine dominance type classes
+  #Length is one less than length of attrList since "ALL" species is ignored
+  arDomTypeVec <- vector(mode = "numeric", length = length(attrList) - 1)
+  nmDomTypeVec <- vector(mode = "numeric", length = length(attrList) - 1)
+  pwDomTypeVec <- vector(mode = "numeric", length = length(attrList) - 1)
+  stDomTypeVec <- vector(mode = "numeric", length = length(attrList) - 1)
+  domTypeVec <- vector(mode = "numeric", length = length(attrList) - 1)
+
+  #Loop across length of attrList
+  for(i in 1:length(attrList))
+  {
+    #Get species
+    sp <- names(attrList)[i]
+
+    #If species is "ALL" move to next iteration
+    if(sp == 'ALL') next
+
+    #Get SSTPA and put in arDomTypeVec
+    SSTPA <- attrList[[sp]]["SSTPA"]
+    arDomTypeVec[i] <- SSTPA
+    names(arDomTypeVec)[i] <- sp
+
+    #Get NMBA and put in nmDomTypeVec
+    NMBA <- attrList[[sp]]["NMBA"]
+    nmDomTypeVec[i] <- NMBA
+    names(nmDomTypeVec)[i] <- sp
+
+    #Get PWBA and put in pwDomTypeVec
+    PWBA <- attrList[[sp]]["PWBA"]
+    pwDomTypeVec[i] <- PWBA
+    names(pwDomTypeVec)[i] <- sp
+
+    #Get STBA and put in stDomTypeVec
+    STBA <- attrList[[sp]]["STBA"]
+    stDomTypeVec[i] <- STBA
+    names(stDomTypeVec)[i] <- sp
+
+    #Get BA and put in DomTypeVec
+    BA <- attrList[[sp]]["BA"]
+    domTypeVec[i] <- BA
+    names(domTypeVec)[i] <- sp
+  }
+
+  #Sort the vectors
+  arDomTypeVec <- sort(arDomTypeVec,
+                       decreasing = T)
+
+  nmDomTypeVec <- sort(nmDomTypeVec,
+                       decreasing = T)
+
+  pwDomTypeVec <- sort(pwDomTypeVec,
+                       decreasing = T)
+
+  stDomTypeVec <- sort(stDomTypeVec,
+                       decreasing = T)
+
+  domTypeVec <- sort(domTypeVec,
+                     decreasing = T)
+
+  #Print dominance type vectors if debug is on
+  if(debug)
+  {
+    #Advance regen
+    cat("arDomType:", "\n")
+    cat(names(arDomTypeVec), "\n")
+    cat(arDomTypeVec, "\n", "\n")
+
+    #Non-merch
+    cat("nmDomType:", "\n")
+    cat(names(nmDomTypeVec), "\n")
+    cat(nmDomTypeVec, "\n", "\n")
+
+    #Pulp
+    cat("pwDomType:", "\n")
+    cat(names(pwDomTypeVec), "\n")
+    cat(pwDomTypeVec, "\n", "\n")
+
+    #Saw
+    cat("stDomType:", "\n")
+    cat(names(stDomTypeVec), "\n")
+    cat(stDomTypeVec, "\n", "\n")
+
+    #Stand
+    cat("DomType:", "\n")
+    cat(names(domTypeVec), "\n")
+    cat(domTypeVec, "\n", "\n")
+  }
+
+  #==============================
+  #Determine SS dominance type
+  #==============================
+
+  #if no trees in this class, set arDomType to NONE
+  if(allSSTPA <= 0)
+  {
+    arDomType <- "NONE"
+  }
+
+  #Single species dominance
+  else if(arDomTypeVec[1] >= (allSSTPA) * 0.7)
+  {
+    arDomType <- names(arDomTypeVec[1])
+  }
+
+  #Two species dominance
+  else if((arDomTypeVec[1] + arDomTypeVec[2]) >= (allSSTPA) * 0.7)
+  {
+    arDomType <- paste(names(arDomTypeVec[1]),
+                       names(arDomTypeVec[2]),
+                       sep = "-")
+  }
+
+  #Three species dominance
+  else
+  {
+    arDomType <- paste(names(arDomTypeVec[1]),
+                       names(arDomTypeVec[2]),
+                       names(arDomTypeVec[3]),
+                       sep = "-")
+  }
+
+  #==============================
+  #Determine NM dominance type
+  #==============================
+
+  #if no BA in this class, set nmDomType to NONE
+  if(allNMBA <= 0)
+  {
+    nmDomType <- "NONE"
+  }
+
+  #Single species dominance
+  else if(nmDomTypeVec[1] >= (allNMBA) * 0.7)
+  {
+    nmDomType <- names(nmDomTypeVec[1])
+  }
+
+  #Two species dominance
+  else if((nmDomTypeVec[1] + nmDomTypeVec[2]) >= (allNMBA) * 0.7)
+  {
+    nmDomType <- paste(names(nmDomTypeVec[1]),
+                       names(nmDomTypeVec[2]),
+                       sep = "-")
+  }
+
+  #Three species dominance
+  else
+  {
+    nmDomType <- paste(names(nmDomTypeVec[1]),
+                       names(nmDomTypeVec[2]),
+                       names(nmDomTypeVec[3]),
+                       sep = "-")
+  }
+
+  #==============================
+  #Determine PW dominance type
+  #==============================
+
+  #if no BA in this class, set nmDomType to NONE
+  if(allPWBA <= 0)
+  {
+    pwDomType <- "NONE"
+  }
+
+  #Single species dominance
+  else if(pwDomTypeVec[1] >= (allPWBA) * 0.7)
+  {
+    pwDomType <- names(pwDomTypeVec[1])
+  }
+
+  #Two species dominance
+  else if((pwDomTypeVec[1] + pwDomTypeVec[2]) >= (allPWBA) * 0.7)
+  {
+    pwDomType <- paste(names(pwDomTypeVec[1]),
+                       names(pwDomTypeVec[2]),
+                       sep = "-")
+  }
+
+  #Three species dominance
+  else
+  {
+    pwDomType <- paste(names(pwDomTypeVec[1]),
+                       names(pwDomTypeVec[2]),
+                       names(pwDomTypeVec[3]),
+                       sep = "-")
+  }
+
+  #==============================
+  #Determine ST dominance type
+  #==============================
+
+  #if no BA in this class, set stDomType to NONE
+  if(allSTBA <= 0)
+  {
+    stDomType <- "NONE"
+  }
+
+  #Single species dominance
+  else if(stDomTypeVec[1] >= (allSTBA) * 0.7)
+  {
+    stDomType <- names(stDomTypeVec[1])
+  }
+
+  #Two species dominance
+  else if((stDomTypeVec[1] + stDomTypeVec[2]) >= (allSTBA) * 0.7)
+  {
+    stDomType <- paste(names(stDomTypeVec[1]),
+                       names(stDomTypeVec[2]),
+                       sep = "-")
+  }
+
+  #Three species dominance
+  else
+  {
+    stDomType <- paste(names(stDomTypeVec[1]),
+                       names(stDomTypeVec[2]),
+                       names(stDomTypeVec[3]),
+                       sep = "-")
+  }
+
+  #=================================
+  #Determine stand dominance type
+  #=================================
+
+  #Single species dominance
+  if(domTypeVec[1] >= (allBA) * 0.7)
+  {
+    domType <- names(domTypeVec[1])
+  }
+
+  #Two species dominance
+  else if((domTypeVec[1] + domTypeVec[2]) >= (allBA) * 0.7)
+  {
+    domType <- paste(names(domTypeVec[1]),
+                     names(domTypeVec[2]),
+                     sep = "-")
+  }
+
+  #Three species dominance
+  else
+  {
+    domType <- paste(names(domTypeVec[1]),
+                     names(domTypeVec[2]),
+                     names(domTypeVec[3]),
+                     sep = "-")
+  }
+
+  #Store dominance types in results list
+  results[["SSDOMSPP"]] <- arDomType
+  results[["NMDOMSPP"]] <- nmDomType
+  results[["PWDOMSPP"]] <- pwDomType
+  results[["STDOMSPP"]] <- stDomType
+  results[["DOMTYPE"]] <- domType
+
+  #Print results if debug is on
+  if(debug)
+  {
+    cat("SSDOMSPP:", arDomType, "\n")
+    cat("NMDOMSPP:", nmDomType, "\n")
+    cat("PWDOMSPP:", pwDomType, "\n")
+    cat("STDOMSPP:", stDomType, "\n")
+    cat("DOMTYPE:", domType, "\n")
+    cat("SSTPA:", allSSTPA, "\n")
+    cat("NMBA:", allNMBA, "\n")
+    cat("PWBA:", allPWBA, "\n")
+    cat("STBA:", allSTBA, "\n")
+    cat("BA:", allBA, "\n", "\n")
+  }
+
+  return(results)
 }
