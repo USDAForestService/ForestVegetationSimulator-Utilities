@@ -1778,3 +1778,30 @@ collectDBPaths <- function(dbIn = c(),
   return(dbInUpdate)
 }
 
+################################################################################
+#Function: correctSp
+#
+#This function takes in a USDA plant symbol and returns a corrected USDA plant
+#symbol if input is 2TD or 2TE. This function could be expanded to account for
+#other erroneous plant symbols.
+#
+#Arguments
+#
+#sp: Character string corresponding to USDA plant symbol.
+#
+#Value
+#
+#USDA plant symbol
+################################################################################
+
+#'@export
+correctSp <- function(sp = "2TB")
+{
+  sp <- toupper(sp)
+  spCorrect <- sp
+
+  if(sp == "2TE") spCorrect <- "2TN"
+  if(sp == "2TD") spCorrect <- "2TB"
+
+  return(spCorrect)
+}

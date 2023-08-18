@@ -731,7 +731,7 @@ excGenusSp<-function(sp, genNames, genusList)
 #Return value
 #
 #Named list containing:
-# - Dominance type of advanced regeneration (ARDOMSPP)
+# - Dominance type of advanced regeneration (SSDOMSPP)
 # - Dominance type of non-merchantable trees (NMDOMSPP)
 # - Dominance type of pulpwood sized trees (PWDOMSPP)
 # - Dominance type of saw timber sized trees (STDOMSPP)
@@ -745,7 +745,7 @@ domTypeR8<-function(data,
                     debug = F){
 
   #Initialize results vector to NA
-  results=list("ARDOMSPP" = NA,
+  results=list("SSDOMSPP" = NA,
                "NMDOMSPP" = NA,
                "PWDOMSPP" = NA,
                "STDOMSPP" = NA,
@@ -779,8 +779,8 @@ domTypeR8<-function(data,
     cat("Stand:", unique(data[[stand]]), "\n", "\n")
   }
 
-  #Get ALL ARTPA, NMBA, PWBA, STBA, BA, and TPA
-  allARTPA <- attrList[["ALL"]]["ARTPA"]
+  #Get ALL SSTPA, NMBA, PWBA, STBA, BA, and TPA
+  allSSTPA <- attrList[["ALL"]]["SSTPA"]
   allNMBA <- attrList[["ALL"]]["NMBA"]
   allPWBA <- attrList[["ALL"]]["PWBA"]
   allSTBA <- attrList[["ALL"]]["STBA"]
@@ -790,7 +790,7 @@ domTypeR8<-function(data,
   #Do debug if true
   if(debug)
   {
-    cat("ARTPA:", allARTPA, "\n")
+    cat("SSTPA:", allSSTPA, "\n")
     cat("NMBA:", allNMBA, "\n")
     cat("PWBA:", allPWBA, "\n")
     cat("STBA:", allSTBA, "\n")
@@ -815,9 +815,9 @@ domTypeR8<-function(data,
     #If species is "ALL" move to next iteration
     if(sp == 'ALL') next
 
-    #Get ARTPA and put in arDomTypeVec
-    ARTPA <- attrList[[sp]]["ARTPA"]
-    arDomTypeVec[i] <- ARTPA
+    #Get SSTPA and put in arDomTypeVec
+    SSTPA <- attrList[[sp]]["SSTPA"]
+    arDomTypeVec[i] <- SSTPA
     names(arDomTypeVec)[i] <- sp
 
     #Get NMBA and put in nmDomTypeVec
@@ -887,23 +887,23 @@ domTypeR8<-function(data,
   }
 
   #==============================
-  #Determine AR dominance type
+  #Determine SS dominance type
   #==============================
 
   #if no trees in this class, set arDomType to NONE
-  if(allARTPA <= 0)
+  if(allSSTPA <= 0)
   {
     arDomType <- "NONE"
   }
 
   #Single species dominance
-  else if(arDomTypeVec[1] >= (allARTPA) * 0.7)
+  else if(arDomTypeVec[1] >= (allSSTPA) * 0.7)
   {
     arDomType <- names(arDomTypeVec[1])
   }
 
   #Two species dominance
-  else if((arDomTypeVec[1] + arDomTypeVec[2]) >= (allARTPA) * 0.7)
+  else if((arDomTypeVec[1] + arDomTypeVec[2]) >= (allSSTPA) * 0.7)
   {
     arDomType <- paste(names(arDomTypeVec[1]),
                        names(arDomTypeVec[2]),
@@ -1046,7 +1046,7 @@ domTypeR8<-function(data,
   }
 
   #Store dominance types in results list
-  results[["ARDOMSPP"]] <- arDomType
+  results[["SSDOMSPP"]] <- arDomType
   results[["NMDOMSPP"]] <- nmDomType
   results[["PWDOMSPP"]] <- pwDomType
   results[["STDOMSPP"]] <- stDomType
@@ -1055,12 +1055,12 @@ domTypeR8<-function(data,
   #Print results if debug is on
   if(debug)
   {
-    cat("ARDOMSPP:", arDomType, "\n")
+    cat("SSDOMSPP:", arDomType, "\n")
     cat("NMDOMSPP:", nmDomType, "\n")
     cat("PWDOMSPP:", pwDomType, "\n")
     cat("STDOMSPP:", stDomType, "\n")
     cat("DOMTYPE:", domType, "\n")
-    cat("ARTPA:", allARTPA, "\n")
+    cat("SSTPA:", allSSTPA, "\n")
     cat("NMBA:", allNMBA, "\n")
     cat("PWBA:", allPWBA, "\n")
     cat("STBA:", allSTBA, "\n")

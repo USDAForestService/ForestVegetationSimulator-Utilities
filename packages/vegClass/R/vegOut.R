@@ -28,9 +28,9 @@
 # - QMD of top 20% (QMD_TOP20)
 # - Basal area weighted diameter (BA_WT_DIA)
 # - Basal area weighted height (BA_WT_HT)
-# - Dominance type of advance regeneration ARDOMSPP - R8 ruleset)
-# - TPA weighted average height of advance regeneration (ARSIZE - R8 ruleset)
-# - Tree per acre of advance regeneration (ARTPA - R8 ruleset)
+# - Dominance type of advance regeneration SSDOMSPP - R8 ruleset)
+# - TPA weighted average height of advance regeneration (SSSIZE - R8 ruleset)
+# - Tree per acre of advance regeneration (SSTPA - R8 ruleset)
 # - Dominance type of non-merchantable trees (NMDOMSPP - R8 only)
 # - Basal area weighted diameter of non-merchantable trees (NMSIZE - R8 ruleset)
 # - Basal area of non-merchantable trees (NMBA - R8 ruleset)
@@ -293,14 +293,14 @@ vegOut <- function(data,
     vegClass <- denSizeR8(data = data,
                           attrList = allAttr)
 
-    #ARDOMSPP
-    vegData$ARDOMSPP <- dtResults[["ARDOMSPP"]]
+    #SSDOMSPP
+    vegData$SSDOMSPP <- dtResults[["SSDOMSPP"]]
 
-    #ARSIZE
-    vegData$ARSIZE <- round(allAttr[["ALL"]]["ARSIZE"],2)
+    #SSSIZE
+    vegData$SSSIZE <- round(allAttr[["ALL"]]["SSSIZE"],2)
 
-    #ARTPA
-    vegData$ARTPA <- round(allAttr[["ALL"]]["ARTPA"],2)
+    #SSTPA
+    vegData$SSTPA <- round(allAttr[["ALL"]]["SSTPA"],2)
 
     #NMDOMSPP
     vegData$NMDOMSPP <- dtResults[["NMDOMSPP"]]

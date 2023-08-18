@@ -18,9 +18,9 @@
 #If region argument in function is 8 or 9 (USFS R8/R9) the following values are
 #calculated:
 #
-#TPA weighted average height of advanced regeneration size class (ARSIZE)
-#Trees per acre of advanced regeneration size class (ARTPA)
-#Basal area of advanced regeneration size class (ARBA)
+#TPA weighted average height of advanced regeneration size class (SSSIZE)
+#Trees per acre of advanced regeneration size class (SSTPA)
+#Basal area of advanced regeneration size class (SSBA)
 #Basal area weighted diameter of non merchantable size class (NMSIZE)
 #Basal area of non merchantable size class (NMBA)
 #Basal area weighted diameter of pulpwood size class (PWSIZE)
@@ -136,9 +136,9 @@ plotAttr <- function(data,
                                 "RSDI" = NA,
                                 "BA_WT_DIA" = NA,
                                 "BA_WT_HT" = NA,
-                                "ARSIZE" = NA,
-                                "ARTPA" = NA,
-                                "ARBA" = NA,
+                                "SSSIZE" = NA,
+                                "SSTPA" = NA,
+                                "SSBA" = NA,
                                 "NMSIZE" = NA,
                                 "NMBA" = NA,
                                 "PWSIZE" = NA,
@@ -188,9 +188,9 @@ plotAttr <- function(data,
               "RSDI" = 0,
               "BA_WT_DIA" = 0,
               "BA_WT_HT" = 0,
-              "ARSIZE" = 0,
-              "ARTPA" = 0,
-              "ARBA" = 0,
+              "SSSIZE" = 0,
+              "SSTPA" = 0,
+              "SSBA" = 0,
               "NMSIZE" = 0,
               "NMBA" = 0,
               "PWSIZE" = 0,
@@ -317,23 +317,23 @@ plotAttr <- function(data,
         #If tree is advanced regeneration
         if(DBH < 1.5)
         {
-          #Update ARTPA
-          attrList[[sp]]["ARTPA"] <- attrList[[sp]]["ARTPA"] + TEXPF
+          #Update SSTPA
+          attrList[[sp]]["SSTPA"] <- attrList[[sp]]["SSTPA"] + TEXPF
 
-          #Update ARBA
-          attrList[[sp]]["ARBA"] <- attrList[[sp]]["ARBA"] + TBA
+          #Update SSBA
+          attrList[[sp]]["SSBA"] <- attrList[[sp]]["SSBA"] + TBA
 
-          #Update ARSIZE (lorey height)
-          attrList[[sp]]["ARSIZE"] <- attrList[[sp]]["ARSIZE"] + HT*TEXPF
+          #Update SSSIZE (lorey height)
+          attrList[[sp]]["SSSIZE"] <- attrList[[sp]]["SSSIZE"] + HT*TEXPF
 
-          #Update ARTPA
-          attrList[["ALL"]]["ARTPA"] <- attrList[["ALL"]]["ARTPA"] + TEXPF
+          #Update SSTPA
+          attrList[["ALL"]]["SSTPA"] <- attrList[["ALL"]]["SSTPA"] + TEXPF
 
-          #Update ARBA
-          attrList[["ALL"]]["ARBA"] <- attrList[["ALL"]]["ARBA"] + TBA
+          #Update SSBA
+          attrList[["ALL"]]["SSBA"] <- attrList[["ALL"]]["SSBA"] + TBA
 
-          #Update ARSIZE (lorey height)
-          attrList[["ALL"]]["ARSIZE"] <- attrList[["ALL"]]["ARSIZE"] + HT*TEXPF
+          #Update SSSIZE (lorey height)
+          attrList[["ALL"]]["SSSIZE"] <- attrList[["ALL"]]["SSSIZE"] + HT*TEXPF
         }
 
         #If the tree is non merch
@@ -420,10 +420,10 @@ plotAttr <- function(data,
         attrList[[i]]["BA"]
     }
 
-    #Calculate advance regen size if ARTPA is greater than 0
-    if(attrList[[i]]["ARTPA"] > 0)
+    #Calculate advance regen size if SSTPA is greater than 0
+    if(attrList[[i]]["SSTPA"] > 0)
     {
-      attrList[[i]]["ARSIZE"] <- attrList[[i]]["ARSIZE"]/attrList[[i]]["ARTPA"]
+      attrList[[i]]["SSSIZE"] <- attrList[[i]]["SSSIZE"]/attrList[[i]]["SSTPA"]
     }
 
     #Calculate non-merch size if BA is greater than 0
@@ -467,9 +467,9 @@ plotAttr <- function(data,
       cat("CC:", attrList[[i]]["CC"], "\n")
       cat("ZSDI:", attrList[[i]]["ZSDI"], "\n")
       cat("RSDI:", attrList[[i]]["RSDI"], "\n")
-      cat("ARTPA:", attrList[[i]]["ARTPA"], "\n")
-      cat("ARBA:", attrList[[i]]["ARTPA"], "\n")
-      cat("ARSIZE:", attrList[[i]]["ARSIZE"],"\n")
+      cat("SSTPA:", attrList[[i]]["SSTPA"], "\n")
+      cat("SSBA:", attrList[[i]]["SSTPA"], "\n")
+      cat("SSSIZE:", attrList[[i]]["SSSIZE"],"\n")
       cat("NMBA:", attrList[[i]]["NMBA"], "\n")
       cat("NMSIZE:", attrList[[i]]["NMSIZE"],"\n")
       cat("PWBA:", attrList[[i]]["PWBA"], "\n")

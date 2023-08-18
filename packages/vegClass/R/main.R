@@ -610,6 +610,10 @@ main<- function(input = NULL,
         next
       }
 
+      #Catch legacy species codes
+      standDF$SpeciesPLANTS <- mapply(correctSp,
+                                      standDF$SpeciesPLANTS)
+
       #Determine years that will be evaluated
       years<-unique(standDF$Year)
 
