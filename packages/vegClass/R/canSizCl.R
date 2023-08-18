@@ -66,11 +66,14 @@ canSizCl<-function(data,
                     dbh = "DBH",
                     expf = "TPA",
                     crwidth = "CrWidth",
-                    TPA,
-                    CC,
+                    TPA = 0,
+                    CC = 0,
                     type=1,
                     debug = F)
 {
+
+  #Intialize variable to return
+  CAN_SIZCL <- NA
 
   if(debug)
   {
@@ -83,6 +86,12 @@ canSizCl<-function(data,
         "expf:", expf, "\n", "\n")
   }
 
+  #if TPA is 0, return
+  if(TPA <= 0) return(CAN_SIZCL)
+
+  #If data has no rows, return
+  if(nrow(data) <= 0) return(CAN_SIZCL)
+
   #Check for missing columns in data
   missing <- c(stand, dbh, expf, crwidth) %in% colnames(data)
 
@@ -91,13 +100,14 @@ canSizCl<-function(data,
   if(F %in% missing)
   {
     cat("One or more input arguments not found in data. Check spelling.", "\n")
-    return(NA)
+    return(CAN_SIZCL)
   }
 
-  #Initialize named vector for storing CC by diameter class (1 - 5)
+  #Initialize named vector for storing percent canopy cover (CC) by diameter
+  #class (1 - 5)
   ccVec<-c("1" = 0, "2" = 0, "3" = 0, "4" = 0, "5" = 0)
 
-  #Statement used to avoid NOTE when stateTrans package is built.
+  #Statement used to avoid NOTE when vegClass package is built.
   DC<-NULL
 
   #Calculate percent canopy cover for each tree record if TREECC does not
@@ -130,11 +140,8 @@ canSizCl<-function(data,
     #Loop across data and sum canopy cover values for each class in ccVec
     for(i in 1:nrow(data))
     {
-      #obtain DC for tree i
       dcIndex<-getCanSizeDC(data[[dbh]][i], type, debug)
 
-      #Add percent canopy cover of tree i to appropriate diameter class index
-      #in ccVec.
       ccVec[dcIndex]<- ccVec[dcIndex] + data$TREECC[i]
     }
 
@@ -245,19 +252,14 @@ getCanSizeDC<-function(DBH, type = 1, debug = F)
   #(0, 5, 10, 20, 30)
   if(type == 1)
   {
-    #DC1: 0 - 5"
     if(DBH >= 0 & DBH < 5) DC = 1
 
-    #DC2: 5 - 10"
     else if(DBH >= 5 & DBH < 10) DC = 2
 
-    #DC3: 10 - 20"
     else if(DBH >= 10 & DBH < 20) DC = 3
 
-    #DC4: 20 - 30"
     else if(DBH >= 20 & DBH < 30) DC = 4
 
-    #DC3: 30"+
     else DC = 5
   }
 
@@ -265,16 +267,12 @@ getCanSizeDC<-function(DBH, type = 1, debug = F)
   #(0, 5, 10, 20)
   if(type == 2)
   {
-    #DC1: 0 - 5"
     if(DBH >= 0 & DBH < 5) DC = 1
 
-    #DC2: 5 - 10"
     else if(DBH >= 5 & DBH < 10) DC = 2
 
-    #DC3: 10 - 20"
     else if(DBH >= 10 & DBH < 20) DC = 3
 
-    #DC4: 20"+
     else DC = 4
   }
 
@@ -282,13 +280,10 @@ getCanSizeDC<-function(DBH, type = 1, debug = F)
   #(0, 5, 10)
   if(type == 3)
   {
-    #DC1: 0 - 5"
     if(DBH >= 0 & DBH < 5) DC = 1
 
-    #DC2: 5 - 10"
     else if(DBH >= 5 & DBH < 10) DC = 2
 
-    #DC3: 10" +
     else DC = 3
   }
 
@@ -300,6 +295,5 @@ getCanSizeDC<-function(DBH, type = 1, debug = F)
                 "TYPE:", type, "\n")
   }
 
-  #Return DC
   return(DC)
 }

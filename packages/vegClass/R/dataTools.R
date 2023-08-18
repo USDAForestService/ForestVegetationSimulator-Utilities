@@ -73,13 +73,13 @@ fvsGaak<-function(dbName="FVS_Data", type = 2)
                                          "WHERE StandPlot_CN ='%Stand_CN%'",
                                          "EndSQL", "END", sep = "\n")))
 
-  #If type is 1, return GAAK with just FVS grouping codes
+  #GAAK with just FVS grouping codes
   if(type == 1)
   {
     gaak<-gaak[1:2,]
   }
 
-  #If type is 2, return GAAK with just FIA grouping codes
+  #GAAK with just FIA grouping codes
   if(type == 2)
   {
     gaak<-gaak[3:5,]
@@ -232,7 +232,6 @@ pvConvert<-function(pv)
     value<-eru()[pvIndex]
   }
 
-  #Else assign value as NA
   else
   {
     value = NA
@@ -246,7 +245,7 @@ pvConvert<-function(pv)
 #
 #This function adds an ERU group label to GROUPS column of FVS_STANDINIT,
 #FVS_PLOTINIT, FVS_STANDINIT_PLOT, FVS_STANDINIT_COND, FVS_PLOTININT_PLOT for
-#PPF. This function is called from dbCombine when addERU is TRUE.
+#PPF. This function is called from dbCompile when addERU is TRUE.
 #
 #Arguments
 #
@@ -276,12 +275,11 @@ addERUGroup <- function(group, eru)
     group <- paste(group, "ERU=PPF")
   }
 
-  #Return group
   return(group)
 }
 
 ################################################################################
-#Function: dbCombine
+#Function: dbCompile
 #
 #This function is used to read in database tables from input FVS-ready data sets
 #and write the database tables from each of these to a single output SQLite
@@ -297,8 +295,8 @@ addERUGroup <- function(group, eru)
 #              or zipped folder (.zip) which contains a SQLite database(s).
 
 #              NOTE: .zip files will be unzipped to a temporary folder called
-#              xxxvegClassdbCombineUnzipxxx in current working directory.
-#              Temporary folder will be deleted after dbCombine has finished
+#              xxxvegClassdbCompileUnzipxxx in current working directory.
+#              Temporary folder will be deleted after dbCompile has finished
 #              writing data to output database.
 #
 #              Examples of valid dbIn formats:
@@ -318,6 +316,7 @@ addERUGroup <- function(group, eru)
 #             By default this argument contains the following values:
 #             "FVS_STANDINIT"
 #             "FVS_TREEINIT"
+#             "FVS_PLOTINIT"
 #             "FVS_STANDINIT_PLOT"
 #             "FVS_STANDINIT_COND"
 #             "FVS_PLOTINIT_PLOT"
@@ -345,13 +344,13 @@ addERUGroup <- function(group, eru)
 #             TRUE.
 #
 #deleteInput: Logical variable used to determine if values in dbIn should be
-#             deleted after dbCombine has been called. By default this argument
+#             deleted after dbCompile has been called. By default this argument
 #             is set to FALSE. Be careful with this argument. The primary
 #             purpose of this argument is to conserve hard disk space for users
 #             who do not want the input databases specified in dbIn.
 #
 #readChunks:  Logical variable used to determine if data from database table
-#             should be read in chunks. In general, processing time of dbCombine
+#             should be read in chunks. In general, processing time of dbCompile
 #             increases but less RAM is used in R session if this argument is
 #             TRUE. By default this argument is set to FALSE.
 #
@@ -365,10 +364,11 @@ addERUGroup <- function(group, eru)
 ################################################################################
 
 #'@export
-dbCombine <- function(dbIn = NULL,
+dbCompile <- function(dbIn = NULL,
                       dbOut = NULL,
                       dbTables = c("FVS_STANDINIT",
                                    "FVS_TREEINIT",
+                                   "FVS_PLOTINIT",
                                    "FVS_STANDINIT_PLOT",
                                    "FVS_STANDINIT_COND",
                                    "FVS_PLOTINIT_PLOT",
@@ -385,24 +385,14 @@ dbCombine <- function(dbIn = NULL,
   #Create directory where file will be unzipped to.
   #If this file exists for any reason, delete it.
   unzipDir <- paste(getwd(),
-                    "xxxvegClassdbCombineUnzipxxx",
+                    "xxxvegClassdbCompileUnzipxxx",
                     sep = "/")
 
   if(file.exists(unzipDir))
   {
-    unlink(unzipDir,
-           recursive = T)
+    deleteFiles(files = unzipDir,
+                recur = TRUE)
   }
-
-  #Vector containing valid table names that can be processed. These values
-  #match the default values in dbTables argument.
-  validTables <- c("FVS_STANDINIT",
-                   "FVS_TREEINIT",
-                   "FVS_STANDINIT_PLOT",
-                   "FVS_STANDINIT_COND",
-                   "FVS_PLOTINIT_PLOT",
-                   "FVS_TREEINIT_PLOT",
-                   "FVS_TREEINIT_COND")
 
   #Test if no values have been specified for dbIn
   if(is.null(dbIn))
@@ -416,28 +406,21 @@ dbCombine <- function(dbIn = NULL,
     stop(paste("No file was specified for dbOut."))
   }
 
-  #Test if dbTables is null and return with error message. Otherwise capitalize
-  #the table names in dbTables.
+  #Test if dbTables is null and return with error message.
   if(is.null(dbTables))
   {
     stop(paste("No table names were provided for dbTables."))
   }
+
+  #Print database tables to consider
   else
   {
+    #Capitalize dbTables
     dbTables <- toupper(dbTables)
 
-    #Select only tables found in validTables
-    dbTables <- dbTables[dbTables %in% validTables]
     cat("Database table names to consider:",
         dbTables,
         "\n")
-
-    #If dbTables is empty after selection from validTables, stop with error
-    #message.
-    if(length(dbTables) <= 0)
-    {
-      stop(paste("No valid databases tables to process."))
-    }
   }
 
   #Catch erroneous gaakType values
@@ -498,7 +481,7 @@ dbCombine <- function(dbIn = NULL,
   #Test if output file is a SQLite database. If the file is not a SQLite
   #database then error message is reported.
   fileExtOut<-sub("(.*)\\.","",dbOut)
-  if(!fileExtOut %in% "db")
+  if(!fileExtOut %in% c("db", "sqlite"))
   {
     stop(paste("Output database:",
          dbOut,
@@ -516,79 +499,8 @@ dbCombine <- function(dbIn = NULL,
 
   cat("Output database:", dbOut, "\n","\n")
 
-  #Initialize dbInUpdate. This is a vector that will be used to store input
-  #directory paths.
-  dbInUpdate <- vector(mode = "character")
-
-  #Loop through dbIn and check if files are not .db or .zip. If a file is a .zip
-  #then unzip it to unzipDir. All db files will be added to dbInUpdate.
-  for(i in 1:length(dbIn))
-  {
-    db <- dbIn[i]
-
-    cat("Processing db:", db, "\n")
-
-    #Grab file extension for db
-    fileExtIn<-sub("(.*)\\.","",db)
-
-    #Display file extension in console
-    cat("File extension:",
-        fileExtIn,
-        "\n",
-        "\n")
-
-    #If the file extension of db is not .db or .zip then stop with error message.
-    if(!fileExtIn %in% c("db", "zip"))
-    {
-      stop(paste("File:",
-          db,
-          "is not a SQLite database or zip file.",
-          "\n"))
-    }
-
-    #If the file is a zip file, then it will be unzipped into xxxdbCombinexxx
-    if(fileExtIn == "zip")
-    {
-      #Create directory where file will be unzipped to
-      unzipDir <- paste(getwd(),
-                        "xxxvegClassdbCombineUnzipxxx",
-                        sep = "/")
-
-      cat("Unzipping:", db, "to", unzipDir, "\n", "\n")
-
-      #Unzip the file
-      unzip(zipfile = db,
-            exdir = unzipDir)
-
-      #Now list all the files that contain .db in the name.
-      #Recursive argument is set to true so any sub directories are checked for
-      #db files as well.
-      dbList <- list.files(unzipDir,
-                           pattern = ".db",
-                           full.names = T,
-                           recursive = T)
-
-      #If dbList is empty move to next iteration of loop
-      if(length(dbList) <= 0)
-      {
-        cat("No .db file found in", db, "\n")
-        next
-      }
-
-      #If dbList has at least one value then append the values in dbList to
-      #dbInUpdate.
-      else
-      {
-        dbInUpdate <- c(dbInUpdate, dbList)
-      }
-    }
-
-    #Dealing with .db file. This file will be appended to dbInUpdate.
-    else
-    {
-      dbInUpdate <- c(dbInUpdate, db)
-    }
-  }
+  #Get updated directory paths and file names
+  dbInUpdate <- collectDBPaths(dbIn = dbIn)
 
   #If dbInUpdate does not have any databases, then stop with error message and
   #delete unzip directory if it exists.
@@ -597,40 +509,29 @@ dbCombine <- function(dbIn = NULL,
     #Check if unzipDir exists. If it does, delete it.
     if(file.exists(unzipDir))
     {
-      retCode <- unlink(unzipDir,
-                        recursive = T,
-                        force = T)
 
-      if(retCode != 0)
-      {
-        cat("Failed to delete temporary unzip directory:", unzipDir, "\n")
-      }
+      deleteFiles(files = unzipDir,
+                  recur = TRUE)
     }
 
-    stop("No valid database files (.db) are available for processing.")
+    stop("No valid database files (.db, .sqlite) are available for processing.")
   }
 
-  #Remove duplicate values in dbInUpdate
+  #Remove duplicate values in dbInUpdate and print database file paths
   dbInUpdate <- unique(dbInUpdate)
   cat("List of db files to process:", "\n")
+  cat(paste(dbInUpdate, collapse = "\n"))
 
-  #List values in dbInUpdate
-  for(i in 1:length(dbInUpdate))
-  {
-    cat("Database", i, dbInUpdate[i], "\n")
-  }
-
-  #Begin processing dbInUpdate
+  #Begin processing databases in dbInUpdate
   for(i in 1:length(dbInUpdate))
   {
 
-    #Extract database to process
     db <- dbInUpdate[i]
 
     cat("\n")
     cat("Processing db:", db, "\n", "\n")
 
-    #Begin processing dbTables
+    #Begin processing dbTables in db
     for(j in 1:length(dbTables))
     {
       #Extract table name
@@ -666,7 +567,7 @@ dbCombine <- function(dbIn = NULL,
       {
         cat("No data found in",
             tableName,
-            "\n")
+            "\n", "\n")
 
         #Disconnect from conIn
         RSQLite::dbDisconnect(conIn)
@@ -682,7 +583,6 @@ dbCombine <- function(dbIn = NULL,
         addDbTable(db,
                    dbOut,
                    tableName,
-                   ignoreCol,
                    addERU)
       }
       else
@@ -690,7 +590,6 @@ dbCombine <- function(dbIn = NULL,
         addDbRows(db,
                    dbOut,
                    tableName,
-                   ignoreCol,
                    addERU,
                    rowsToRead,
                    numRows)
@@ -701,18 +600,6 @@ dbCombine <- function(dbIn = NULL,
     cat("Finished processing db:",
         db,
         "\n")
-
-    #Check if db should be deleted
-    #Any files that are unzipped by dbCombine function will be deleted.
-    #All other dbs will be deleted if deleteInput is T
-    if(db %in% list.files(unzipDir,
-                          pattern = ".db",
-                          full.names = T,
-                          recursive = T))
-    {
-      unlink(db,
-             force = T)
-    }
   }
 
   #Determine if GAAK table should be written to dbOut.
@@ -735,38 +622,24 @@ dbCombine <- function(dbIn = NULL,
     RSQLite::dbDisconnect(conOut)
   }
 
-  #If deleteInput is TRUE, loop through dbIn and delete files.
+  #If deleteInput is TRUE, delete files in dbIN argument.
   if(deleteInput)
   {
-    for(i in 1:length(dbIn))
-    {
-      cat(paste("deleteInput is TRUE.",
-                "Deleting database:", dbIn[i],
-                "\n", "\n"))
 
-      retCode <- unlink(dbIn[i])
-
-      if(retCode != 0)
-      {
-        cat("Failed to delete:", dbIn[i], "\n", "\n")
-      }
-    }
+    cat(paste("Argument deleteInput is TRUE.",
+              "Deleting input databases.", "\n"))
+    deleteFiles(files = dbIn,
+                recur = FALSE)
   }
 
   #Before returning, delete unzipDir if it exists.
   if(file.exists(unzipDir))
   {
-    retCode <- unlink(unzipDir,
-                      recursive = T,
-                      force = T)
-
-    if(retCode != 0)
-    {
-      cat("Failed to delete temporary unzip directory:", unzipDir, "\n")
-    }
+    deleteFiles(files = unzipDir,
+                recur = TRUE)
   }
 
-  return(cat("Data created!"))
+  invisible(0)
 }
 
 ################################################################################
@@ -862,36 +735,30 @@ fvsGetTypes <- function()
 ################################################################################
 #Function: setDataTypes
 #
+#THIS FUNCTION IS CURRENTLY NOT IN USE.
+#
 #This function accepts a dataframe and checks if all columns in the data frame
 #match a specified datatype. If a column does not match a specified data type,
 #the column in the dataframe is cast to the correct data type. Only double,
-#integer, and character values are considered in this function. If a column is
-#not recognized, then it is either ignored or cast to character type depending
-#on the value specified in argument ignoreCols.
+#integer, and character values are considered in this function.
 #
 #Arguments
 #
-#data:       Input dataframe
+#data:     Input dataframe.
 #
-#cols:       Character vector of variable names.By default this argument
-#            is set  to NULL. When this value is NULL, variables will be
-#            set to values produced by fvsGetCols function. Length of variables
-#            argument must match length of types argument.
+#cols:     Character vector of variable names.By default this argument
+#          is set  to NULL. When this value is NULL, variables will be
+#          set to values produced by fvsGetCols function. Length of variables
+#          argument must match length of types argument.
 #
-#colTypes:   Character vector of data type types that correspond to variables in
-#            argument variables. By default this argument is set to NULL. When
-#            this value is NULL, variables will be set to values produced by
-#            fvsGetTypes function. Length of types argument must match length of
-#            types argument.
+#colTypes: Character vector of data type types that correspond to variables in
+#          argument variables. By default this argument is set to NULL. When
+#          this value is NULL, variables will be set to values produced by
+#          fvsGetTypes function. Length of types argument must match length of
+#          types argument.
 #
-#ignoreCols: Boolean variable that determines how to handle columns that are in
-#            argument data but not in argument variables. If this argument is
-#            FALSE, then these columns will be cast to character type. If this
-#            argument is TRUE, then these columns are ignored. By default this
-#            argument is set to FALSE.
-#
-#verbose:    Boolean variable that determines if debug information should be
-#            printed to console. By default this argument set to FALSE.
+#debug:    Boolean variable that determines if debug information should be
+#          printed to console. By default this argument set to FALSE.
 #
 #Return value
 #
@@ -901,8 +768,7 @@ fvsGetTypes <- function()
 setDataTypes<-function(data,
                        cols = NULL,
                        colTypes = NULL,
-                       ignoreCols = F,
-                       verbose = F)
+                       debug = F)
 {
 
   #If data is not dataframe stop with error message
@@ -932,17 +798,16 @@ setDataTypes<-function(data,
   #If length of variables is not equal to types, return with error.
   if(length(cols) != length(colTypes))
   {
-    if(verbose) cat("Length cols:", length(cols), "\n")
-    if(verbose) cat("Length types:", length(colTypes), "\n")
+    if(debug) cat("Length cols:", length(cols), "\n")
+    if(debug) cat("Length types:", length(colTypes), "\n")
     stop("Variables and types arguments must have the same length.")
   }
 
   #Iterate across columns of input dataframe
   for(i in 1:length(names(data)))
   {
-    #Extract column name
     colname<-toupper(names(data)[i])
-    if(verbose) cat("Column:", colname, "being processed.", "\n")
+    if(debug) cat("Column:", colname, "being processed.", "\n")
 
     #Attempt to match column name with variable in fvsvars
     varIndex<-match(colname, cols)
@@ -956,23 +821,23 @@ setDataTypes<-function(data,
       #If data type of column matches with designated data type, move to next
       #loop iteration.
       if(typeof(data[,i]) == datatype){
-        if(verbose) cat("Data type of", colname, "is a match.", "\n")
+        if(debug) cat("Data type of", colname, "is a match.", "\n")
         next
       }
 
       #Variable is a character
-      if(datatype == "character")
+      if(datatype %in% c("character", "complex"))
       {
         #Print message that column will be converted to character.
-        if(verbose) cat(colname, "being converted to", datatype, "\n")
+        if(debug) cat(colname, "being converted to", datatype, "\n")
         data[,i]<-as.character(data[,i])
       }
 
       #Variable is a integer
-      if(datatype == "integer")
+      if(datatype %in% c("integer", "logical"))
       {
         #Print message that column will be converted to integer.
-        if(verbose) cat(colname, "being converted to", datatype, "\n")
+        if(debug) cat(colname, "being converted to", datatype, "\n")
         data[,i]<-as.integer(data[,i])
       }
 
@@ -980,27 +845,15 @@ setDataTypes<-function(data,
       if(datatype == "double")
       {
         #Print message that column will be converted to double.
-        if(verbose) cat(colname, "being converted to", datatype, "\n")
+        if(debug) cat(colname, "being converted to", datatype, "\n")
         data[,i]<-as.double(data[,i])
       }
     }
 
-    #If varIndex is NA, then determine what will happen with column. The column
-    #will either be ignored or converted to character type depending on input
-    #argument ignoreCols.
+    #If varIndex is NA it will be ignored.
     else
     {
-      if(!ignoreCols)
-      {
-        if(verbose) cat(colname,
-                        "not recognized and being converted to character",
-                        "\n")
-        data[,i]<-as.character(data[,i])
-      }
-
-      else{
-        if(verbose) cat(colname, "not recognized and ignored.", "\n")
-      }
+      if(debug) cat(colname, "not recognized and ignored.", "\n")
     }
   }
 
@@ -1021,13 +874,9 @@ setDataTypes<-function(data,
 #
 #tableName:  Name of database table in db being sent to dbOut.
 #
-#ignoreCols: Logical variable indicating if unrecognized fields in setDataTypes
-#            function should be ignored. See setDataTypes function for more
-#            details.
-#
 #addERU:     Logical variable indicating if ERU should be added to GROUPS column
 #            of FVS_STANDINIT tables (FIA or regular FVS versions). See
-#            dbCombine function for more details.
+#            dbCompile function for more details.
 #
 #Return value
 #
@@ -1037,7 +886,6 @@ setDataTypes<-function(data,
 addDbTable<-function(db,
                      dbOut,
                      tableName,
-                     ignoreCol,
                      addERU)
 {
 
@@ -1051,6 +899,10 @@ addDbTable<-function(db,
 
   #Capitalize column headers
   colnames(dbTable) <- toupper(colnames(dbTable))
+
+  #Get column data types from tableName
+  tableTypes <-getDataTypes(conIn,
+                            tableName)
 
   #Determine if ERU needs to be added to dbTable
   if(addERU & tableName %in% c("FVS_STANDINIT",
@@ -1106,27 +958,23 @@ addDbTable<-function(db,
   #appended to the existing table in output (conOut).
   if(tableName %in% toupper(RSQLite::dbListTables(conOut)))
   {
-    #Set datatypes of dbTable
-    dbTable <- setDataTypes(dbTable,
-                            ignoreCols = F)
-
     #Identify any fields in dbTable that are missing from the same data table
     #in conOut.
     dbFields <- RSQLite::dbListFields(conOut,
                                       name = tableName)
 
-    #Missing fields
     missingFields <- names(dbTable)[! names(dbTable) %in% dbFields]
 
     #Loop through missingFields and add to database table in conOut
     if(length(missingFields) > 0)
     {
-      cat("Fields missing from",
+      cat("\n",
+          "Fields missing from",
           tableName,
           "in",
           dbOut,
           "\n",
-          missingFields, "\n")
+          missingFields, "\n", "\n")
 
       for(i in 1:length(missingFields))
       {
@@ -1134,27 +982,8 @@ addDbTable<-function(db,
         field <- missingFields[i]
 
         #Extract datatype of field
-        colType <- typeof(dbTable[[field]])
-
-        cat("colType:", colType, "\n")
-
-        #Change colType to REAL, TEXT, or INTEGER depending on dataType.
-        #REAL, CHARACTER, and TEXT are used since these datatypes are assumed
-        #by default when sending data to database with dbWriteTable function.
-        if(colType == "double")
-        {
-          dataType <- "REAL"
-        }
-
-        if(colType == 'character')
-        {
-          dataType <- "TEXT"
-        }
-
-        if(colType == 'integer')
-        {
-          dataType <- "INTEGER"
-        }
+        dataType <- tableTypes[names(tableTypes) == field]
+        cat("Field:", field, "dataType:", dataType, "\n")
 
         cat("Adding field:",
             field,
@@ -1177,7 +1006,7 @@ addDbTable<-function(db,
             field,
             "added to table:",
             tableName,
-            "\n")
+            "\n", "\n")
       }
     }
 
@@ -1203,10 +1032,6 @@ addDbTable<-function(db,
   #Table will be created in conOut and data will then be written to the table.
   else
   {
-    #Set datatypes of dbTable
-    dbTable <- setDataTypes(dbTable,
-                            ignoreCols = F)
-
     cat("Writing",
         tableName,
         "to",
@@ -1217,7 +1042,8 @@ addDbTable<-function(db,
     RSQLite::dbWriteTable(conn = conOut,
                           name = tableName,
                           value = dbTable,
-                          overwrite = T)
+                          overwrite = T,
+                          field.types = tableTypes)
 
     cat(tableName,
         "written to",
@@ -1232,7 +1058,7 @@ addDbTable<-function(db,
   #Disconnect from conOut
   RSQLite::dbDisconnect(conOut)
 
-  return()
+  invisible(0)
 }
 
 ################################################################################
@@ -1249,13 +1075,9 @@ addDbTable<-function(db,
 #
 #tableName:  Name of database table being sent from db to dbOut.
 #
-#ignoreCols: Logical variable indicating if unrecognized fields in setDataTypes
-#            function should be ignored. See setDataTypes function for more
-#            details.
-#
 #addERU:     Logical variable indicating if ERU should be added to GROUPS column
 #            of FVS_STANDINIT tables (FIA or regular FVS versions). See
-#            dbCombine function for more details.
+#            dbCompile function for more details.
 #
 #numToRead:  Number of rows to read in from database table at a time.
 #
@@ -1267,12 +1089,11 @@ addDbTable<-function(db,
 ################################################################################
 
 addDbRows<-function(db,
-                     dbOut,
-                     tableName,
-                     ignoreCol,
-                     addERU,
-                     numToRead,
-                     numRows)
+                    dbOut,
+                    tableName,
+                    addERU,
+                    numToRead,
+                    numRows)
 {
 
   #Variable to signify when read of data from tableName in db is complete
@@ -1345,6 +1166,10 @@ addDbRows<-function(db,
     dbTable <- RSQLite::dbGetQuery(conIn,
                                    query)
 
+    #Get column data types from tableName
+    tableTypes <-getDataTypes(conIn,
+                              tableName)
+
     #Disconnect from db
     RSQLite::dbDisconnect(conIn)
 
@@ -1410,27 +1235,23 @@ addDbRows<-function(db,
     #appended to the existing table in output (conOut).
     if(tableName %in% toupper(RSQLite::dbListTables(conOut)))
     {
-      #Set datatypes of dbTable
-      dbTable <- setDataTypes(dbTable,
-                              ignoreCols = F)
-
       #Identify any fields in dbTable that are missing from the same data table
       #in conOut.
       dbFields <- RSQLite::dbListFields(conOut,
                                         name = tableName)
 
-      #Missing fields
       missingFields <- names(dbTable)[! names(dbTable) %in% dbFields]
 
       #Loop through missingFields and add to database table in conOut
       if(length(missingFields) > 0)
       {
-        cat("Fields missing from",
+        cat("\n",
+            "Fields missing from",
             tableName,
             "in",
             dbOut,
             "\n",
-            missingFields, "\n")
+            missingFields, "\n", "\n")
 
         for(i in 1:length(missingFields))
         {
@@ -1438,27 +1259,8 @@ addDbRows<-function(db,
           field <- missingFields[i]
 
           #Extract datatype of field
-          colType <- typeof(dbTable[[field]])
-
-          cat("colType:", colType, "\n")
-
-          #Change colType to REAL, TEXT, or INTEGER depending on dataType.
-          #REAL, CHARACTER, and TEXT are used since these datatypes are assumed
-          #by default when sending data to database with dbWriteTable function.
-          if(colType == "double")
-          {
-            dataType <- "REAL"
-          }
-
-          if(colType == 'character')
-          {
-            dataType <- "TEXT"
-          }
-
-          if(colType == 'integer')
-          {
-            dataType <- "INTEGER"
-          }
+          dataType <- tableTypes[names(tableTypes) == field]
+          cat("Field:", field, "dataType:", dataType, "\n")
 
           cat("Adding field:",
               field,
@@ -1467,7 +1269,7 @@ addDbRows<-function(db,
               tableName,
               "\n")
 
-          #Create query to add field to table in conout
+          #Create query to alter table and add field in conout
           addField <-paste("ALTER TABLE",
                            tableName,
                            "ADD COLUMN",
@@ -1481,7 +1283,7 @@ addDbRows<-function(db,
               field,
               "added to table:",
               tableName,
-              "\n")
+              "\n", "\n")
         }
       }
 
@@ -1507,9 +1309,6 @@ addDbRows<-function(db,
     #table.
     else
     {
-      #Set datatypes of dbTable
-      dbTable <- setDataTypes(dbTable,
-                              ignoreCols = F)
 
       cat("Writing rows", lower + 1, "through", upper, "from",
           tableName,
@@ -1521,7 +1320,8 @@ addDbRows<-function(db,
       RSQLite::dbWriteTable(conn = conOut,
                             name = tableName,
                             value = dbTable,
-                            overwrite = T)
+                            overwrite = T,
+                            field.types = tableTypes)
 
       cat("Rows", lower + 1, "through", upper, "from", tableName,
           "written to",
@@ -1545,5 +1345,463 @@ addDbRows<-function(db,
     RSQLite::dbDisconnect(conOut)
   }
 
-  return()
+  invisible(0)
+}
+
+################################################################################
+#convertType
+#
+#THIS FUNCTION IS CURRENTLY NOT IN USE.
+#
+#This function maps R data types to SQLite data types or SQLite data types to
+#R data types depending on the value specified in the input type argument.
+#
+#Arguments
+#
+#value:   Character string corresponding to an R or SQLite data type
+#
+#type:    Integer variable used to determine if converting to R data type
+#         or SQLite data type.
+#         1: Convert to SQLite data type
+#         2: Convert to R data type
+#
+#Value
+#
+#Character string corresponding to R of SQLite data type
+################################################################################
+
+#'@export
+convertType <- function(value,
+                        type = 1)
+{
+  dataType <- NA
+
+  #Convert to SQLite database type from R data type
+  if(type == 1)
+  {
+    if(value %in% c("double"))
+    {
+      dataType <- "REAL"
+    }
+
+    else if(value %in% c("integer", "logical"))
+    {
+      dataType <- "INTEGER"
+    }
+
+    else
+    {
+      dataType <- "TEXT"
+    }
+  }
+
+  #Convert to R data type from SQLite data type. SQLite data types are based on
+  #those specified in PRAGMA table_info(name of table)
+  else
+  {
+    if(value %in% c("INT", "INTEGER", "TINYINT", "SMALLINT", "MEDIUMINT",
+                    "BIGINT", "UNSIGNED BIG INT", "INT2", "INT8", "BOOLEAN"))
+    {
+      dataType <- "integer"
+    }
+
+    else if(value %in% c("REAL", "DOUBLE", "DOUBLE PRECISION", "FLOAT",
+                         "NUMERIC", "DECIMAL(10,5)"))
+    {
+      dataType <- "double"
+    }
+
+    else
+    {
+      dataType <- "character"
+    }
+  }
+
+  return(dataType)
+}
+
+################################################################################
+#checkDataTypes
+#
+#THIS FUNCTION IS CURRENTLY NOT IN USE.
+#
+#This function is used to determine if column data types in an input dataframe
+#match the field types in a table from a SQLite database where information in
+#dataframe will be inserted. If a column type in the dataframe does not match
+#the data type of the field in the SQLite database, then the column in the
+#dataframe is cast to the correct type. This function is used when data is being
+#appended to output SQLite database in the addDBTable or addDBRows functions.
+#
+#Arguments
+#
+#con:       Connection to SQLite database.
+#
+#tableName: Name of table in SQLite database.
+#
+#data:      Input dataframe whose column data types will compared against data
+#           types in argument tableName.
+#
+#debug:     Logical variable that determines if debug information should be
+#           printed to console. By default this argument set to FALSE.
+#
+#Value
+#
+#data frame
+################################################################################
+
+#'@export
+checkDataTypes <- function(con,
+                           tableName,
+                           data,
+                           debug = F)
+{
+
+  #Extract field names and data types for tableName
+  tableDefs <- RSQLite::dbGetQuery(con,
+                                   paste0("PRAGMA table_info('",
+                                          tableName,
+                                          "')"))[,c(2,3)]
+
+  #Obtain column names from data
+  dfCols <- colnames(data)
+
+  #Start loop across column names in data
+  for(i in 1:length(dfCols))
+  {
+    colName <- dfCols[i]
+
+    #Determine type of colName
+    colType <- typeof(data[[colName]])
+
+    #Find column in tableDefs
+    colIndex <- match(colName, tableDefs$name)
+
+    #If colName is not in tableDefs skip to next iteration in loop
+    if(is.na(colIndex)) next
+
+    #Obtain data type of field
+    fieldType <- tableDefs$type[colIndex]
+
+    #Get R version of fieldType
+    fieldType <- convertType(fieldType, 2)
+
+    #If debug, print column name, field type and column type
+    if(debug)
+    {
+      cat("Column name:", colName, "\n")
+      cat("Field type:", fieldType, "\n")
+      cat("Column type:", colType, "\n")
+    }
+
+    #Check if colType and fieldType are the same. If they are, skip to the next
+    #iteration
+    if(colType == fieldType)
+    {
+      if(debug) cat("Data type of", colName, "is a match.", "\n", "\n")
+      next
+    }
+
+    #Types did not match
+    else
+    {
+      #If field type is double, convert colName to double
+      if(fieldType == "double")
+      {
+        if(debug) cat(colName, "being converted to", fieldType, "\n", "\n")
+        data[,i]<-as.double(data[,i])
+      }
+
+      #If field type is integer, convert colName to integer
+      else if(fieldType == "integer")
+      {
+        if(debug) cat(colName, "being converted to", fieldType, "\n", "\n")
+        data[,i]<-as.integer(data[,i])
+      }
+
+      #If field type is anything else, convert to character
+      else
+      {
+        if(debug) cat(colName, "being converted to character", "\n", "\n")
+        data[,i]<-as.character(data[,i])
+      }
+    }
+  }
+
+  return(data)
+}
+
+################################################################################
+#Function: deleteFiles
+#
+#This function takes in a character vector containing directory paths and file
+#names and deletes each file if they exist.
+#
+#Arguments
+#
+#files: Character vector of directory paths and file names that will be deleted
+#       if they exist.
+#
+#recur: Logical variable used to signal if recursive deletion should occur
+#       if TRUE. By default, this argument is set to FALSE.
+#Value
+#
+#Integer value of 0.
+################################################################################
+
+#'@export
+deleteFiles <- function(files = c(),
+                        recur = FALSE)
+{
+  #If there are no files specified, return
+  if(length(files) <= 0) invisible(0)
+
+  #Loop across files and delete
+  for(file in files)
+  {
+    if(file.exists(file))
+    {
+      retCode <- unlink(x = file,
+                        recursive = recur)
+
+      if(retCode == 0)
+      {
+        cat(file, "was sucessfully deleted.", "\n")
+      }
+
+      else
+      {
+        cat(file, "was not sucessfully deleted.", "\n")
+      }
+    }
+  }
+
+  invisible(0)
+}
+
+################################################################################
+#Function: fvsDBTable
+#
+#THIS FUNCTION IS CURRENTLY NOT IN USE.
+#
+#This function takes in a database table name and checks if it is an input FVS
+#table name.
+#
+#FVS tables:
+#"FVS_STANDINIT"
+#"FVS_TREEINIT"
+#"FVS_PLOTINIT"
+#"FVS_STANDINIT_PLOT"
+#"FVS_STANDINIT_COND"
+#"FVS_PLOTINIT_PLOT"
+#"FVS_TREEINIT_PLOT"
+#"FVS_TREEINIT_COND"
+#
+#Arguments
+#
+#dbTable:  Character string pertaining to directory to name of database table.
+#
+#Value
+#
+#TRUE if database table name is an input FVS table name and FALSE if not.
+################################################################################
+
+fvsDBTable <- function(dbTable = "")
+{
+  fvsTable <- FALSE
+
+  fvsTable <- dbTable %in% c("FVS_STANDINIT",
+                             "FVS_TREEINIT",
+                             "FVS_PLOTINIT",
+                             "FVS_STANDINIT_PLOT",
+                             "FVS_STANDINIT_COND",
+                             "FVS_PLOTINIT_PLOT",
+                             "FVS_TREEINIT_PLOT",
+                             "FVS_TREEINIT_COND")
+
+  return(fvsTable)
+}
+
+################################################################################
+#Function: getDataTypes
+#
+#This function takes in directory path to sqlite database and database table
+#name an returns a named list of fields and associated data types for the
+#specified database table.
+#
+#
+#Arguments
+#
+#db:      Connection to SQLite database.
+#
+#dbTable: Character string pertaining to name of database table in db argument.
+#
+#Value
+#
+#Named list containing field names and associated data types for all fields in
+#dbTable.
+################################################################################
+
+#'@export
+getDataTypes <- function(con,
+                         dbTable = "")
+{
+  #If dbTable does not exist in db, return empty vector
+  if(!RSQLite::dbExistsTable(conn = con,
+                             name = dbTable))
+  {
+    return(c())
+  }
+
+  #Get name of fields and datatypes
+  tableDefs <- RSQLite::dbGetQuery(con,
+                                   paste0("PRAGMA table_info('",
+                                          dbTable,
+                                          "')"))[,c(c("name", "type"))]
+
+  #Make named vector from variables and data types
+  dataTypes<- tableDefs$type
+  names(dataTypes) <- toupper(tableDefs$name)
+
+  return(dataTypes)
+}
+
+################################################################################
+#Function: collectDBpaths
+#
+#This function takes in a character vector of directory paths and file names to
+#SQLite databases or zipped folder and returns an updated character vector of
+#directory paths and file names to SQLite databases. The updated character
+#vector can contain additional .db paths.
+#
+#
+#Arguments
+#
+#dbIn:     Character vector containing directory paths and file names to SQLite
+#          database or zipped folders.
+#
+#unzipDir: Directory path to folder where contents of zipped folders will be
+#          stored.
+#
+#Value
+#
+#Character vector of directory paths and file names to SQLite databases.
+################################################################################
+
+#'@export
+collectDBPaths <- function(dbIn = c(),
+                           unzipDir = "")
+{
+  #If length of dbIn is 0, return dbIn
+  if(length(dbIn) <= 0)
+  {
+    return(dbIn)
+  }
+
+  #If unzipDir does not exist, create it
+  if(!file.exists(unzipDir))
+  {
+    unzipDir <- paste(getwd(),
+                      "xxxvegClassdbCompileUnzipxxx",
+                      sep = "/")
+  }
+
+  #Initialize dbInUpdate. This is a vector that will be used to store input
+  #directory paths.
+  dbInUpdate <- vector(mode = "character")
+
+  #Loop through dbIn and check if files are not .db or .zip. If a file is a .zip
+  #then unzip it to unzipDir. All db files will be added to dbInUpdate.
+  for(i in 1:length(dbIn))
+  {
+    db <- dbIn[i]
+
+    cat("Processing db:", db, "\n")
+
+    #Grab file extension for db
+    fileExtIn<-sub("(.*)\\.","",db)
+
+    cat("File extension:",
+        fileExtIn,
+        "\n",
+        "\n")
+
+    #If the file extension of db is not .db or .zip then stop with error message.
+    if(!fileExtIn %in% c("db", "zip", "sqlite"))
+    {
+      cat(db, "is not a zipped folder or sqlite database.", "\n")
+      next
+    }
+
+    #If the file is a zip file, then it will be unzipped into xxxdbCompilexxx
+    if(fileExtIn == "zip")
+    {
+
+      cat("Unzipping:", db, "to", unzipDir, "\n", "\n")
+
+      unzip(zipfile = db,
+            exdir = unzipDir)
+
+      #Now list all the files that contain .db or .sqlite in the name.
+      #Recursive argument is set to true so any sub directories are checked for
+      #db files as well.
+      dbList <- c(list.files(unzipDir,
+                           pattern = "\\.db",
+                           full.names = T,
+                           recursive = T),
+                  list.files(unzipDir,
+                             pattern = "\\.sqlite",
+                             full.names = T,
+                             recursive = T))
+
+      #If dbList is empty move to next iteration of loop
+      if(length(dbList) <= 0)
+      {
+        cat("No .db or .sqlite files found in", db, "\n")
+        next
+      }
+
+      #If dbList has at least one value then append the values in dbList to
+      #dbInUpdate.
+      else
+      {
+        dbInUpdate <- c(dbInUpdate, dbList)
+      }
+    }
+
+    #Dealing with .db file. This file will be appended to dbInUpdate.
+    else
+    {
+      dbInUpdate <- c(dbInUpdate, db)
+    }
+  }
+
+  return(dbInUpdate)
+}
+
+################################################################################
+#Function: correctSp
+#
+#This function takes in a USDA plant symbol and returns a corrected USDA plant
+#symbol if input is 2TD or 2TE. This function could be expanded to account for
+#other erroneous plant symbols.
+#
+#Arguments
+#
+#sp: Character string corresponding to USDA plant symbol.
+#
+#Value
+#
+#USDA plant symbol
+################################################################################
+
+#'@export
+correctSp <- function(sp = "2TB")
+{
+  sp <- toupper(sp)
+  spCorrect <- sp
+
+  if(sp == "2TE") spCorrect <- "2TN"
+  if(sp == "2TD") spCorrect <- "2TB"
+
+  return(spCorrect)
 }

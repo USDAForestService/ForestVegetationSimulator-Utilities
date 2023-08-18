@@ -47,11 +47,15 @@ qmdTop20 <- function(data,
                      stand = "StandID",
                      dbh = "DBH",
                      expf = "TPA",
-                     TPA,
-                     CC,
+                     TPA = 0,
+                     CC = 0,
                      sortData = F,
                      debug = F)
 {
+
+  #Intialize variable to return
+  QMD20 <- NA
+
   if(debug)
   {
     cat("In function qmdTop20", "\n")
@@ -62,6 +66,12 @@ qmdTop20 <- function(data,
         "expf:", expf, "\n", "\n")
   }
 
+  #If TPA is 0 return
+  if(TPA <= 0) return(QMD20)
+
+  #If data has no rows, return
+  if(nrow(data) <= 0) return(QMD20)
+
   #Check of missing columns in data
   missing <- c(dbh, expf, stand) %in% colnames(data)
 
@@ -69,7 +79,7 @@ qmdTop20 <- function(data,
   if(F %in% missing)
   {
     cat("One or more input arguments not found in data. Check spelling.", "\n")
-    return(NA)
+    return(QMD20)
   }
 
   #Sort data from largest to smallest diameter
@@ -148,9 +158,13 @@ qmdTop20 <- function(data,
         else
         {
           DBHSQ = DBHSQ + data[[dbh]][i] ^ 2 * data[[expf]][i]
-          cat("TREE DBH:", data[[dbh]][i], "\n",
-              "EXPF:", data[[expf]][i], "\n",
-              "TPASUM:", TPASUM, "\n", "\n")
+
+          if(debug)
+          {
+            cat("TREE DBH:", data[[dbh]][i], "\n",
+                "EXPF:", data[[expf]][i], "\n",
+                "TPASUM:", TPASUM, "\n", "\n")
+          }
         }
 
         if(debug) cat("Breaking out of loop.", "\n")
@@ -159,7 +173,7 @@ qmdTop20 <- function(data,
         break
       }
 
-      #TPA20 has not been exceeded. Added next DBH^2 * TPA value to DBHSQ
+      #TPA20 has not been exceeded. Add next DBH^2 * TPA value to DBHSQ
       else
       {
         DBHSQ = DBHSQ + data[[dbh]][i] ^ 2 * data[[expf]][i]
