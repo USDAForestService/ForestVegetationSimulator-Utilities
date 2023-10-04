@@ -58,9 +58,13 @@
 #crwidth: Name of column corresponding crown width values of tree records in
 #         data. By default this argument is set to "CrWidth".
 #
+#region:  USFS Region number
+#
 #debug:	  Logical variable used to specify if debug output should be printed to
 #         R console. If value is TRUE, then debug output will printed to R
 #         console.
+#
+#con:     Connection to database defined in input
 #
 #Return value
 #
@@ -75,32 +79,28 @@ vegOut <- function(data,
                    ht = "Ht",
                    expf = "TPA",
                    crwidth = "CrWidth",
-                   debug = F)
+                   region,
+                   debug = F,
+                   con=con)
 {
   #Initialize output dataframe
-  vegData <- data.frame(CAN_COV = NA,
-                        BA = NA,
-                        TPA = NA,
-                        QMD = NA,
-                        ZSDI = NA,
-                        RSDI = NA,
-                        BA_STM = NA,
-                        TPA_STM = NA,
-                        QMD_STM = NA,
-                        ZSDI_STM = NA,
-                        RSDI_STM = NA,
-                        BA_WT_DIA = NA,
-                        BA_WT_HT = NA,
-                        QMD_TOP20 = NA,
-                        DOM_TYPE = NA,
-                        DCC1 = NA,
-                        XDCC1 = NA,
-                        DCC2 = NA,
-                        XDCC2 = NA,
-                        CAN_SIZCL = NA,
-                        CAN_SZTMB = NA,
-                        CAN_SZWDL = NA,
-                        BA_STORY = NA)
+    if(region==1) vegData <- data.frame(
+     CAN_COV = NA, BA = NA, TPA = NA,
+     QMD = NA, ZSDI = NA, RSDI = NA,
+     BA_STM = NA, TPA_STM = NA, QMD_STM = NA,
+     ZSDI_STM = NA, RSDI_STM = NA, BA_WT_DIA = NA,
+     BA_WT_HT = NA, QMD_TOP20 = NA, VEGTYPE = NA,
+     COVERTYPE_R1 = NA, DOM6040 = NA,
+     VERTICAL_STRUCTURE = NA, SIZECLASS_NTG =NA)
+  if(region==3) vegData <- data.frame(
+     CAN_COV = NA, BA = NA, TPA = NA,
+     QMD = NA, ZSDI = NA, RSDI = NA,
+     BA_STM = NA, TPA_STM = NA, QMD_STM = NA,
+     ZSDI_STM = NA, RSDI_STM = NA, BA_WT_DIA = NA,
+     BA_WT_HT = NA, QMD_TOP20 = NA, DOM_TYPE = NA,
+     DCC1 = NA, XDCC1 = NA, DCC2 = NA,
+     XDCC2 = NA, CAN_SIZCL = NA, CAN_SZTMB = NA,
+     CAN_SZWDL = NA, BA_STORY = NA)
 
   #Check of missing columns in data
   missing <- c(stand, species, dbh, ht, expf, crwidth) %in% colnames(data)
@@ -170,71 +170,102 @@ vegOut <- function(data,
                                 expf = expf,
                                 TPA = allAttr[["ALL"]]["TPA"],
                                 CC = allAttr[["ALL"]]["CC"])
+  if(region==1){
+    #Calculate COVERTYPE_R1, COVTYPE_ATTR, DOM6040
+    ctR1Results<-R1(data = data,
+                       stand = stand,
+                       species = species,
+                       dbh = dbh,
+                       expf = expf,
+                       ht = ht,
+                       TPA = allAttr[["ALL"]]["TPA"],
+                       BA = allAttr[["ALL"]]["BA"],
+                       plotvals = allAttr,
+                       con=con)
 
-  #Calculate DomType, dcc1, dcc2, xdcc1, and xdcc2
-  dtResults<-domType(data = data,
-                     stand = stand,
-                     species = species,
-                     dbh = dbh,
-                     crwidth = crwidth,
-                     expf = expf,
-                     TPA = allAttr[["ALL"]]["TPA"],
-                     CC = allAttr[["ALL"]]["UNCC"])
+    #Region 1 Potential Vegetation Type (StSim)-Cover Type
+    vegData$VEGTYPE<-ctR1Results[["VEGTYPE"]]
 
-  #Dominance type
-  vegData$DOM_TYPE<-dtResults[["DOMTYPE"]]
+    #Region 1 Cover Type
+    vegData$COVERTYPE_R1<-ctR1Results[["COVERTYPE_R1"]]
 
-  #Primary attribute of dominance type
-  vegData$DCC1<-dtResults[["DCC1"]]
+    #DOM6040 Subclass
+    vegData$DOM6040<-ctR1Results[["DOM6040"]]
 
-  #CC of primary attribute
-  vegData$XDCC1<-round(dtResults[["XDCC1"]],2)
+    #CANOPY LAYERS
+    vegData$VERTICAL_STRUCTURE<-ctR1Results[["VERTICAL_STRUCTURE"]]
 
-  #Secondary attribute of dominance type
-  vegData$DCC2<-dtResults[["DCC2"]]
+    #SIZECLASS_NTG
+    vegData$SIZECLASS_NTG<-ctR1Results[["SIZECLASS_NTG"]]
 
-  #CC of secondary attribute
-  vegData$XDCC2<-round(dtResults[["XDCC2"]],2)
+    #structure class strata
+    vegData$STRCLSSTR<-ctR1Results[["STRCLSSTR"]]
+  }
+  if(region==3){
+    #Calculate DomType, dcc1, dcc2, xdcc1, and xdcc2
+    dtResults<-domType(data = data,
+                       stand = stand,
+                       species = species,
+                       dbh = dbh,
+                       crwidth = crwidth,
+                       expf = expf,
+                       TPA = allAttr[["ALL"]]["TPA"],
+                       CC = allAttr[["ALL"]]["UNCC"])
 
-  #Canopy size class - R3 midscale mapping
-  vegData$CAN_SIZCL<-canSizCl(data = data,
-                               stand = stand,
-                               dbh = dbh,
-                               crwidth = crwidth,
-                               expf = expf,
-                               type = 1,
-                               TPA = allAttr[["ALL"]]["TPA"],
-                               CC = allAttr[["ALL"]]["CC"])
+    #Dominance type
+    vegData$DOM_TYPE<-dtResults[["DOMTYPE"]]
 
-  #Canopy size class - timberland
-  vegData$CAN_SZTMB<-canSizCl(data = data,
-                               stand = stand,
-                               dbh = dbh,
-                               crwidth = crwidth,
-                               expf = expf,
-                               type = 2,
-                               TPA = allAttr[["ALL"]]["TPA"],
-                               CC = allAttr[["ALL"]]["CC"])
+    #Primary attribute of dominance type
+    vegData$DCC1<-dtResults[["DCC1"]]
 
-  #Canopy size class - woodland
-  vegData$CAN_SZWDL<-canSizCl(data = data,
-                               stand = stand,
-                               dbh = dbh,
-                               crwidth = crwidth,
-                               expf = expf,
-                               type = 3,
-                               TPA = allAttr[["ALL"]]["TPA"],
-                               CC = allAttr[["ALL"]]["CC"])
+    #CC of primary attribute
+    vegData$XDCC1<-round(dtResults[["XDCC1"]],2)
 
-  #BA storiedness
-  vegData$BA_STORY<-baStory(data,
-                            stand = stand,
-                            dbh = dbh,
-                            expf = expf,
-                            BA = allAttr[["ALL"]]["BA"],
-                            TPA = allAttr[["ALL"]]["TPA"],
-                            CC = allAttr[["ALL"]]["CC"])
+    #Secondary attribute of dominance type
+    vegData$DCC2<-dtResults[["DCC2"]]
 
+    #CC of secondary attribute
+    vegData$XDCC2<-round(dtResults[["XDCC2"]],2)
+
+    #Canopy size class - R3 midscale mapping
+    vegData$CAN_SIZCL<-canSizCl(data = data,
+                                 stand = stand,
+                                 dbh = dbh,
+                                 crwidth = crwidth,
+                                 expf = expf,
+                                 type = 1,
+                                 TPA = allAttr[["ALL"]]["TPA"],
+                                 CC = allAttr[["ALL"]]["CC"])
+
+    #Canopy size class - timberland
+    vegData$CAN_SZTMB<-canSizCl(data = data,
+                                 stand = stand,
+                                 dbh = dbh,
+                                 crwidth = crwidth,
+                                 expf = expf,
+                                 type = 2,
+                                 TPA = allAttr[["ALL"]]["TPA"],
+                                 CC = allAttr[["ALL"]]["CC"])
+
+    #Canopy size class - woodland
+    vegData$CAN_SZWDL<-canSizCl(data = data,
+                                 stand = stand,
+                                 dbh = dbh,
+                                 crwidth = crwidth,
+                                 expf = expf,
+                                 type = 3,
+                                 TPA = allAttr[["ALL"]]["TPA"],
+                                 CC = allAttr[["ALL"]]["CC"])
+
+    #BA storiedness
+    vegData$BA_STORY<-baStory(data,
+                              stand = stand,
+                              dbh = dbh,
+                              expf = expf,
+                              BA = allAttr[["ALL"]]["BA"],
+                              TPA = allAttr[["ALL"]]["TPA"],
+                              CC = allAttr[["ALL"]]["CC"])
+  }
   return(vegData)
 }
 

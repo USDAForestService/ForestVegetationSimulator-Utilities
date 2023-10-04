@@ -520,7 +520,6 @@ main<- function(input = NULL,
       #Execute SQL query to obtain list of stand data
       standDF<-RSQLite::dbGetQuery(con,
                                    dbQuery)
-
       #Display column names and number of rows in standDF
       cat("Columns read from tree list:", colnames(standDF), "\n")
       cat("Number of rows read from tree list:", nrow(standDF), "\n")
@@ -607,7 +606,7 @@ main<- function(input = NULL,
         }
 
         #Calculate basal and percent canopy cover for each tree record
-        standYrDF$TREEBA <- standYrDF$DBH^2 * standYrDF$TPA * 0.005454
+        standYrDF$TREEBA <- standYrDF$DBH^2 * standYrDF$TPA * 0.0054542
         standYrDF$TREECC <- pi * (standYrDF$CrWidth/2)^2 *
           (standYrDF$TPA/43560) * 100
 
@@ -618,10 +617,9 @@ main<- function(input = NULL,
                              VARIANT = variant,
                              REGION = region,
                              YEAR = years[j])
-
         #Bind data from vegOut to yrOutput
         yrOutput <- cbind(yrOutput,
-                          vegOut(standYrDF))
+                          vegOut(standYrDF,region=region,con=con))
 
         #If addVolume is TRUE, calculate volumes and add to yrOutput
         if(addVolume)
@@ -682,7 +680,6 @@ main<- function(input = NULL,
         standSum<-standSum + 1
         next
       }
-
       #Combine all year-by-year information for standID into a single
       #dataframe.
       standOut<-do.call("rbind", standYrOutput)

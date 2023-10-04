@@ -210,6 +210,9 @@
 #Reineke SDI (RSDI)
 #Basal area weighted diameter (BA_WT_DIA)
 #Basal area weighted height (BA_WT_HT)
+#Sum of total heights per acre (SUM_HT)--for later use in R1.R in calculating
+#average height by species by dividing each SUM_HT by each species' respective
+#TPA value
 #
 #Arguments:
 #
@@ -307,7 +310,8 @@ plotAttr <- function(data,
                        "ZSDI" = 0,
                        "RSDI" = 0,
                        "BA_WT_DIA" = 0,
-                       "BA_WT_HT" = 0))
+                       "BA_WT_HT" = 0,
+                       "SUM_HT" = 0))
 
     return(attr)
   }
@@ -348,7 +352,8 @@ plotAttr <- function(data,
               "ZSDI" = 0,
               "RSDI" = 0,
               "BA_WT_DIA" = 0,
-              "BA_WT_HT" = 0)
+              "BA_WT_HT" = 0,
+              "SUM_HT" = 0)
 
     #Store attr in attrList
     attrList[[i]] <- attr
@@ -358,11 +363,13 @@ plotAttr <- function(data,
   #SDI), BAWTD, and BAWTH
   TBA = 0
   TEXPF = 0
+  THT = 0
   DBHSQ = 0
   TCC = 0
   TZSDI = 0
   BAWTD = 0
   BAWTH = 0
+  TSUMHT = 0
 
   #Loop across data and calculate attributes
   for(i in 1:nrow(data))
@@ -379,8 +386,11 @@ plotAttr <- function(data,
       #Extract DBH of tree i
       DBH <- data[[dbh]][i]
 
+      #Extract HT of tree i
+      THT <- data[[ht]][i]
+
       #Calculate BA of tree
-      TBA <- DBH^2 * TEXPF * 0.005454
+      TBA <- DBH^2 * TEXPF * 0.0054542
 
       #Calculate CC of tree
       TCC <- pi * (data[[crwidth]][i]/2)^2 *(TEXPF/43560) * 100
@@ -397,17 +407,22 @@ plotAttr <- function(data,
       #Calculate tree contribution of ZSDI
       TZSDI <- (TEXPF * (DBH/10)^1.605)
 
+      #Calculate tree contribution of SUM_HT
+      TSUMHT <- THT * TEXPF
+
       if(debug)
       {
         cat("SPECIES:", sp, "\n",
             "TREE DBH:", DBH, "\n",
             "TREE EXP:", TEXPF, "\n",
+            "TREE HT:", THT, "\n",
             "TREECC:", TCC, "\n",
             "TREEBA:", TBA, "\n",
             "DBHSQ:", DBHSQ, "\n",
             "BAWTD:", BAWTD, "\n",
             "BAWTH:", BAWTH, "\n",
-            "TZSDI:", TZSDI, "\n", "\n")
+            "TZSDI:", TZSDI, "\n",
+            "TSUMHT:", TSUMHT, "\n","\n")
       }
 
       #=========================================================================
@@ -435,6 +450,9 @@ plotAttr <- function(data,
       #Update ZSDI
       attrList[["ALL"]]["ZSDI"] <- attrList[["ALL"]]["ZSDI"] + TZSDI
 
+      #Update SUM_HT
+      attrList[["ALL"]]["SUM_HT"] <- attrList[["ALL"]]["SUM_HT"] + TSUMHT
+
       #=========================================================================
       #Update values for species (sp) if allSpecies is TRUE
       #=========================================================================
@@ -461,6 +479,9 @@ plotAttr <- function(data,
 
         #Update ZSDI
         attrList[[sp]]["ZSDI"] <- attrList[[sp]]["ZSDI"] + TZSDI
+
+        #Update SUM_HT
+        attrList[[sp]]["SUM_HT"] <- attrList[[sp]]["SUM_HT"] + TSUMHT
       }
     }
   }
