@@ -48,10 +48,11 @@
 #
 #Named list containing
 # - STSIM potential vegetation type grouping (VEGTYPE)
-# - R1 Cover Type (COVERTYPE_R1),
-# - Subclass DOM6040,
+# - R1 Cover Type (COVERTYPE_R1)
+# - Subclass DOM6040
 # - number of Canopy layers (VERTICAL STRUCTURE)--1,2,3 or continuous (C)
 # - Basal area weighted diameter size class (SIZECLASS_NTG)
+# - Size & density structure class strata (STRCLSSTR)
 ################################################################################
 #'@export
 R1<-function(data,
@@ -207,10 +208,6 @@ R1<-function(data,
   for(i in 1:length(spStand)){
     SpeciesBA[i] <- plotvals[[spStand[i]]]["BA"]
   }
-  #SpeciesTotalHeight
-  for(i in 1:length(spStand)){
-    SpeciesTotalHeight[i] <- plotvals[[spStand[i]]]["SUM_HT"]
-  }
   #SpeciesPropTPA
   for(i in 1:length(spStand)){
     SpeciesPropTPA[i] <- SpeciesTPA[i]/TPA
@@ -229,8 +226,7 @@ R1<-function(data,
   }
   #AvgHeightBySpecies
   for(i in 1:length(spStand)){
-    AvgHeightBySpecies[i] <- SpeciesTotalHeight[i]/SpeciesTPA[i]
-    if(is.na(AvgHeightBySpecies[i])) AvgHeightBySpecies[i] <- 0
+    AvgHeightBySpecies[i] <- plotvals[[spStand[i]]]["AVE_HT"]
   }
 
   #If debug, print the values above

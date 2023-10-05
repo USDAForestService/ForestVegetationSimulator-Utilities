@@ -359,7 +359,7 @@ caseQuery <- function(runTitle)
   query<- paste("SELECT FVS_Cases.StandID, FVS_Cases.CaseID, FVS_Cases.Groups,",
                 "FVS_Cases.Variant",
                 "FROM FVS_Cases",
-                "WHERE RunTitle LIKE", paste0("'%",runTitle,"%'"))
+                "WHERE RunTitle LIKE", paste0("'",runTitle,"'"))
   return(query)
 }
 
