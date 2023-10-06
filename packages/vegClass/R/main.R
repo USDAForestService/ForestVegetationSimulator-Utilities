@@ -711,7 +711,7 @@ main<- function(input = NULL,
         }
 
         #Calculate basal and percent canopy cover for each tree record
-        standYrDF$TREEBA <- standYrDF$DBH^2 * standYrDF$TPA * 0.005454
+        standYrDF$TREEBA <- standYrDF$DBH^2 * standYrDF$TPA * 0.0054542
         standYrDF$TREECC <- pi * (standYrDF$CrWidth/2)^2 *
           (standYrDF$TPA/43560) * 100
 
@@ -744,7 +744,8 @@ main<- function(input = NULL,
                                  region = region,
                                  vol1 = vol1,
                                  vol2 = vol2,
-                                 vol3 = vol3))
+                                 vol3 = vol3,
+                                 con=con))
 
         #If addVolume is TRUE, calculate volumes and add to yrOutput
         if(addVolume)

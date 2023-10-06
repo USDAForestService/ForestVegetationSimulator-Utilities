@@ -14,6 +14,7 @@
 #Reineke SDI (RSDI)
 #Basal area weighted diameter (BA_WT_DIA)
 #Basal area weighted height (BA_WT_HT)
+#Average height (AVE_HT)
 #
 #If region argument in function is 8 or 9 (USFS R8/R9) the following values are
 #calculated:
@@ -136,6 +137,7 @@ plotAttr <- function(data,
                                 "RSDI" = NA,
                                 "BA_WT_DIA" = NA,
                                 "BA_WT_HT" = NA,
+                                "AVE_HT" = NA,
                                 "SSSIZE" = NA,
                                 "SSTPA" = NA,
                                 "SSBA" = NA,
@@ -188,6 +190,7 @@ plotAttr <- function(data,
               "RSDI" = 0,
               "BA_WT_DIA" = 0,
               "BA_WT_HT" = 0,
+              "AVE_HT" = 0,
               "SSSIZE" = 0,
               "SSTPA" = 0,
               "SSBA" = 0,
@@ -232,7 +235,7 @@ plotAttr <- function(data,
       HT <- data[[ht]][i]
 
       #Calculate BA of tree
-      TBA <- DBH^2 * TEXPF * 0.005454
+      TBA <- DBH^2 * TEXPF * 0.0054542
 
       #Calculate CC of tree
       TCC <- pi * (data[[crwidth]][i]/2)^2 *(TEXPF/43560) * 100
@@ -279,6 +282,9 @@ plotAttr <- function(data,
 
       #Update ZSDI
       attrList[["ALL"]]["ZSDI"] <- attrList[["ALL"]]["ZSDI"] + TZSDI
+      
+      #Update AVE_HT
+      attrList[["ALL"]]["AVE_HT"] <- attrList[["ALL"]]["AVE_HT"] + HT*TEXPF
 
       #=========================================================================
       #Update values for individual species
@@ -307,6 +313,9 @@ plotAttr <- function(data,
 
       #Update ZSDI
       attrList[[sp]]["ZSDI"] <- attrList[[sp]]["ZSDI"] + TZSDI
+      
+      #Update AVE_HT
+      attrList[[sp]]["AVE_HT"] <- attrList[[sp]]["AVE_HT"] + HT*TEXPF
 
       #=========================================================================
       #If region is 8 or 9, then update R8/R9 specific variables
@@ -331,7 +340,7 @@ plotAttr <- function(data,
 
           #Update SSBA
           attrList[["ALL"]]["SSBA"] <- attrList[["ALL"]]["SSBA"] + TBA
-
+          
           #Update SSSIZE (lorey height)
           attrList[["ALL"]]["SSSIZE"] <- attrList[["ALL"]]["SSSIZE"] + HT*TEXPF
         }
@@ -420,6 +429,12 @@ plotAttr <- function(data,
         attrList[[i]]["BA"]
     }
 
+    #Calculate average height if TPA is not 0
+    if(attrList[[i]]["TPA"] > 0)
+    {
+      attrList[[i]]["AVE_HT"] = sqrt(attrList[[i]]["AVE_HT"]/attrList[[i]]["TPA"])
+    }
+
     #Calculate advance regen size if SSTPA is greater than 0
     if(attrList[[i]]["SSTPA"] > 0)
     {
@@ -467,6 +482,7 @@ plotAttr <- function(data,
       cat("CC:", attrList[[i]]["CC"], "\n")
       cat("ZSDI:", attrList[[i]]["ZSDI"], "\n")
       cat("RSDI:", attrList[[i]]["RSDI"], "\n")
+      cat("AVE_HT:", attrList[[i]]["AVE_HT"], "\n")
       cat("SSTPA:", attrList[[i]]["SSTPA"], "\n")
       cat("SSBA:", attrList[[i]]["SSTPA"], "\n")
       cat("SSSIZE:", attrList[[i]]["SSSIZE"],"\n")
