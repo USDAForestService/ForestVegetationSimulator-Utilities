@@ -745,7 +745,7 @@ main<- function(input = NULL,
                                  vol1 = vol1,
                                  vol2 = vol2,
                                  vol3 = vol3,
-                                 ,con=con))
+                                 con=con))
 
         #If addVolume is TRUE, calculate volumes and add to yrOutput
         if(addVolume)

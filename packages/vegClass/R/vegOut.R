@@ -47,7 +47,8 @@
 # - Number of Canopy layers (VERTICAL STRUCTURE - R1 ruleset)
 # - Basal area weighted diameter size class (SIZECLASS_NTG)
 # - Size & density structure class strata (STRCLSSTR - R1 ruleset)
-
+=======
+#
 #Arguments
 #
 #data:    Data frame containing tree records from a single stand or plot. Data
@@ -100,7 +101,7 @@
 #         argument is set to 8.
 #
 #con:     Connection to database defined in input
-#
+=======
 #debug:	  Logical variable used to specify if debug output should be printed to
 #         R console. If value is TRUE, then debug output will printed to R
 #         console.
@@ -223,7 +224,8 @@ vegOut <- function(data,
                                 CC = allAttr[["ALL"]]["CC"]),2)
 
   #If region is 1
-  if(region==1){
+  if(region==1)
+  {
     #Calculate COVERTYPE_R1, COVTYPE_ATTR, DOM6040
     dtResults<-R1(data = data,
                        stand = stand,
@@ -253,8 +255,8 @@ vegOut <- function(data,
 
     #structure class strata
     vegData$STRCLSSTR<-dtResults[["STRCLSSTR"]]
-
   }
+  
   #If region is 3
   if(region==3)
   {
@@ -309,10 +311,10 @@ vegOut <- function(data,
                                 dbh = dbh,
                                 crwidth = crwidth,
                                 expf = expf,
-                                type = 3,
+                                type = 1,
                                 TPA = allAttr[["ALL"]]["TPA"],
                                 CC = allAttr[["ALL"]]["CC"])
-
+    
     #BA storiedness
     vegData$BA_STORY<-baStory(data = data,
                               stand = stand,
@@ -322,8 +324,9 @@ vegOut <- function(data,
                               TPA = allAttr[["ALL"]]["TPA"],
                               CC = allAttr[["ALL"]]["CC"])
   }
-  #If region is 8 or 9
-  if(region %in% c(8, 9))
+ 
+  #If region is 8
+  if(region == 8)
   {
     #Calculate ardomspp, nmdomspp, pwdomspp, stdomspp, domtype
     dtResults<-domTypeR8(data = data,
