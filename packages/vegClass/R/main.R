@@ -42,20 +42,6 @@
 #              stop with an error message. The default value of this argument is
 #              FALSE (F).
 #
-#region:       Integer variable corresponding to USFS region number. Valid
-#              values are 1, 2, 3, 4, 5, 6, 8, 9, or 10. This argument is
-#              currently a dummy variable and has no effect on underlying logic.
-#              In the future this variable will be likely used to determine rule
-#              sets for calculating vegetation classifications and other
-#              attributes. The value specified in this argument will be included
-#              in the file specified in the output argument.
-#
-#              WARNING: the value specified in the region argument will apply
-#              to all runs specified in the runTitles argument or all runs being
-#              processed if the allRuns argument is set to TRUE (T). As such,
-#              run(s) from only one region at a time when using the main
-#              function.
-#
 #runTitles:    Vector of character strings corresponding to FVS runTitles that
 #              will be processed. If runTitles is left as NULL and allRuns is
 #              FALSE (F), execution of main function will stop with an error
@@ -78,20 +64,15 @@
 #              runTitles will be ignored. By default, this argument is set
 #              to FALSE (F).
 #
-#region:	     Integer variable corresponding to USFS region number. Valid
-#              values are 1, 2, 3, 4, 5, 6, 8, 9, or 10. This argument is
-#              currently a dummy variable and has no effect on output produced
-#              from main function. In the future this variable will be likely
-#              used to determine rule sets for calculating vegetation
-#              classifications and other attributes. The value specified in this
-#              argument will be included in the file specified in the output
-#              argument.
+#region:       Integer variable corresponding to USFS region number. Valid
+#              values are 1, 3, and 8. This variable is used to determine what
+#              region-specific vegetation classifications and other attributes
+#              are reported and what rulesets are used to calculate these. By
+#              default, this argument is set to NA.
 #
-#              WARNING: the value specified in the region argument will apply to
+#              NOTE: the value specified in the region argument will apply to
 #              all runs specified in the runTitles argument or all runs being
-#              processed if the allRuns argument is set to TRUE (T). As such,
-#              run(s) from only one region at a time when using the main
-#              function.
+#              processed if the allRuns argument is set to TRUE (T).
 #
 #addCompute:   Logical variable used to indicate if information in FVS_Compute
 #              table should be included in output argument. If the FVS_Compute
@@ -335,10 +316,10 @@ main<- function(input = NULL,
   #==========================================================================
 
   #If region is not a valid value, then stop with error message
-  if(! region %in% c(1, 2, 3, 4, 5, 6, 8, 9, 10))
+  if(! region %in% c(1, 3, 8))
   {
     stop(paste("Invalid region number was specified in region argument.",
-               "Please enter a value of 1, 2, 3, 4, 5, 6, 8, 9, or 10"))
+               "Please enter a value of 1, 3, or 8"))
   }
 
   #==========================================================================

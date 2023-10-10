@@ -47,7 +47,7 @@
 # - Number of Canopy layers (VERTICAL STRUCTURE - R1 ruleset)
 # - Basal area weighted diameter size class (SIZECLASS_NTG)
 # - Size & density structure class strata (STRCLSSTR - R1 ruleset)
-=======
+#=======
 #
 #Arguments
 #
@@ -56,8 +56,8 @@
 #         (USDA Plant Symbol only), DBH, expansion factor, and crown width for
 #         each tree record.
 #
-#region:  Integer variable corresponding to USFS region number (1, 2, 3, 4,
-#         5, 6, 8, 9, or 10).
+#region:  Integer variable corresponding to USFS region number (1, 3, or 8 are
+#         valid values).
 #
 #stand:   Character string corresponding to name of column pertaining to stand
 #         or plot ID associated with tree records in data argument. By default,
@@ -101,10 +101,11 @@
 #         argument is set to 8.
 #
 #con:     Connection to database defined in input
-=======
+#
 #debug:	  Logical variable used to specify if debug output should be printed to
 #         R console. If value is TRUE, then debug output will printed to R
 #         console.
+#
 #Return value
 #
 #Single row dataframe containing attributes described above.
@@ -256,7 +257,7 @@ vegOut <- function(data,
     #structure class strata
     vegData$STRCLSSTR<-dtResults[["STRCLSSTR"]]
   }
-  
+
   #If region is 3
   if(region==3)
   {
@@ -311,10 +312,10 @@ vegOut <- function(data,
                                 dbh = dbh,
                                 crwidth = crwidth,
                                 expf = expf,
-                                type = 1,
+                                type = 3,
                                 TPA = allAttr[["ALL"]]["TPA"],
                                 CC = allAttr[["ALL"]]["CC"])
-    
+
     #BA storiedness
     vegData$BA_STORY<-baStory(data = data,
                               stand = stand,
@@ -324,7 +325,7 @@ vegOut <- function(data,
                               TPA = allAttr[["ALL"]]["TPA"],
                               CC = allAttr[["ALL"]]["CC"])
   }
- 
+
   #If region is 8
   if(region == 8)
   {

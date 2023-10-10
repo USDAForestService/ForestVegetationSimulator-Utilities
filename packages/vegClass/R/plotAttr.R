@@ -282,7 +282,7 @@ plotAttr <- function(data,
 
       #Update ZSDI
       attrList[["ALL"]]["ZSDI"] <- attrList[["ALL"]]["ZSDI"] + TZSDI
-      
+
       #Update AVE_HT
       attrList[["ALL"]]["AVE_HT"] <- attrList[["ALL"]]["AVE_HT"] + HT*TEXPF
 
@@ -313,7 +313,7 @@ plotAttr <- function(data,
 
       #Update ZSDI
       attrList[[sp]]["ZSDI"] <- attrList[[sp]]["ZSDI"] + TZSDI
-      
+
       #Update AVE_HT
       attrList[[sp]]["AVE_HT"] <- attrList[[sp]]["AVE_HT"] + HT*TEXPF
 
@@ -340,7 +340,7 @@ plotAttr <- function(data,
 
           #Update SSBA
           attrList[["ALL"]]["SSBA"] <- attrList[["ALL"]]["SSBA"] + TBA
-          
+
           #Update SSSIZE (lorey height)
           attrList[["ALL"]]["SSSIZE"] <- attrList[["ALL"]]["SSSIZE"] + HT*TEXPF
         }
@@ -629,12 +629,12 @@ volumeCalc <- function(data,
   }
 
   #Initialize volume vector that will be returned
-  volume <- c("VOL1" = NA,
-              "VOL2" = NA,
-              "VOL3" = NA,
-              "VOL4" = NA,
-              "VOL5" = NA,
-              "VOL6" = NA)
+  volume <- c("VOL1" = 0,
+              "VOL2" = 0,
+              "VOL3" = 0,
+              "VOL4" = 0,
+              "VOL5" = 0,
+              "VOL6" = 0)
 
   #If data has no rows, return
   if(nrow(data) <= 0) return(volume)
@@ -653,6 +653,7 @@ volumeCalc <- function(data,
   #Loop across data and calculate volumes
   for(i in 1:nrow(data))
   {
+
     #Accumulate volume 1 values
     if(data[[dbh]][i] >= vol1DBH)
     {
