@@ -41,6 +41,13 @@
 # - Basal area weighted diameter of saw timber sized trees (STSIZE - R8 ruleset)
 # - Basal area of saw timber sized trees (STBA - R8 ruleset)
 # - Size and density class (VEGCLASS - R8 ruleset)
+# - STSIM potential vegetation type grouping (VEGTYPE - R1 ruleset)
+# - Cover Type (COVERTYPE_R1 - R1 ruleset)
+# - Dominance group 6040 (DOM6040 - R1 ruleset)
+# - Number of Canopy layers (VERTICAL STRUCTURE - R1 ruleset)
+# - Basal area weighted diameter size class (SIZECLASS_NTG)
+# - Size & density structure class strata (STRCLSSTR - R1 ruleset)
+#=======
 #
 #Arguments
 #
@@ -49,8 +56,8 @@
 #         (USDA Plant Symbol only), DBH, expansion factor, and crown width for
 #         each tree record.
 #
-#region:  Integer variable corresponding to USFS region number (1, 2, 3, 4,
-#         5, 6, 8, 9, or 10).
+#region:  Integer variable corresponding to USFS region number (1, 3, or 8 are
+#         valid values).
 #
 #stand:   Character string corresponding to name of column pertaining to stand
 #         or plot ID associated with tree records in data argument. By default,
@@ -93,6 +100,8 @@
 #         argument is set to "SBdFt". Currently vol3 is only used if region
 #         argument is set to 8.
 #
+#con:     Connection to database defined in input
+#
 #debug:	  Logical variable used to specify if debug output should be printed to
 #         R console. If value is TRUE, then debug output will printed to R
 #         console.
@@ -114,6 +123,7 @@ vegOut <- function(data,
                    vol1 = "MCuFt",
                    vol2 = "SCuFt",
                    vol3 = "SBdFt",
+                   con=con,
                    debug = F)
 {
   #Initialize output dataframe
@@ -214,8 +224,42 @@ vegOut <- function(data,
                                 TPA = allAttr[["ALL"]]["TPA"],
                                 CC = allAttr[["ALL"]]["CC"]),2)
 
-  #If region is not 8 or 9
-  if(! region %in% c(8, 9))
+  #If region is 1
+  if(region==1)
+  {
+    #Calculate COVERTYPE_R1, COVTYPE_ATTR, DOM6040
+    dtResults<-R1(data = data,
+                       stand = stand,
+                       species = species,
+                       dbh = dbh,
+                       expf = expf,
+                       ht = ht,
+                       TPA = allAttr[["ALL"]]["TPA"],
+                       BA = allAttr[["ALL"]]["BA"],
+                       plotvals = allAttr,
+                       con=con)
+
+    #Region 1 Potential Vegetation Type (StSim)-Cover Type
+    vegData$VEGTYPE<-dtResults[["VEGTYPE"]]
+
+    #Region 1 Cover Type
+    vegData$COVERTYPE_R1<-dtResults[["COVERTYPE_R1"]]
+
+    #DOM6040 Subclass
+    vegData$DOM6040<-dtResults[["DOM6040"]]
+
+    #CANOPY LAYERS
+    vegData$VERTICAL_STRUCTURE<-dtResults[["VERTICAL_STRUCTURE"]]
+
+    #SIZECLASS_NTG
+    vegData$SIZECLASS_NTG<-dtResults[["SIZECLASS_NTG"]]
+
+    #structure class strata
+    vegData$STRCLSSTR<-dtResults[["STRCLSSTR"]]
+  }
+
+  #If region is 3
+  if(region==3)
   {
     #Calculate DomType, dcc1, dcc2, xdcc1, and xdcc2
     dtResults<-domTypeR3(data = data,
@@ -282,8 +326,8 @@ vegOut <- function(data,
                               CC = allAttr[["ALL"]]["CC"])
   }
 
-  #Else region is 8 or 9
-  else
+  #If region is 8
+  if(region == 8)
   {
     #Calculate ardomspp, nmdomspp, pwdomspp, stdomspp, domtype
     dtResults<-domTypeR8(data = data,
