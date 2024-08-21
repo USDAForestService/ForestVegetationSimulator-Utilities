@@ -1,16 +1,19 @@
 Package: vegClass
 Title: Vegetation Classification
-Version: 0.6.0
-Authors@R: person("Mark", "Castle", email = "mark.castle@usda.gov", role=c("aut",
-          "cre"))
+Version: 0.7.0
+Authors@R: c(person("Mark", "Castle", email = "mark.castle@usda.gov", 
+          	  role=c("aut")),
+	     person("Mike", "Shettles", email = "michael.a.shettles@usda.gov",
+		 role = c("aut","cre")))
 Description: This package provides a suite of functions that are used to derive
  vegetation classifications from Forest Vegetation Simulator output.
 Imports: 
     RSQLite (>= 2.2.4),
-    utils
+    utils,
+    readxl
 License: MIT
 Roxygen: list(markdown = TRUE)
-RoxygenNote: 7.2.3
+RoxygenNote: 7.3.2
 LazyData: true
 Depends: 
     R (>= 4.0.0)

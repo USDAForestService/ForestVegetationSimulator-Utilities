@@ -5,7 +5,7 @@
 #
 #Argument
 #
-#BAByDiameterClass: vector containing the amount of basal area by diameter class.
+#BAByDiameterClass: vector containing the proportion of basal area by diameter class.
 #         Classes are 0-4.9", 5-9.9", 10-14.9", 15-19.9", 20-24.9", and 25"+
 #
 #Return value
