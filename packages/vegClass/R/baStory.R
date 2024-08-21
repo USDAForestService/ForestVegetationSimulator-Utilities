@@ -63,10 +63,16 @@ baStory<-function(data,
   }
 
   #if TPA is 0, return
-  if(TPA <= 0) return(story)
+  if(TPA <= 0){
+    story<-0
+    return(story)
+  }
 
   #If data has no rows, return
-  if(nrow(data) <= 0) return(story)
+  if(nrow(data) <= 0){
+    story<-0
+    return(story)
+  }
 
   #Check for missing columns in data
   missing <- c(stand, dbh, expf) %in% colnames(data)
@@ -75,6 +81,7 @@ baStory<-function(data,
   #warning message is issued and NA value is returned.
   if(F %in% missing)
   {
+    story<-0
     cat("One or more input arguments not found in data. Check spelling.", "\n")
     return(story)
   }
@@ -154,7 +161,7 @@ baStory<-function(data,
           if(debug) cat("baSlide for trees between", bottom, "and", top, "DBH:",
                          baSlide, "GE 60% of total plot BA:", BA, "\n")
           story = 2
-          storyFound = T
+          # storyFound = T
         }
 
         #Test if plot is single story based on value of baSlide. If baSlide is

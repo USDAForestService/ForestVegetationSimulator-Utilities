@@ -13,7 +13,7 @@
 
 #RGui:    press Crtl + A key and then press Ctrl + R. Alternatively, after
 #         selecting all lines of code with Ctrl + A, you can press the Run line
-#         or selection button. 
+#         or selection button.
 
 #Attach vegClass package
 library(vegClass)
@@ -31,7 +31,8 @@ main(input = "C:/FVS/VegClass Example/FVSOut.db",
      vol1DBH = 5,
      vol2DBH = 5,
      vol3DBH = 9,
-     startYear = 2022)
+     startYear = 2022,
+     customVars = "C:/Veg_Classification/CustomVars_vegClass.xlsx")
 
 #You can call the main function as many times as you want in an R script. You
 #can simply copy and paste the code above and change the function arguments as

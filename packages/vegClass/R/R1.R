@@ -65,7 +65,8 @@ R1<-function(data,
                   BA,
                   plotvals,
                   debug = F,
-                  con=con){
+                  InvDB=InvDB,
+                  InvStandTbl=InvStandTbl){
 
   #Calculate the number of trees in the output treelist for the plot
   Ntrees <- length(data$SpeciesPLANTS)
@@ -78,41 +79,54 @@ R1<-function(data,
                "SIZECLASS_NTG" = NA,
                "STRCLSSTR" = NA)
 
-  #Check for required R1HABTYPE compute variable that should contain the
-  #3-digit numeric ADP habitat type code
-  if(!RSQLite::dbExistsTable(con, "FVS_Compute")){
-    stop(paste("FVS_Compute table is missing in the output database and region=1.",
-         "The R1HABTYPE compute variable is needed for R1 classification.","\n"))
+  #Test if value in InvDB argument is null.
+  if (is.null(InvDB)){
+    stop(paste("No inventory database specified in InvDB argument.",
+               "The PV_CODE variable is needed for R1 classification"))
   }
-  #Establish connection to output database
-  #conR1<-RSQLite::dbConnect(RSQLite::SQLite(), "C:/20230106/Project_1/FVSOut.db")
-  #check if FVS_compute table exists
-  if(RSQLite::dbExistsTable(con, "FVS_Compute")){
-    HABTYPE <- ""
-    cat("FVS_Compute table exists for R1HABTYP query", "\n")
-    query<- paste("SELECT R1HABTYP", "FROM FVS_Compute")
+  #Test existence of input database.
+  if (!(file.exists(InvDB))){
+    stop(paste("Inventory database (InvDB) specified not found. Make sure",
+               "directory path and file name in input are spelled correctly."))
+  }
+  #Extract file extension for input argument.
+  fileExtInv<-sub("(.*)\\.","",InvDB)
 
-    #Add quotes to stand and commas to cases
-    cases<-paste0("'",data$CaseID[1],"'", ",")
-    #Collapse cases into a single string
-    cases<-paste(cases, collapse = "")
-    #Remove last comma from cases
-    cases<-substr(cases,1, nchar(cases)-1)
-    #Add parentheses around cases
-    cases<-paste0("(", cases, ")")
-    #Create WHERE clause with cases
-    standQuery<-paste0("WHERE CaseID IN", cases)
+  #Make sure input database is SQLite (.db).
+  if (!fileExtInv %in% "db"){
+    stop(paste("InvDB argument does not have a valid file extension. File",
+               "extension must be .db."))
+  }
+  #Connect to inventory database
+  conInv<-RSQLite::dbConnect(RSQLite::SQLite(), InvDB)
+  #Establish connection to inventory database
+  #check if InvStandTbl table exists
+  if(RSQLite::dbExistsTable(conInv, InvStandTbl)){
+    HABTYPE <- ""
+    cat("Inventory stand table exists for PV_CODE query", "\n")
+    query<- paste("SELECT PV_CODE", "FROM ",InvStandTbl)
+
+    #Add quotes to stand and commas to stIDs
+    stIDs<-paste0("'",data$StandID[1],"'", ",")
+    #Collapse stIDs into a single string
+    stIDs<-paste(stIDs, collapse = "")
+    #Remove last comma from stIDs
+    stIDs<-substr(stIDs,1, nchar(stIDs)-1)
+    #Add parentheses around stIDs
+    stIDs<-paste0("(", stIDs, ")")
+    #Create WHERE clause with stIDs
+    standQuery<-paste0("WHERE STAND_ID IN", stIDs)
     #Add standQuery to query
     query<-paste(query, standQuery)
 
-    habquery <- try(RSQLite::dbGetQuery(con, query))
+    habquery <- try(RSQLite::dbGetQuery(conInv, query))
     if(class(habquery) != "try-error") {
-      cat("R1HABTYP exists as",habquery[[1]][1], "\n")
+      cat("PV_CODE exists as",habquery[[1]][1], "\n")
       HABTYPE <- habquery[[1]][1]
     }
     else{
-      stop(paste("R1HABTYPE compute variable needed for R1 classification is
-          missing from the FVS_Compute table.","\n"))
+      stop(paste("PV_CODE value needed for R1 classification is
+          missing from the inventory stand table.","\n"))
     }
   }
 
@@ -144,6 +158,8 @@ R1<-function(data,
   COVERTYPE_R1<-NA
   DOM6040<-NA
   VERTICAL_STRUCTURE<-NA
+  SIZECLASS_NTG<-NA
+  STRCLSSTR<-NA
 
   #Print plot BA and TPA if debug is TRUE
   if(debug) cat("BA of plot is", BA, "\n")
@@ -342,33 +358,35 @@ MapDominance6040toCovertype <- c(
     "142"="HODR","160"="HODR","161"="HODR","162"="HODR",
     "170"="HODR","171"="HODR","172"="HODR","180"="HODR",
     "181"="HODR","182"="HODR","190"="HODR","200"="HODR",
-    "210"="HODR","220"="HODR","230"="HODR","250"="WMMW",
-    "260"="WMMW","261"="WMMW","262"="WMMW","263"="WMMW",
-    "280"="WMMW","281"="WMMW","282"="WMMW","283"="WMMW",
-    "290"="WMMW","291"="WMMW","292"="WMMW","293"="WMMW",
-    "310"="WMMW","311"="HODR","312"="WMMW","313"="WMMW",
-    "320"="WMMW","321"="HODR","322"="WMMW","323"="WMMW",
-    "324"="HODR","330"="WMMW","340"="WMMW","350"="WMMW",
-    "360"="WMMW","370"="WMMW","380"="HODR","400"="COOL",
-    "410"="COOL","420"="COOL","421"="COOL","422"="COOL",
-    "430"="WMMW","440"="COOL","450"="COOL","460"="COOL",
-    "461"="COOL","462"="COOL","470"="COOL","480"="COOL",
-    "500"="COOL","501"="WAMO","505"="WMMW","506"="WMMW",
-    "507"="WMMW","508"="WMMW","510"="WMMW","511"="WMMW",
-    "512"="WMMW","515"="WMMW","516"="WAMO","517"="WAMO",
-    "518"="WAMO","519"="WAMO","520"="WAMO","521"="WAMO",
-    "522"="WAMO","523"="WAMO","524"="WAMO","525"="WAMO",
-    "526"="WAMO","529"="WAMO","530"="WAMO","531"="WAMO",
-    "532"="WAMO","533"="WAMO","534"="WAMO","535"="WAMO",
-    "540"="WAMO","541"="WAMO","542"="WAMO","545"="WAMO",
-    "546"="WAMO","547"="WAMO","548"="WAMO","550"="WAMO",
-    "555"="WAMO","560"="WAMO","565"="WAMO","570"="WAMO",
-    "571"="WAMO","572"="WAMO","573"="WAMO","574"="WAMO",
-    "575"="WAMO","576"="WAMO","577"="WAMO","578"="WAMO",
-    "579"="WAMO","590"="WMMW","591"="WMMW","592"="WMMW",
-    "600"="COOL","610"="COOL","620"="COOL","621"="COOL",
-    "622"="COOL","623"="COOL","624"="COOL","625"="COOL",
-    "630"="COOL","635"="COOL","636"="COOL","637"="COOL",
+    "205"="WMMW","210"="HODR","220"="HODR","230"="HODR",
+    "240"="WMMW","250"="WMMW","260"="WMMW","261"="WMMW",
+    "262"="WMMW","263"="WMMW","280"="WMMW","281"="WMMW",
+    "282"="WMMW","283"="WMMW","290"="WMMW","291"="WMMW",
+    "292"="WMMW","293"="WMMW","310"="WMMW","311"="HODR",
+    "312"="WMMW","313"="WMMW","320"="WMMW","321"="HODR",
+    "322"="WMMW","323"="WMMW","324"="HODR","330"="WMMW",
+    "340"="WMMW","350"="WMMW","360"="WMMW","370"="WMMW",
+    "380"="HODR","390"="WMMW","400"="COOL","410"="COOL",
+    "420"="COOL","421"="COOL","422"="COOL","430"="WMMW",
+    "440"="COOL","450"="COOL","457"="COOL","460"="COOL",
+    "461"="COOL","462"="COOL","470"="COOL","472"="COOL",
+    "475"="COOL","480"="COOL","500"="COOL","501"="WAMO",
+    "505"="WMMW","506"="WMMW","507"="WMMW","508"="WMMW",
+    "510"="WMMW","511"="WMMW","512"="WMMW","515"="WMMW",
+    "516"="WAMO","517"="WAMO","518"="WAMO","519"="WAMO",
+    "520"="WAMO","521"="WAMO","522"="WAMO","523"="WAMO",
+    "524"="WAMO","525"="WAMO","526"="WAMO","529"="WAMO",
+    "530"="WAMO","531"="WAMO","532"="WAMO","533"="WAMO",
+    "534"="WAMO","535"="WAMO","540"="WAMO","541"="WAMO",
+    "542"="WAMO","545"="WAMO","546"="WAMO","547"="WAMO",
+    "548"="WAMO","550"="WAMO","555"="WAMO","560"="WAMO",
+    "565"="WAMO","570"="WAMO","571"="WAMO","572"="WAMO",
+    "573"="WAMO","574"="WAMO","575"="WAMO","576"="WAMO",
+    "577"="WAMO","578"="WAMO","579"="WAMO","590"="WMMW",
+    "591"="WMMW","592"="WMMW","600"="COOL","610"="COOL",
+    "620"="COOL","621"="COOL","622"="COOL","623"="COOL",
+    "624"="COOL","625"="COOL","630"="COOL","631"="COOL",
+    "632"="COOL","635"="COOL","636"="COOL","637"="COOL",
     "640"="COOL","650"="COOL","651"="COOL","652"="COOL",
     "653"="COOL","654"="COOL","655"="COOL","660"="COOL",
     "661"="COOL","662"="COOL","663"="COOL","670"="COOL",
@@ -379,14 +397,14 @@ MapDominance6040toCovertype <- c(
     "693"="COOL","694"="COLD","700"="COLD","710"="COOL",
     "711"="COLD","712"="COOL","713"="COLD","720"="COOL",
     "730"="COLD","731"="COLD","732"="COLD","733"="COLD",
-    "740"="COOL","750"="COOL","770"="COOL","780"="COOL",
-    "790"="COOL","791"="COOL","792"="COOL","800"="COOL",
-    "810"="COLD","820"="COLD","830"="COLD","831"="COLD",
-    "832"="COLD","840"="COLD","841"="COLD","842"="COLD",
-    "850"="COLD","860"="COLD","870"="COLD","890"="COLD",
-    "900"="COLD","910"="WMMW","920"="COOL","930"="COOL",
-    "940"="COLD","950"="COOL", "100032"="HODR","100033"="HODR",
-    "100034"="HODR","100035"="HODR","100037"="HODR"
+    "740"="COOL","745"="COOL","750"="COOL","770"="COOL",
+    "780"="COOL","790"="COOL","791"="COOL","792"="COOL",
+    "800"="COOL","810"="COLD","820"="COLD","830"="COLD",
+    "831"="COLD","832"="COLD","840"="COLD","841"="COLD",
+    "842"="COLD","850"="COLD","860"="COLD","870"="COLD",
+    "890"="COLD","900"="COLD","910"="WMMW","920"="COOL",
+    "930"="COOL","940"="COLD","950"="COOL","100032"="HODR",
+    "100033"="HODR","100034"="HODR","100035"="HODR","100037"="HODR"
   )
 
   #compute VEGTYPE
@@ -434,33 +452,36 @@ MapDominance6040toCovertype <- c(
 
   #compute structure class strata STRCLSSTR variable
   if(!is.na(StBAWTDBH) && !is.na(StCC)){
-    if(StCC<10) STRCLSSTR <- "X"
-    if(StBAWTDBH>=0 && StBAWTDBH<5){#0-4.9"
-      STRCLSSTR <- if(StCC<40) "E" else "F"
-    }
-    if(StBAWTDBH>=5 && StBAWTDBH<10){#5-9.9"
-      STRCLSSTR <- if(StCC<40) "G" else "H"
-    }
-    if(StBAWTDBH>=10 && StBAWTDBH<15){#10-14.9"
-      if(StCC>=10 && StCC<40){
-        STRCLSSTR <- "I"
-      } else if (StCC>=40 && StCC<60){
-        STRCLSSTR <- "J"
-      } else STRCLSSTR <- "K"
-    }
-    if(StBAWTDBH>=15&& StBAWTDBH<20){#15-19.9"
-      if(StCC>=10 && StCC<40){
-        STRCLSSTR <- "L"
-      } else if (StCC>=40 && StCC<60){
-        STRCLSSTR <- "M"
-      } else STRCLSSTR <- "N"
-    }
-    if(StBAWTDBH>=20){#20"+
-      if(StCC>=10 && StCC<40){
-        STRCLSSTR <- "O"
-      } else if (StCC>=40 && StCC<60){
-        STRCLSSTR <- "P"
-      } else STRCLSSTR <- "Q"
+    if(StCC<10) {
+      STRCLSSTR <- "X"
+    } else {
+      if(StBAWTDBH>=0 && StBAWTDBH<5){#0-4.9"
+        STRCLSSTR <- if(StCC<40) "E" else "F"
+      }
+      if(StBAWTDBH>=5 && StBAWTDBH<10){#5-9.9"
+        STRCLSSTR <- if(StCC<40) "G" else "H"
+      }
+      if(StBAWTDBH>=10 && StBAWTDBH<15){#10-14.9"
+        if(StCC>=10 && StCC<40){
+          STRCLSSTR <- "I"
+        } else if (StCC>=40 && StCC<60){
+          STRCLSSTR <- "J"
+        } else STRCLSSTR <- "K"
+      }
+      if(StBAWTDBH>=15 && StBAWTDBH<20){#15-19.9"
+        if(StCC>=10 && StCC<40){
+          STRCLSSTR <- "L"
+        } else if (StCC>=40 && StCC<60){
+          STRCLSSTR <- "M"
+        } else STRCLSSTR <- "N"
+      }
+      if(StBAWTDBH>=20){#20"+
+        if(StCC>=10 && StCC<40){
+          STRCLSSTR <- "O"
+        } else if (StCC>=40 && StCC<60){
+          STRCLSSTR <- "P"
+        } else STRCLSSTR <- "Q"
+      }
     }
   }
 

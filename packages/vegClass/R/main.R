@@ -195,6 +195,30 @@
 #              0004201904090101990050) being truncated and converted to numbers.
 #              By default, this argument is set to TRUE (T).
 #
+#InvDB:        Character string corresponding to the full directory location of
+#              the inventory database that was used for the FVS runs specified
+#              in the runTitles argument, or all runs being processed if the
+#              allRuns argument is set to TRUE (T). Used to obtain the PV_CODE
+#              value from the stand data table for each stand. By default,
+#              this argument is set to NULL.
+#
+#              NOTE: Currently only required if the region argument is set to 1.
+#              If this argument is populated, then the below invStandTbl
+#              argument needs to be populated as well.
+#
+#InvStandTbl:  Character string corresponding to name of the stand data table
+#              in InvDB that contains the PV_CODE values for the stands in the
+#              runs specified in the runTitles argument, or all runs being
+#              processed if the allRuns argument is set to TRUE (T). By default,
+#              this argument is set to NULL.
+#
+#              NOTE: Currently only required if the region argument is set to 1,
+#              and if the above InvDB argument is populated.
+#
+#customVars:   Character string corresponding to the full directory location of
+#              the CustomVars_vegClass.XLSX file with the requested custom
+#              variable specifications. By default, this argument is set to NULL.
+#
 #Value
 #
 #0 value invisibly returned.
@@ -220,7 +244,10 @@ main<- function(input = NULL,
                 vol2DBH = 5,
                 vol3DBH = 9,
                 setIndices = F,
-                modStandID = T)
+                modStandID = T,
+                InvDB = NULL,
+                InvStandTbl = NULL,
+                customVars = NULL)
 {
   #Set the start time of function execution
   startTime <- Sys.time()
@@ -726,7 +753,12 @@ main<- function(input = NULL,
                                  vol1 = vol1,
                                  vol2 = vol2,
                                  vol3 = vol3,
-                                 con=con))
+                                 vol1DBH = vol1DBH,
+                                 vol2DBH = vol2DBH,
+                                 vol3DBH = vol3DBH,
+                                 InvDB=InvDB,
+                                 InvStandTbl=InvStandTbl,
+                                 customVars = customVars))
 
         #If addVolume is TRUE, calculate volumes and add to yrOutput
         if(addVolume)

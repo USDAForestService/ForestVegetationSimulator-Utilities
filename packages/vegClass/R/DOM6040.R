@@ -5,7 +5,7 @@
 #
 #Arguments
 #
-#dTotal:  Stand-level trees per acre
+#dTotal:  Stand-level trees/basal area per acre
 #
 #spec1:   Character vector of species in the stand (USDA Plants 4-digit code(s))
 #

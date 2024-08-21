@@ -14,6 +14,10 @@
 #Reineke SDI (RSDI)
 #Basal area weighted diameter (BA_WT_DIA)
 #Basal area weighted height (BA_WT_HT)
+#
+#If region argument in function is 1 (USFS R1) the following value is
+#calculated:
+#
 #Average height (AVE_HT)
 #
 #If region argument in function is 8 or 9 (USFS R8/R9) the following values are
@@ -36,8 +40,8 @@
 #            DBH, height, species, expansion factor, and crown width for each
 #            tree record.
 #
-#region:     Integer variable corresponding to USFS region number (1, 2, 3, 4,
-#            5, 6, 8, 9, or 10).
+#region:     Integer variable corresponding to USFS region number (1, 3, or 8 are
+#            valid values).
 #
 #stand:      Character string corresponding to name of column pertaining to
 #            stand or plot ID associated with tree records in data argument. By
@@ -283,9 +287,6 @@ plotAttr <- function(data,
       #Update ZSDI
       attrList[["ALL"]]["ZSDI"] <- attrList[["ALL"]]["ZSDI"] + TZSDI
 
-      #Update AVE_HT
-      attrList[["ALL"]]["AVE_HT"] <- attrList[["ALL"]]["AVE_HT"] + HT*TEXPF
-
       #=========================================================================
       #Update values for individual species
       #=========================================================================
@@ -314,8 +315,16 @@ plotAttr <- function(data,
       #Update ZSDI
       attrList[[sp]]["ZSDI"] <- attrList[[sp]]["ZSDI"] + TZSDI
 
-      #Update AVE_HT
-      attrList[[sp]]["AVE_HT"] <- attrList[[sp]]["AVE_HT"] + HT*TEXPF
+      #=========================================================================
+      #If region is 1, then update R1 specific variables
+      #=========================================================================
+
+      if(region==1)
+      {
+        #Update AVE_HT for both individual species and All code
+        attrList[[sp]]["AVE_HT"] <- attrList[[sp]]["AVE_HT"] + HT*TEXPF
+        attrList[["ALL"]]["AVE_HT"] <- attrList[["ALL"]]["AVE_HT"] + HT*TEXPF
+      }
 
       #=========================================================================
       #If region is 8 or 9, then update R8/R9 specific variables

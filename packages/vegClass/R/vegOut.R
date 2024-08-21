@@ -86,19 +86,19 @@
 #         total cubic foot (western variants) or merchantable cubic foot
 #         volume (eastern variants) of tree records in data argument. By
 #         default, this argument is set to "MCuFt". Currently vol1 is only
-#         used if region argument is set to 8.
+#         used if region argument is set to 8, or if customVars is not null.
 #
 #vol2:    Character string corresponding to name of column pertaining to
 #         merchantable cubic foot (western variants) or sawlog cubic foot
 #         volume (eastern variants) of tree records in data argument. By
 #         default, this argument is set to "SCuFt". Currently vol2 is only
-#         used if region argument is set to 8.
+#         used if region argument is set to 8, or if customVars is not null.
 #
 #vol3:    Character string corresponding to name of column pertaining to
 #         board foot (western variants) or sawlog board foot volume (eastern
 #         variants) of tree records in data argument. By default, this
 #         argument is set to "SBdFt". Currently vol3 is only used if region
-#         argument is set to 8.
+#         argument is set to 8, or if customVars is not null.
 #
 #con:     Connection to database defined in input
 #
@@ -123,7 +123,12 @@ vegOut <- function(data,
                    vol1 = "MCuFt",
                    vol2 = "SCuFt",
                    vol3 = "SBdFt",
-                   con=con,
+                   vol1DBH = vol1DBH,
+                   vol2DBH = vol2DBH,
+                   vol3DBH = vol3DBH,
+                   InvDB=InvDB,
+                   InvStandTbl=InvStandTbl,
+                   customVars = customVars,
                    debug = F)
 {
   #Initialize output dataframe
@@ -227,7 +232,8 @@ vegOut <- function(data,
   #If region is 1
   if(region==1)
   {
-    #Calculate COVERTYPE_R1, COVTYPE_ATTR, DOM6040
+    #Calculate VEGTYPE, COVERTYPE_R1, DOM6040, VERTICAL_STRUCTURE,
+    #SIZECLASS_NTG, and STRCLSSTR
     dtResults<-R1(data = data,
                        stand = stand,
                        species = species,
@@ -237,7 +243,8 @@ vegOut <- function(data,
                        TPA = allAttr[["ALL"]]["TPA"],
                        BA = allAttr[["ALL"]]["BA"],
                        plotvals = allAttr,
-                       con=con)
+                       InvDB=InvDB,
+                       InvStandTbl=InvStandTbl)
 
     #Region 1 Potential Vegetation Type (StSim)-Cover Type
     vegData$VEGTYPE<-dtResults[["VEGTYPE"]]
@@ -378,6 +385,29 @@ vegOut <- function(data,
 
     #VEGCLASS
     vegData$VEGCLASS <- vegClass
+  }
+
+  #If we need to calculate additional custom variables
+  if (!is.null(customVars)){
+
+    #Calculate custom attributes
+    custAttr <- customAttr(data,
+                          region = region,
+                          stand = stand,
+                          species = species,
+                          dbh = dbh,
+                          ht = ht,
+                          crwidth = crwidth,
+                          expf = expf,
+                          vol1 = vol1,
+                          vol2 = vol2,
+                          vol3 = vol3,
+                          vol1DBH = vol1DBH,
+                          vol2DBH = vol2DBH,
+                          vol3DBH = vol3DBH,
+                          customVars = customVars)
+
+    vegData <- cbind(vegData,custAttr)
   }
 
   return(vegData)
