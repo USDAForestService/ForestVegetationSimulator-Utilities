@@ -84,6 +84,11 @@ R1<-function(data,
     stop(paste("No inventory database specified in InvDB argument.",
                "The PV_CODE variable is needed for R1 classification"))
   }
+  #Test if value in InvStandTbl argument is null.
+  if (is.null(InvStandTbl)){
+    stop(paste("No inventory stand table specified in InvDB argument.",
+               "The PV_CODE variable is needed for R1 classification"))
+  }
   #Test existence of input database.
   if (!(file.exists(InvDB))){
     stop(paste("Inventory database (InvDB) specified not found. Make sure",
