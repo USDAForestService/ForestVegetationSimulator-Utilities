@@ -268,6 +268,7 @@ customAttr <- function(data,
     if(ithVar$ATTRIBUTE=="QUADRATIC MEAN DIAMETER"){
       #Loop across data and calculate attributes
       QMD <- 0
+      DSQ <- 0
       if(nrow(data>0)){
         for(i in 1:nrow(data))
         {
