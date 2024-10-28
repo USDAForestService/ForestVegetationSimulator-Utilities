@@ -24,8 +24,8 @@
 #            DBH, height, species, expansion factor, and crown width for each
 #            tree record.
 #
-#region:     Integer variable corresponding to USFS region number (1, 3, or 8 are
-#            valid values).
+#region:     Integer variable corresponding to USFS region number (1, 2, 3, 8 or
+#            "MPSG" are valid values).
 #
 #stand:      Character string corresponding to name of column pertaining to
 #            stand or plot ID associated with tree records in data argument. By

@@ -14,6 +14,21 @@
 # - Quadratic mean diameter for stems (QMD_STM)
 # - Zeide stand density index stems (ZSDI_STM)
 # - Reineke stand density index for stems (RSDI_STM)
+# - STSIM potential vegetation type grouping (VEGTYPE - R1 ruleset)
+# - Cover Type (COVERTYPE_R1 - R1 ruleset)
+# - Dominance group 6040 (DOM6040 - R1 ruleset)
+# - Number of Canopy layers (VERTICAL STRUCTURE - R1 ruleset)
+# - Basal area weighted diameter size class (SIZECLASS_NTG)
+# - Size & density structure class strata (STRCLSSTR - R1 ruleset)
+# - Dominance type reported as the top 3 species by percent canopy cover (R2 ruleset)
+# - Percent canopy cover of the most dominant species in the stand (R2 ruleset)
+# - Percent canopy cover of the 2nd most dominant species in the stand (R2 ruleset)
+# - Percent canopy cover of the 3rd most dominant species in the stand (R2 ruleset)
+# - Cover type (R2 ruleset)
+# - Tree size class (R2 ruleset)
+# - Percent Canopy cover class (R2 ruleset)
+# - Habitat structural stage calculated and reported for the 1 through 4C classes (R2 ruleset)
+# - Habitat structural stage calculated and reported for the 1 through 5 classes (R2 ruleset)
 # - Dominance type (DOM_TYPE - R3 or R8 ruleset)
 # - Dominant species/genus/category or species/genus/category occurring before
 #   underscore in dominance type (DCC1 - R3 ruleset)
@@ -41,14 +56,7 @@
 # - Basal area weighted diameter of saw timber sized trees (STSIZE - R8 ruleset)
 # - Basal area of saw timber sized trees (STBA - R8 ruleset)
 # - Size and density class (VEGCLASS - R8 ruleset)
-# - STSIM potential vegetation type grouping (VEGTYPE - R1 ruleset)
-# - Cover Type (COVERTYPE_R1 - R1 ruleset)
-# - Dominance group 6040 (DOM6040 - R1 ruleset)
-# - Number of Canopy layers (VERTICAL STRUCTURE - R1 ruleset)
-# - Basal area weighted diameter size class (SIZECLASS_NTG)
-# - Size & density structure class strata (STRCLSSTR - R1 ruleset)
-#=======
-#
+
 #Arguments
 #
 #data:    Data frame containing tree records from a single stand or plot. Data
@@ -56,8 +64,16 @@
 #         (USDA Plant Symbol only), DBH, expansion factor, and crown width for
 #         each tree record.
 #
-#region:  Integer variable corresponding to USFS region number (1, 3, or 8 are
-#         valid values).
+#region:  Integer variable corresponding to USFS region number (1, 2, 3, 8, or
+#         MPSG (Mountain Planning Services Group, R1-4)).
+#
+#MPSGcovTyp: Integer value corresponding to the USFS region number whose
+#         algorithms should be used in the calculations of the
+#         COVERTYPE_MPSG variable.
+#
+#addHSS:	Logical variable used to indicate whether the USFS Region 2
+#         Habitat Structural Stage (HSS) variables should be included in
+#         the file specified in output argument.
 #
 #stand:   Character string corresponding to name of column pertaining to stand
 #         or plot ID associated with tree records in data argument. By default,
@@ -86,26 +102,28 @@
 #         total cubic foot (western variants) or merchantable cubic foot
 #         volume (eastern variants) of tree records in data argument. By
 #         default, this argument is set to "MCuFt". Currently vol1 is only
-#         used if region argument is set to 8, or if customVars is not null.
+#         used if region argument is set to 8.
 #
 #vol2:    Character string corresponding to name of column pertaining to
 #         merchantable cubic foot (western variants) or sawlog cubic foot
 #         volume (eastern variants) of tree records in data argument. By
 #         default, this argument is set to "SCuFt". Currently vol2 is only
-#         used if region argument is set to 8, or if customVars is not null.
+#         used if region argument is set to 8.
 #
 #vol3:    Character string corresponding to name of column pertaining to
 #         board foot (western variants) or sawlog board foot volume (eastern
 #         variants) of tree records in data argument. By default, this
 #         argument is set to "SBdFt". Currently vol3 is only used if region
-#         argument is set to 8, or if customVars is not null.
+#         argument is set to 8.
 #
-#con:     Connection to database defined in input
+#InvDB:   Connection to inventory database defined in input
+#
+#InvStandTbl: Character string corresponding to name of the stand data table
+#         in InvDB
 #
 #debug:	  Logical variable used to specify if debug output should be printed to
 #         R console. If value is TRUE, then debug output will printed to R
 #         console.
-#
 #Return value
 #
 #Single row dataframe containing attributes described above.
@@ -114,6 +132,8 @@
 #'@export
 vegOut <- function(data,
                    region = 3,
+                   MPSGcovTyp = MPSGcovTyp,
+                   addHSS = addHSS,
                    stand = "StandID",
                    species = "SpeciesPLANTS",
                    dbh = "DBH",
@@ -264,7 +284,47 @@ vegOut <- function(data,
     #structure class strata
     vegData$STRCLSSTR<-dtResults[["STRCLSSTR"]]
   }
+  #If region is 2
+  if(region==2){
 
+    dtResults<-R2(data = data,
+                        stand = stand,
+                        species = species,
+                        dbh = dbh,
+                        expf = expf,
+                        ht = ht,
+                        TPA = allAttr[["ALL"]]["TPA"],
+                        BA = allAttr[["ALL"]]["BA"],
+                        CC = allAttr[["ALL"]]["CC"],
+                        plotvals = allAttr)
+
+    #DOM_TYPE_R2
+    vegData$DOM_TYPE_R2<-dtResults[["DOM_TYPE_R2"]]
+
+    #DOM_TYPE_R2_CC1
+    vegData$DOM_TYPE_R2_CC1<-dtResults[["DOM_TYPE_R2_CC1"]]
+
+    #DOM_TYPE_R2_CC2
+    vegData$DOM_TYPE_R2_CC2<-dtResults[["DOM_TYPE_R2_CC2"]]
+
+    #DOM_TYPE_R2_CC3
+    vegData$DOM_TYPE_R2_CC3<-dtResults[["DOM_TYPE_R2_CC3"]]
+
+    #Region 2 Cover Type
+    vegData$COVERTYPE_R2<-dtResults[["COVERTYPE_R2"]]
+
+    #TREE_SIZE_CLASS
+    vegData$TREE_SIZE_CLASS_R2<-dtResults[["TREE_SIZE_CLASS_R2"]]
+
+    #CROWN_COVER
+    vegData$CROWN_CLASS_R2<-dtResults[["CROWN_CLASS_R2"]]
+
+    #Habitat Estimated Structural Stage 1-4C
+    vegData$HSS1_4C<-dtResults[["HSS1_4C"]]
+
+    #Habitat Estimated Structural Stage 1-5
+    vegData$HSS1_5<-dtResults[["HSS1_5"]]
+  }
   #If region is 3
   if(region==3)
   {
@@ -386,7 +446,45 @@ vegOut <- function(data,
     #VEGCLASS
     vegData$VEGCLASS <- vegClass
   }
+  #If region is MPSG
+  if(region=="MPSG")
+  {
+    MPSGresults<-MPSG(data = data,
+                      stand = stand,
+                      species = species,
+                      dbh = dbh,
+                      expf = expf,
+                      ht = ht,
+                      crwidth = crwidth,
+                      TPA = allAttr[["ALL"]]["TPA"],
+                      BA = allAttr[["ALL"]]["BA"],
+                      CC = allAttr[["ALL"]]["CC"],
+                      plotvals = allAttr,
+                      InvDB = InvDB,
+                      InvStandTbl = InvStandTbl,
+                      MPSGcovTyp = MPSGcovTyp,
+                      addHSS = addHSS)
 
+    #COVERTYPE_MPSG
+    vegData$COVERTYPE<-MPSGresults[["COVERTYPE_MPSG"]]
+
+    #TREE_SIZE_CLASS
+    vegData$TREE_SIZE_CLASS<-MPSGresults[["TREE_SIZE_CLASS"]]
+
+    #CROWN_COVER
+    vegData$CROWN_CLASS<-MPSGresults[["CROWN_CLASS"]]
+
+    #CANOPY_LAYERS
+    vegData$VERTICAL_STRUCTURE<-MPSGresults[["VERTICAL_STRUCTURE"]]
+
+    if(addHSS){
+      #Habitat Estimated Structural Stage 1-4C
+      vegData$HSS1_4C<-MPSGresults[["HSS1_4C"]]
+
+      #Habitat Estimated Structural Stage 1-5
+      vegData$HSS1_5<-MPSGresults[["HSS1_5"]]
+    }
+  }
   #If we need to calculate additional custom variables
   if (!is.null(customVars)){
 

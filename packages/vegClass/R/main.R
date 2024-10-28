@@ -35,13 +35,6 @@
 #              "C:/FVS/R3_Work/FVSOut.csv"
 #              "C:\\FVS\\R3_Work\\FVSOut.csv"
 #
-#overwriteOut: Logical variable used to determine if output file should be
-#              overwritten. If value is TRUE, any information existing in output
-#              will be overwritten with new information. If value is FALSE (F)
-#              and the file in output argument exists, then main function will
-#              stop with an error message. The default value of this argument is
-#              FALSE (F).
-#
 #runTitles:    Vector of character strings corresponding to FVS runTitles that
 #              will be processed. If runTitles is left as NULL and allRuns is
 #              FALSE (F), execution of main function will stop with an error
@@ -64,15 +57,69 @@
 #              runTitles will be ignored. By default, this argument is set
 #              to FALSE (F).
 #
-#region:       Integer variable corresponding to USFS region number. Valid
-#              values are 1, 3, and 8. This variable is used to determine what
-#              region-specific vegetation classifications and other attributes
-#              are reported and what rulesets are used to calculate these. By
-#              default, this argument is set to NA.
+#startYear:    Integer value corresponding to the year that data should start
+#              being reported in output argument. Data with years prior to this
+#              value will not be included in the output argument. By default,
+#              this argument is set to NA.
 #
-#              NOTE: the value specified in the region argument will apply to
-#              all runs specified in the runTitles argument or all runs being
-#              processed if the allRuns argument is set to TRUE (T).
+#endYear:      Integer value corresponding to the last year that data should be
+#              reported in output argument. Data associated with years after
+#              this value will not be included in the output argument. By
+#              default,this value is set to NA. If this argument is left as NA,
+#              then all information after startYear argument will be sent to
+#              output argument.
+#
+#startCycle:   Integer value corresponding to the cycle that data should start
+#              being reported in output argument. Data with cycles prior to this
+#              value will not be included in the output argument. By default,
+#              this value is set to NA.
+#
+#endCycle:     Integer value corresponding to the last cycle that data should be
+#              reported in output argument. Data associated with cycles after
+#              this value will not be included in the output argument. By
+#              default,this value is set to NA. If this argument is left as NA,
+#              then all information after startCycle argument will be sent to
+#              output argument.
+#
+#overwriteOut: Logical variable used to determine if output file should be
+#              overwritten. If value is TRUE, any information existing in output
+#              will be overwritten with new information. If value is FALSE (F)
+#              and the file in output argument exists, then main function will
+#              stop with an error message. The default value of this argument is
+#              FALSE (F).
+#
+#region:       Variable corresponding to USFS region number. Current valid
+#              values are 1, 2, 3, 8, or MPSG (Mountain Planning Services Group,
+#              R1-4). This variable is used to determine rule sets for
+#              calculating vegetation classifications and other attributes. The
+#              value specified in this argument will be included in the file
+#              specified in the output argument.
+#
+#              WARNING: the value specified in the region argument will apply
+#              to all runs specified in the runTitles argument or all runs being
+#              processed if the allRuns argument is set to TRUE (T). As such,
+#              run(s) from only one region at a time when using the main
+#              function.
+#
+#MPSGcovTyp:   Integer value corresponding to the USFS region number whose
+#              algorithms should be used in the calculations of the
+#              COVERTYPE_MPSG variable. Valid values are 1, 2, and 3. Will only
+#              apply when region argument is set to “MPSG”. If region argument
+#              is set to “MPSG” and MPSGcovTyp argument is NA (default value),
+#              main function will stop with an error message.
+#
+#              NOTE: currently only the region 2 cover type labels are cross
+#              walked to the MPSG-specific cover type labels. For regions 1 and
+#              3, those region-specific labels do not yet have corresponding
+#              MPSG labels to be cross walked to, and the COVERTYPE_MPSG values
+#              will have the labels from those regions’ covertypes.
+#
+#addHSS:	     Logical variable used to indicate whether the USFS Region 2
+#              Habitat Structural Stage (HSS) variables should be included in
+#              the file specified in output argument. Will only apply when
+#              region argument is set to “MPSG”. If addHSS is TRUE and region
+#              argument is anything other than “MPSG”, main function will stop
+#              with an error message.
 #
 #addCompute:   Logical variable used to indicate if information in FVS_Compute
 #              table should be included in output argument. If the FVS_Compute
@@ -146,30 +193,6 @@
 #              DEADVOL3 when addVolume is TRUE. By default, this argument is set
 #              to 9.
 #
-#startYear:    Integer value corresponding to the year that data should start
-#              being reported in output argument. Data with years prior to this
-#              value will not be included in the output argument. By default,
-#              this argument is set to NA.
-#
-#endYear:      Integer value corresponding to the last year that data should be
-#              reported in output argument. Data associated with years after
-#              this value will not be included in the output argument. By
-#              default,this value is set to NA. If this argument is left as NA,
-#              then all information after startYear argument will be sent to
-#              output argument.
-#
-#startCycle:   Integer value corresponding to the cycle that data should start
-#              being reported in output argument. Data with cycles prior to this
-#              value will not be included in the output argument. By default,
-#              this value is set to NA.
-#
-#endCycle:     Integer value corresponding to the last cycle that data should be
-#              reported in output argument. Data associated with cycles after
-#              this value will not be included in the output argument. By
-#              default,this value is set to NA. If this argument is left as NA,
-#              then all information after startCycle argument will be sent to
-#              output argument.
-#
 #              NOTE: If both startYear and startCycle arguments do not have a
 #              value specified (left as NA), main function will stop with an
 #              error message. One of these arguments must be used. If non NA
@@ -235,6 +258,8 @@ main<- function(input = NULL,
                 endCycle = NA,
                 overwriteOut = F,
                 region = NA,
+                MPSGcovTyp =NA,
+                addHSS = F,
                 addCompute = F,
                 addPotFire = F,
                 addFuels = F,
@@ -249,6 +274,7 @@ main<- function(input = NULL,
                 InvStandTbl = NULL,
                 customVars = NULL)
 {
+
   #Set the start time of function execution
   startTime <- Sys.time()
 
@@ -342,11 +368,40 @@ main<- function(input = NULL,
   #Do checks on region argument
   #==========================================================================
 
-  #If region is not a valid value, then stop with error message
-  if(! region %in% c(1, 3, 8))
+  #If region is MPSG without the needed quotes, then stop with error message
+  if(!is.numeric(region) && !is.character(region))
+  {
+    stop(paste("Invalid value entered for the region argument.",
+               "Please enter a value of 1, 2, 3, 8, or MPSG (with quotes)"))
+  }
+
+  #If region is not a valid numeric value, then stop with error message
+  if(is.numeric(region) && (!region %in% c(1, 2, 3, 8)))
   {
     stop(paste("Invalid region number was specified in region argument.",
-               "Please enter a value of 1, 3, or 8"))
+               "Please enter a value of 1, 2, 3, 8, or MPSG (with quotes)"))
+  }
+
+  #==========================================================================
+  #Do checks on MPSGcovtyp argument
+  #==========================================================================
+
+  #If region is MPSG, and MPSGcovTyp is not specied, then stop with error message
+  if(region=="MPSG" && is.na(MPSGcovTyp))
+  {
+    stop(paste("MPSG was specified in region argument but the MPSGcovTyp is NA.",
+               "Please specify which regional cover type algorithm to use."))
+  }
+
+  #==========================================================================
+  #Do checks on addHSS argument
+  #==========================================================================
+
+  #If addHSS is TRUE but region is not MPSG, then stop with error message
+  if(region!="MPSG" && addHSS)
+  {
+    stop(paste("addHSS is set to TRUE, but MPSG was not specified in region argument.",
+               "Please set addHSS to FALSE, or swith region to MPSG (with quotes)."))
   }
 
   #==========================================================================
@@ -750,14 +805,16 @@ main<- function(input = NULL,
         yrOutput <- cbind(yrOutput,
                           vegOut(data = standYrDF,
                                  region = region,
+                                 MPSGcovTyp = MPSGcovTyp,
+                                 addHSS = addHSS,
                                  vol1 = vol1,
                                  vol2 = vol2,
                                  vol3 = vol3,
                                  vol1DBH = vol1DBH,
                                  vol2DBH = vol2DBH,
                                  vol3DBH = vol3DBH,
-                                 InvDB=InvDB,
-                                 InvStandTbl=InvStandTbl,
+                                 InvDB = InvDB,
+                                 InvStandTbl = InvStandTbl,
                                  customVars = customVars))
 
         #If addVolume is TRUE, calculate volumes and add to yrOutput

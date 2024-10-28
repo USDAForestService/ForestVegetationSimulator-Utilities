@@ -40,8 +40,8 @@
 #            DBH, height, species, expansion factor, and crown width for each
 #            tree record.
 #
-#region:     Integer variable corresponding to USFS region number (1, 3, or 8 are
-#            valid values).
+#region:     Integer variable corresponding to USFS region number (1, 2, 3, 8,
+#            or MPSG (Mountain Planning Services Group, R1-4)).
 #
 #stand:      Character string corresponding to name of column pertaining to
 #            stand or plot ID associated with tree records in data argument. By
@@ -239,7 +239,7 @@ plotAttr <- function(data,
       HT <- data[[ht]][i]
 
       #Calculate BA of tree
-      TBA <- DBH^2 * TEXPF * 0.0054542
+      TBA <- DBH^2 * TEXPF * 0.005454154
 
       #Calculate CC of tree
       TCC <- pi * (data[[crwidth]][i]/2)^2 *(TEXPF/43560) * 100
