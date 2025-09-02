@@ -1,10 +1,10 @@
 Package: vegClass
 Title: Vegetation Classification
-Version: 0.8.0
+Version: 0.8.1
 Authors@R: c(person("Mark", "Castle", email = "mark.castle@usda.gov", 
-          	  role=c("aut")),
+          	  role=c("aut","cre")),
 	     person("Mike", "Shettles", email = "michael.a.shettles@usda.gov",
-		 role = c("aut","cre")))
+		 role = c("aut")))
 Description: This package provides a suite of functions that are used to derive
  vegetation classifications from Forest Vegetation Simulator output.
 Imports: 
